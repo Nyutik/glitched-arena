@@ -13,6 +13,7 @@ let isPhase3 = false;
 let isSoundOn = true;
 let shouldAutoStart = false;
 let maxPlayerHealth = 100; // Базовый предел
+let coinsThisRun = 0; // Монеты, собранные за текущую попытку
 let level = 1, coins = 0, distance = 0, runGoal = 700, bestLevel = 1, bestDistance = 0;
 let combo = 0;
 let isGlitchMode = false;
@@ -48,9 +49,10 @@ const saveProgress = () => {
         upgradeLevels,
         bestLevel,
         coins,
-        bestDistance, // Сохраняем актуальный максимум
+        bestDistance,
         maxPlayerHealth,
-        isShieldActive
+        isShieldActive,
+        shareClaimed: upgradeLevels.shareClaimed
     }));
 };
 
@@ -67,6 +69,7 @@ const loadProgress = () => {
         isShieldActive = p.isShieldActive || false;
         // КРИТИЧЕСКИЙ ФИКС: Пересчитываем цель для высоких уровней
         runGoal = 700 + (level - 1) * 100;
+        upgradeLevels.shareClaimed = p.shareClaimed || false;
     }
 };
 loadProgress();
@@ -105,6 +108,9 @@ function create() {
     isBossFight = false;
     distance = 0; overdrive = 0; isPhase2 = false; isStarted = false; isPaused = false;
     playerHealth = 100; bossHealth = 400 * (1 + level * 0.45);
+    isMagnetActive = false; // Отключаем магнит
+    isGlitchMode = false;   // Сбрасываем режим безумия
+    this.physics.world.timeScale = 1; // Возвращаем время в норму
 
     //const startText = this.add.text(187, 333, `SECTOR: ${level}\n[ CLICK TO START ]`, { fontFamily: 'Courier New', fontSize: '24px', fill: '#00ffff', align: 'center', backgroundColor: '#000', padding: 20 }).setOrigin(0.5).setDepth(1000);
     if (shouldAutoStart) {
@@ -214,8 +220,8 @@ function create() {
         minion.destroy();
         bullet.destroy();
 
-        coins += 5;
-        scoreText.setText(`CREDITS: ${coins}`);
+        coinsThisRun += 5;
+        scoreText.setText(`CREDITS: ${coins + coinsThisRun}`);
 
         // ЗАПУСКАЕМ ВАУ-ЭФФЕКТ
         minionExplode(this, mx, my);
@@ -230,7 +236,7 @@ function create() {
     this.input.on('pointermove', (p) => {
         if (isStarted && !isShopOpen && !isDead && !isPaused) {
             player.x = p.x;
-            player.y = p.y; // Убрали все смещения (-30, -100 и т.д.)
+            player.y = p.y - 10; // смещения (-30, -100 и т.д.)
             shieldAura.setPosition(player.x, player.y);
         }
     });
@@ -394,6 +400,11 @@ function handleDamage(scene, dmg) {
 
 function triggerDeath(scene) {
     if (isVictory || isDead) return;
+    isMagnetActive = false;
+    isGlitchMode = false;
+    coinsThisRun = 0; // Игрок погиб — всё собранное на уровне аннулируется
+    scoreText.setText(`CREDITS: ${coins}`); // Возвращаем визуально к основному счету
+
     isDead = true; scene.physics.pause();
     if (scene.obstacleTimer) scene.obstacleTimer.remove();
     if (scene.shootEvent) scene.shootEvent.remove();
@@ -474,9 +485,21 @@ function startBossFight(scene) {
         glitchText.setText("ELITE_DEFENSE_ENGAGED").setFill("#ff00ff");
     }
 
-    // Твои фразы и миньоны (Оставляем!)
-    scene.bossShootEvent = scene.time.addEvent({ delay: isPhase2 ? 800 : 1200, callback: bossShoot, callbackScope: scene, loop: true });
-    scene.minionTimer = scene.time.addEvent({ delay: 4000, callback: spawnMinion, callbackScope: scene, loop: true });
+    scene.bossShootEvent = scene.time.addEvent({
+        delay: isPhase2 ? 800 : 1200, callback: bossShoot,
+        callbackScope: scene, loop: true
+    });
+    scene.phraseTimer = scene.time.addEvent({
+        delay: 3500, callback: () => {
+            if(isBossFight && !isVictory) {
+                glitchText.setText(Phaser.Utils.Array.GetRandom(
+                    isPhase2 ? PHRASES_P2 : PHRASES_P1)
+                ).setFill(isPhase2 ? "#ff0000" : "#ff00ff");
+                scene.time.delayedCall(1500, () => glitchText.setText('')); }
+            }, loop: true });
+    scene.minionTimer = scene.time.addEvent({
+        delay: 4000, callback: spawnMinion, callbackScope: scene, loop: true
+    });
 }
 
 function hitBoss(b, bullet) {
@@ -484,8 +507,8 @@ function hitBoss(b, bullet) {
     if (bullet) bullet.destroy();
 
     bossHealth -= 10;
-    coins += 2;
-    scoreText.setText(`CREDITS: ${coins}`);
+    coinsThisRun += 2;
+    scoreText.setText(`CREDITS: ${coins + coinsThisRun}`);
 
     let chargeBonus = 2 + (upgradeLevels.ultra * 1.5);
     overdrive = Math.min(100, overdrive + chargeBonus);
@@ -556,6 +579,8 @@ function useOverdrive() {
 
 function triggerVictory(scene) {
     if (isDead || isVictory) return;
+    coins += coinsThisRun; // Зачисляем собранное в основной кошелек
+    coinsThisRun = 0;      // Сбрасываем временный счетчик
     isPhase3 = false;
 
     // 1. СРАЗУ СОХРАНЯЕМ ПРОГРЕСС УРОВНЯ
@@ -671,17 +696,40 @@ function showShop(scene, mainMenu) {
     }).setOrigin(0.5).setInteractive();
 
     share.on('pointerdown', () => {
+        // ДЕРЗКИЕ ФРАЗЫ БОССА
+        let bossTaunt = "";
+        if (level < 10) bossTaunt = "SCANNING_NEW_VICTIM... This human is weak. Can you do better?";
+        else if (level < 25) bossTaunt = "SYSTEM_WARNING: Sector " + level + " breached! I need a real challenge. Are you the one?";
+        else bossTaunt = "!! CORE_OVERLOAD !! I've deleted thousands. You're next. Try to survive if you dare!";
+
+        const shareText = encodeURIComponent("I'm on Sector " + level + "! Beat my record of " + bestDistance + "m in Glitched Arena!");
+        const shareUrl = encodeURIComponent(SHARE_LINK);
+        const fullLink = `https://t.me/share/url?url=${shareUrl}&text=${shareText}`;
+
+        // Проверяем, запущены ли мы внутри Telegram
         if (window.Telegram?.WebApp) {
-            Telegram.WebApp.shareUrl(SHARE_LINK, "Destroy COREs with me in Glitched Arena!");
-            // Бонус даем один раз за открытие магазина, чтобы не абузили
-            if (share.active) {
+
+            Telegram.WebApp.openTelegramLink(fullLink);
+
+            // Начисляем бонус (один раз за сессию)
+            if (!upgradeLevels.shareClaimed) {
                 coins += 500;
+                upgradeLevels.shareClaimed = true;
                 saveProgress();
                 creds.setText(`CREDITS: ${coins}`);
-                share.setText("INVITATION SENT ✓").setFill("#aaa").disableInteractive();
+                share.setText("BONUS CLAIMED ✓").setFill("#aaa").disableInteractive();
+                if (Telegram.WebApp.HapticFeedback) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
             }
+        } else {
+            // Если в обычном браузере
+            window.open(fullLink, '_blank');
         }
     });
+
+    // Если бонус уже был получен ранее, сразу меняем вид кнопки при открытии магазина
+    if (upgradeLevels.shareClaimed) {
+        share.setText("INVITATION SENT ✓").setFill("#aaa").disableInteractive();
+    }
 
     const back = scene.add.text(187, 635, "<< BACK TO MENU", { fontSize: '16px', fill: '#ff00ff' }).setOrigin(0.5).setInteractive().on('pointerdown', () => {
         overlay.destroy(); isShopOpen = false; saveProgress(); scene.scene.restart();
@@ -847,8 +895,8 @@ function collectItem(p, item) {
         this.time.delayedCall(1500, () => glitchText.setAlpha(0));
 
     } else if (type === 'coin') {
-        coins += (isGlitchMode ? 30 : 10); // Бонус безумия
-        scoreText.setText(`CREDITS: ${coins}`);
+        coinsThisRun += (isGlitchMode ? 30 : 10); // Бонус безумия
+        scoreText.setText(`CREDITS: ${coins + coinsThisRun}`);
     } else if (type === 'slowmo') {
         glitchText.setText("TIME_WARP_ACTIVE").setFill("#00ff00");
         this.physics.world.timeScale = 2; // Мир в 2 раза медленнее
@@ -896,8 +944,8 @@ function showComboEffect(scene) {
 
     if (combo % 5 === 0) {
         let reward = isGlitchMode ? 45 : 15; // Тройная награда в режиме безумия
-        coins += reward;
-        scoreText.setText(`CREDITS: ${coins}`);
+        coinsThisRun += reward;
+        scoreText.setText(`CREDITS: ${coins + coinsThisRun}`);
         scene.cameras.main.flash(100, 255, 255, 255, 0.3);
     }
 }
@@ -948,7 +996,7 @@ function minionExplode(scene, x, y) {
                         // Эффект распада пули
                         b.destroy();
                         // Небольшой бонус за "защитный взрыв"
-                        coins += 1;
+                        coinsThisRun += 1;
                     }
                 }
             });
@@ -1003,10 +1051,92 @@ function showMenu(scene) {
         if (!isSoundOn) scene.sound.stopAll();
     });
 
-    const rules = scene.add.text(187, 520, "RULES: DODGE RED, COLLECT YELLOW\nREACH 700m FOR BOSS\nCOMBO X10 = 3X GOLD", {
-        fontSize: '11px', fill: '#888', align: 'center'
+    const rulesBtn = scene.add.text(187, 470, ">> HOW_TO_SURVIVE", btnStyle).setOrigin(0.5).setInteractive();
+    rulesBtn.on('pointerdown', () => { menu.setVisible(false); showRules(scene, menu); });
+
+    menu.add([bg, title, stats, startBtn, shopBtn, soundBtn, rulesBtn]);
+    return menu;
+}
+
+function showRules(scene, mainMenu) {
+    const rulesOverlay = scene.add.container(0, 0).setDepth(4000);
+    const bg = scene.add.graphics().fillStyle(0x000000, 0.98).fillRect(0, 0, 375, 667);
+    rulesOverlay.add(bg);
+
+    const header = scene.add.text(187, 40, "SYSTEM_MANUAL v1.1", {
+        fontSize: '24px', fill: '#00ffff', fontWeight: 'bold', fontFamily: 'Courier New'
+    }).setOrigin(0.5);
+    rulesOverlay.add(header);
+
+    // --- SECTION 1: ITEMS ---
+    const items = [
+        { key: 'wall', c: 0xff0000, t: "RED_WALL: Lethal. Avoid at all costs!" },
+        { key: 'pixel', c: 0xffff00, t: "CREDITS: Pick up for upgrades." },
+        { key: 'heart', c: 0xff0088, t: "HEART: Restores +25% Hull Integrity." },
+        { key: 'pixel', c: 0xff00ff, t: "SYSTEM_NUKE: Purge all threats + Siren.", angle: 45, scale: 2.8 },
+        { key: 'pixel', c: 0xff00ff, t: "MAGNET: Pull credits from distance.", angle: 180 },
+        { key: 'pixel', c: 0x00ff00, t: "SLOW_MO: Stabilize time for 3 sec." }
+    ];
+
+    items.forEach((item, i) => {
+        let y = 100 + (i * 45);
+        let icon = scene.add.sprite(40, y, item.key).setTint(item.c);
+
+        // 1. Устанавливаем масштаб: если в объекте есть свой scale — берем его, иначе стандарт
+        let finalScale = item.scale ? item.scale : (item.key === 'pixel' ? 2 : 0.7);
+        icon.setScale(finalScale);
+
+        // 2. Устанавливаем угол: если есть angle — поворачиваем (так квадрат станет ромбом)
+        if (item.angle) {
+            icon.setAngle(item.angle);
+        }
+
+        let txt = scene.add.text(70, y, item.t, { fontSize: '12px', fill: '#fff', fontFamily: 'Courier New' }).setOrigin(0, 0.5);
+        rulesOverlay.add([icon, txt]);
+    });
+
+    // --- SECTION 2: SECTOR ALERTS ---
+    const stagesTitle = scene.add.text(187, 350, "--- SECTOR_ALERTS ---", {
+        fontSize: '16px', fill: '#00ffff', fontFamily: 'Courier New'
     }).setOrigin(0.5);
 
-    menu.add([bg, title, stats, startBtn, shopBtn, soundBtn, rules]);
-    return menu; // ОБЯЗАТЕЛЬНО ВОЗВРАЩАЕМ
+    const stagesDesc = scene.add.text(187, 400,
+        "SEC 15: MEGA_BOSS (Side Turrets Engaged)\n" +
+        "SEC 20: ELITE_SHIELDS (Orbital Protection)\n" +
+        "SEC 30: CORE_OVERLOAD (Final Rage Mode)",
+        { fontSize: '11px', fill: '#ffaa00', fontFamily: 'Courier New', align: 'center', lineSpacing: 10 }
+    ).setOrigin(0.5);
+    rulesOverlay.add([stagesTitle, stagesDesc]);
+
+    // --- SECTION 3: DATA SHOP ---
+    const shopBox = scene.add.rectangle(187, 480, 330, 80, 0x00ffff, 0.1).setStrokeStyle(1, 0x00ffff);
+    const shopTxt = scene.add.text(187, 480,
+        "STRATEGY: Visit the DATA_SHOP!\n" +
+        "Upgrade Firepower, Speed, and\n" +
+        "install EMERGENCY_SHIELDS to survive.",
+        { fontSize: '12px', fill: '#00ffff', align: 'center', fontFamily: 'Courier New' }
+    ).setOrigin(0.5);
+    rulesOverlay.add([shopBox, shopTxt]);
+
+    // --- OPTIONAL: ANIMATED HAND (TUTORIAL) ---
+    const hand = scene.add.circle(187, 630, 10, 0x00ffff, 0.5);
+    scene.tweens.add({
+        targets: hand,
+        x: { from: 120, to: 255 },
+        duration: 1500,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+    });
+    const handTxt = scene.add.text(187, 650, "SLIDE TO MOVE", { fontSize: '10px', fill: '#00ffff' }).setOrigin(0.5);
+    rulesOverlay.add([hand, handTxt]);
+
+    // BACK BUTTON
+    const back = scene.add.text(187, 580, "<< RETURN_TO_MENU", {
+        fontSize: '18px', fill: '#fff', backgroundColor: '#330033', padding: 12, fontFamily: 'Courier New'
+    }).setOrigin(0.5).setInteractive().on('pointerdown', () => {
+        rulesOverlay.destroy();
+        mainMenu.setVisible(true);
+    });
+    rulesOverlay.add(back);
 }
