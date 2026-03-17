@@ -230,7 +230,7 @@ function create() {
     this.input.on('pointermove', (p) => {
         if (isStarted && !isShopOpen && !isDead && !isPaused) {
             player.x = p.x;
-            player.y = p.y - 30; // Смещение на 50 пикселей ВВЕРХ
+            player.y = p.y; // Убрали все смещения (-30, -100 и т.д.)
             shieldAura.setPosition(player.x, player.y);
         }
     });
