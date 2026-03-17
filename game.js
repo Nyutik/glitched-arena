@@ -98,7 +98,12 @@ function preload() {
 }
 
 function create() {
-    isVictory = false; isShopOpen = false; isDead = false; isBossFight = false; distance = 0; overdrive = 0; isPhase2 = false; isStarted = false; isPaused = false;
+    isPhase3 = false;
+    isVictory = false;
+    isShopOpen = false;
+    isDead = false;
+    isBossFight = false;
+    distance = 0; overdrive = 0; isPhase2 = false; isStarted = false; isPaused = false;
     playerHealth = 100; bossHealth = 400 * (1 + level * 0.45);
 
     //const startText = this.add.text(187, 333, `SECTOR: ${level}\n[ CLICK TO START ]`, { fontFamily: 'Courier New', fontSize: '24px', fill: '#00ffff', align: 'center', backgroundColor: '#000', padding: 20 }).setOrigin(0.5).setDepth(1000);
@@ -150,7 +155,8 @@ function create() {
     boss = this.physics.add.sprite(187, -200, 'boss')
     .setDepth(5)
     .setImmovable(true)
-    .setVisible(false);
+    .setVisible(false)
+    .clearTint();
 
     // ШЛЕЙФ ДЛЯ БОССА
     bossTrail = this.add.particles(0, 0, 'pixel', {
@@ -162,7 +168,7 @@ function create() {
         tint: 0xff00ff,      // стартовый фиолетовый
         follow: boss
     });
-    bossTrail.setVisible(false);
+    bossTrail.setParticleTint(0xff00ff);
 
     // --- HUD v5.5: АВТО-ДИЗАЙН ---
     // Строка 1: Основная инфа
@@ -224,7 +230,7 @@ function create() {
     this.input.on('pointermove', (p) => {
         if (isStarted && !isShopOpen && !isDead && !isPaused) {
             player.x = p.x;
-            player.y = p.y - 50; // Смещение на 50 пикселей ВВЕРХ
+            player.y = p.y - 30; // Смещение на 50 пикселей ВВЕРХ
             shieldAura.setPosition(player.x, player.y);
         }
     });
@@ -414,8 +420,15 @@ function triggerDeath(scene) {
 
     // 3. Хард-ребут (Сектор 1, потеря всего)
     btn(440, "HARD REBOOT (SEC 1)", '#440000', () => {
-        level = 1; coins = 0; upgradeLevels = { fire: 0, ultra: 0, speed: 0, health: 0 };
-        isDead = false; shouldAutoStart = false; saveProgress(); scene.scene.restart();
+        level = 1;
+        coins = 0;
+        upgradeLevels = { fire: 0, ultra: 0, speed: 0, health: 0, shield: 0 };
+        isDead = false;
+        isPhase2 = false; // СБРОС ФАЗЫ 2
+        isPhase3 = false; // СБРОС ФАЗЫ 3
+        shouldAutoStart = false;
+        saveProgress();
+        scene.scene.restart();
     });
 }
 
@@ -478,10 +491,12 @@ function hitBoss(b, bullet) {
     overdrive = Math.min(100, overdrive + chargeBonus);
 
     // Вспышка урона
-    b.setTint(0x00ff00);
+    boss.setTint(0x00ff00); // Вспышка зеленым
     this.time.delayedCall(80, () => {
-        if (b && !isDead) b.setTint(isPhase2 ? 0xff0000 : 0xffffff).clearTint();
-        if (isPhase2 && b) b.setTint(0xff0000);
+        if (boss && !isDead) {
+            // Если фаза 2 — возвращаем красный, если нет — возвращаем белый (без тинта)
+            isPhase2 ? boss.setTint(0xff0000) : boss.clearTint();
+        }
     });
 
     // ОПРЕДЕЛЯЕМ МАКСИМАЛЬНОЕ HP БОССА
@@ -490,13 +505,18 @@ function hitBoss(b, bullet) {
     // ФАЗА 2: ПЕРЕХОД (на 50% HP)
     if (bossHealth <= maxB / 2 && !isPhase2) {
         isPhase2 = true;
-        boss.setTint(0xff0000);
+        boss.setTint(0xff0000); // Красим ядро в красный
         bHealthLabel.setFill('#ff0000');
         glitchText.setText("CRITICAL_RAGE").setFill("#ff0000");
+
+        // ПРАВИЛЬНАЯ ПОКРАСКА ШЛЕЙФА
+        if (bossTrail) {
+            bossTrail.setParticleTint(0xff0000); // Форсируем красный цвет частиц
+        }
     }
 
     // ФАЗА 3: УЛЬТРА-ЯРОСТЬ (на 25% HP)
-    if (bossHealth <= maxB * 0.25 && !isPhase3) {
+    if (level >= 30 && bossHealth <= maxB * 0.25 && !isPhase3) {
         isPhase3 = true;
         glitchText.setText("!! SYSTEM_HALT: CORE_OVERLOAD !!").setFill("#ffffff").setBackgroundColor("#ff0000");
         this.cameras.main.shake(500, 0.05);
