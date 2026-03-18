@@ -1,4 +1,7 @@
 const SHARE_LINK = "https://t.me/GlitchedArenaBot";
+const SUPABASE_URL = "https://dxqeegfjgakbmeimmigy.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR4cWVlZ2ZqZ2FrYm1laW1taWd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4MzYyMDIsImV4cCI6MjA4OTQxMjIwMn0.KnwSsRrfzl1tKY0nKvKVZnOT9XU_5_-2bmnCFRPeh8Y";
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const ASSETS = {
     BGM: 'assets/Cyberpunk 2.mp3',
     SFX_ULTRA: 'assets/futuristic-cyberpunk-digi-ivvyqv4k.wav',
@@ -31,6 +34,7 @@ let playerBar, bossBar, overdriveBar, roadBar, shieldAura, trailEmitter, bossTra
 let items, itemsTimer;
 let minions, minionBullets;
 let yOffset = -50;
+let currentStats = { atk: 1, spd: 1, label: "STANDARD" };
 let currentShape = 'classic';
 let currentSkin = 'classic';
 const SKIN_DATA = {
@@ -127,6 +131,7 @@ function preload() {
 }
 
 function create() {
+    currentStats = getShipStats();
     isPhase3 = false;
     isVictory = false;
     isShopOpen = false;
@@ -328,8 +333,7 @@ function update(time, delta) {
     // 3. Дистанция и Босс
     if (!isBossFight) {
         // Скорость растет от уровня и прокачки
-        const stats = getShipStats();
-        distance += delta * (0.08 + level * 0.01 + upgradeLevels.speed * 0.03) * stats.spd;
+        distance += delta * (0.08 + level * 0.01 + upgradeLevels.speed * 0.03) * currentStats.spd;
         let currentDist = Math.floor(distance);
 
         if (currentDist > bestDistance) {
@@ -442,6 +446,10 @@ function triggerDeath(scene) {
     coinsThisRun = 0; // Игрок погиб — всё собранное на уровне аннулируется
     scoreText.setText(`CREDITS: ${coins}`); // Возвращаем визуально к основному счету
 
+    if (Math.floor(distance) > bestDistance) {
+        submitScore(Math.floor(distance), level);
+    }
+
     isDead = true; scene.physics.pause();
     if (scene.obstacleTimer) scene.obstacleTimer.remove();
     if (scene.shootEvent) scene.shootEvent.remove();
@@ -543,8 +551,7 @@ function hitBoss(b, bullet) {
     if (isVictory) return;
     if (bullet) bullet.destroy();
 
-    const stats = getShipStats();
-    bossHealth -= (10 * stats.atk);
+    bossHealth -= (10 * currentStats.atk);
     coinsThisRun += 2;
     scoreText.setText(`CREDITS: ${coins + coinsThisRun}`);
 
@@ -611,7 +618,7 @@ function useOverdrive() {
         duration: 1200,
         onUpdate: () => {
             if (isBossFight && !isVictory && Math.abs(laser.x - boss.x) < 130) {
-                bossHealth -= Math.max(3, 12 - level);
+                bossHealth -= Math.max(3, (12 - level) * currentStats.atk);
                 if (bossHealth <= 0) { bossHealth = 0; triggerVictory(this); }
             }
         },
@@ -629,6 +636,7 @@ function triggerVictory(scene) {
     level++;
     runGoal = 700 + (level - 1) * 100;
     saveProgress();
+    submitScore(Math.floor(distance), level);
 
     isVictory = true;
 
@@ -1144,6 +1152,14 @@ function showMenu(scene) {
     const setBtn = scene.add.text(187, 405, ">> PILOT SETTINGS", btnStyle).setOrigin(0.5).setInteractive();
     const soundBtn = scene.add.text(187, 470, `>> AUDIO: ${isSoundOn ? 'ON' : 'OFF'}`, btnStyle).setOrigin(0.5).setInteractive();
     const rulesBtn = scene.add.text(187, 535, ">> HOW_TO_SURVIVE", btnStyle).setOrigin(0.5).setInteractive();
+    const topBtn = scene.add.text(187, 600, ">> TOP PILOTS [GLOBAL]", {
+        fontSize: '16px', fill: '#ffff00', backgroundColor: '#333300', padding: 10
+    }).setOrigin(0.5).setInteractive();
+
+    topBtn.on('pointerdown', () => {
+        menu.setVisible(false);
+        showLeaderboard(scene, menu);
+    });
 
     // Логика кнопок
     startBtn.on('pointerdown', () => {
@@ -1164,7 +1180,7 @@ function showMenu(scene) {
         if (!isSoundOn) scene.sound.stopAll();
     });
 
-    menu.add([bg, title, startBtn, hangarBtn, shopBtn, setBtn, soundBtn, rulesBtn]);
+    menu.add([bg, title, startBtn, hangarBtn, shopBtn, setBtn, soundBtn, rulesBtn, topBtn]);
     return menu;
 }
 
@@ -1266,6 +1282,8 @@ function refreshPlayerAppearance(scene) {
     if (trailEmitter) {
         trailEmitter.setParticleTint(skin.trail);
     }
+
+    currentStats = getShipStats();
 }
 
 function showSettings(scene, mainMenu) {
@@ -1385,10 +1403,10 @@ function getShipStats() {
     // Бонус за цвет
     if (currentSkin === 'gold') {
         stats.atk += 0.1; // Золото чуть мощнее
-        stats.label += " | GOLD: +10% ATK";
+        stats.label = (currentShape === 'striker') ? stats.label + " | GOLD: +10% ATK" : "GOLD: +10% ATK";
     } else if (currentSkin === 'ghost') {
         stats.spd += 0.15; // Призрак быстрее
-        stats.label += " | GHOST: +15% SPD";
+        stats.label = (currentShape === 'striker') ? stats.label + " | GHOST: +15% SPD" : "GHOST: +15% SPD";
     }
 
     return stats;
@@ -1420,4 +1438,101 @@ function getBossIntel() {
             tip: "SUGGEST: GHOST (+15% SPD)"
         };
     }
+}
+
+async function submitScore(dist, lvl) {
+    if (!window.Telegram?.WebApp?.initDataUnsafe?.user) return;
+    const user = window.Telegram.WebApp.initDataUnsafe.user;
+    const userName = user.first_name;
+
+    try {
+        // 1. Проверяем, есть ли уже этот игрок в базе
+        const { data: existingEntry, error: fetchError } = await db
+            .from('leaderboard')
+            .select('score')
+            .eq('username', userName)
+            .maybeSingle();
+
+        if (fetchError) throw fetchError;
+
+        if (existingEntry) {
+            // 2. Если игрок есть, обновляем только если новый рекорд ВЫШЕ
+            if (dist > existingEntry.score) {
+                await db
+                    .from('leaderboard')
+                    .update({ score: dist, level: lvl, skin: currentSkin })
+                    .eq('username', userName);
+                console.log("Record UPDATED in Supabase!");
+            } else {
+                console.log("New score isn't higher. Skipping DB update.");
+            }
+        } else {
+            // 3. Если игрока нет в базе — создаем новую запись
+            await db
+                .from('leaderboard')
+                .insert([{ username: userName, score: dist, level: lvl, skin: currentSkin }]);
+            console.log("New player SAVED to Supabase!");
+        }
+    } catch (e) {
+        console.error("Supabase Sync Error:", e);
+    }
+}
+
+async function showLeaderboard(scene, mainMenu) {
+    const overlay = scene.add.container(0, 0).setDepth(4000);
+    const bg = scene.add.graphics().fillStyle(0x000000, 0.98).fillRect(0, 0, 375, 667);
+    const title = scene.add.text(187, 50, "GLOBAL_RANKINGS", { fontSize: '26px', fill: '#ffff00', fontWeight: 'bold', fontFamily: 'Courier New' }).setOrigin(0.5);
+    overlay.add([bg, title]);
+
+    const loadingText = scene.add.text(187, 300, "CONNECTING_TO_DATABASE...", { fontSize: '14px', fill: '#00ffff', fontFamily: 'Courier New' }).setOrigin(0.5);
+    overlay.add(loadingText);
+
+    try {
+        // Запрос ТОП-10 из Supabase
+        const { data, error } = await db
+            .from('leaderboard')
+            .select('*')
+            .order('score', { ascending: false })
+            .limit(10);
+
+        if (error) throw error;
+        loadingText.destroy();
+
+        if (data.length === 0) {
+            overlay.add(scene.add.text(187, 300, "NO RECORDS YET", { fontSize: '16px', fill: '#aaa' }).setOrigin(0.5));
+        }
+
+        data.forEach((entry, i) => {
+            const y = 130 + (i * 42);
+            let color = '#ffffff';
+            let medal = '';
+
+            if (i === 0) { color = '#FFD700'; medal = '🥇 '; }
+            else if (i === 1) { color = '#C0C0C0'; medal = '🥈 '; }
+            else if (i === 2) { color = '#CD7F32'; medal = '🥉 '; }
+
+            const rank = scene.add.text(30, y, `${medal}#${i+1}`, { fontSize: '15px', fill: color, fontWeight: 'bold' });
+            const name = scene.add.text(95, y, entry.username.substring(0, 12).toUpperCase(), { fontSize: '14px', fill: color });
+            const score = scene.add.text(345, y, `${entry.score}m`, { fontSize: '14px', fill: color, fontWeight: 'bold' }).setOrigin(1, 0);
+
+            // Подсветка ТЕКУЩЕГО игрока
+            if (window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name === entry.username) {
+                const highlight = scene.add.rectangle(187, y + 10, 340, 30, 0x00ffff, 0.1).setOrigin(0.5, 0.3);
+                overlay.add(highlight);
+            }
+
+            overlay.add([rank, name, score]);
+        });
+    } catch (e) {
+        console.error(e);
+        loadingText.setText("CONNECTION_ERROR: OFFLINE");
+    }
+
+    const back = scene.add.text(187, 610, "<< RETURN TO MENU", {
+        fontSize: '18px', fill: '#fff', backgroundColor: '#330033', padding: 12
+    }).setOrigin(0.5).setInteractive().on('pointerdown', () => {
+        overlay.destroy();
+        mainMenu.setVisible(true);
+    });
+    overlay.add(back);
 }
