@@ -30,6 +30,7 @@ let player, boss, obstacles, bullets, playerBullets, scoreText, levelText, bestT
 let playerBar, bossBar, overdriveBar, roadBar, shieldAura, trailEmitter, bossTrail;
 let items, itemsTimer;
 let minions, minionBullets;
+let yOffset = -50;
 let currentShape = 'classic';
 let currentSkin = 'classic';
 const SKIN_DATA = {
@@ -62,6 +63,7 @@ const saveProgress = () => {
         bestDistance,
         maxPlayerHealth,
         isShieldActive,
+        yOffset: yOffset,
         currentShape: currentShape,
         currentSkin: currentSkin,
         shareClaimed: upgradeLevels.shareClaimed
@@ -81,6 +83,7 @@ const loadProgress = () => {
         isShieldActive = p.isShieldActive || false;
         currentShape = p.currentShape || 'classic';
         currentSkin = p.currentSkin || 'classic';
+        yOffset = p.yOffset !== undefined ? p.yOffset : -50;
         // КРИТИЧЕСКИЙ ФИКС: Пересчитываем цель для высоких уровней
         runGoal = 700 + (level - 1) * 100;
         upgradeLevels.shareClaimed = p.shareClaimed || false;
@@ -269,7 +272,7 @@ function create() {
     this.input.on('pointermove', (p) => {
         if (isStarted && !isShopOpen && !isDead && !isPaused) {
             player.x = p.x;
-            player.y = p.y - 10; // смещения (-30, -100 и т.д.)
+            player.y = p.y + yOffset;
             shieldAura.setPosition(player.x, player.y);
         }
     });
@@ -325,7 +328,8 @@ function update(time, delta) {
     // 3. Дистанция и Босс
     if (!isBossFight) {
         // Скорость растет от уровня и прокачки
-        distance += delta * (0.08 + level * 0.01 + upgradeLevels.speed * 0.03);
+        const stats = getShipStats();
+        distance += delta * (0.08 + level * 0.01 + upgradeLevels.speed * 0.03) * stats.spd;
         let currentDist = Math.floor(distance);
 
         if (currentDist > bestDistance) {
@@ -539,7 +543,8 @@ function hitBoss(b, bullet) {
     if (isVictory) return;
     if (bullet) bullet.destroy();
 
-    bossHealth -= 10;
+    const stats = getShipStats();
+    bossHealth -= (10 * stats.atk);
     coinsThisRun += 2;
     scoreText.setText(`CREDITS: ${coins + coinsThisRun}`);
 
@@ -1126,43 +1131,40 @@ function showMenu(scene) {
     const menu = scene.add.container(0, 0).setDepth(3000);
     const bg = scene.add.graphics().fillStyle(0x000000, 1).fillRect(0, 0, 375, 667);
 
-    const title = scene.add.text(187, 100, "GLITCHED\nARENA", {
+    const title = scene.add.text(187, 80, "GLITCHED\nARENA", {
         fontSize: '42px', fill: '#00ffff', align: 'center', fontWeight: 'bold', stroke: '#ff00ff', strokeThickness: 4
     }).setOrigin(0.5);
 
-    // СТАТИСТИКА В МЕНЮ
-    const stats = scene.add.text(187, 180, `BEST SEC: ${bestLevel} | MAX DIST: ${bestDistance}m`, {
-        fontSize: '12px', fill: '#00ff00', fontFamily: 'Courier New'
-    }).setOrigin(0.5);
+    const btnStyle = { fontSize: '18px', fill: '#fff', backgroundColor: '#222', padding: 10 };
 
-    const btnStyle = { fontSize: '20px', fill: '#fff', backgroundColor: '#222', padding: 12 };
+    // Кнопки управления (сдвинуты для баланса)
+    const startBtn = scene.add.text(187, 210, ">> START SYSTEM", btnStyle).setOrigin(0.5).setInteractive();
+    const hangarBtn = scene.add.text(187, 275, ">> HANGAR [SKINS]", btnStyle).setOrigin(0.5).setInteractive();
+    const shopBtn = scene.add.text(187, 340, ">> DATA SHOP", btnStyle).setOrigin(0.5).setInteractive();
+    const setBtn = scene.add.text(187, 405, ">> PILOT SETTINGS", btnStyle).setOrigin(0.5).setInteractive();
+    const soundBtn = scene.add.text(187, 470, `>> AUDIO: ${isSoundOn ? 'ON' : 'OFF'}`, btnStyle).setOrigin(0.5).setInteractive();
+    const rulesBtn = scene.add.text(187, 535, ">> HOW_TO_SURVIVE", btnStyle).setOrigin(0.5).setInteractive();
 
-    const startBtn = scene.add.text(187, 260, ">> START SYSTEM", btnStyle).setOrigin(0.5).setInteractive();
+    // Логика кнопок
     startBtn.on('pointerdown', () => {
-        menu.destroy();
-        isStarted = true;
+        menu.destroy(); isStarted = true;
         if (isSoundOn && !scene.sound.get('bgm')) scene.sound.play('bgm', {loop:true, volume:0.15});
-
-        // ЗАПУСК СИСТЕМ (Таймеры теперь живут здесь)
         scene.obstacleTimer = scene.time.addEvent({ delay: Math.max(300, 1150 - level * 50), callback: spawnObstacle, callbackScope: scene, loop: true });
         scene.shootEvent = scene.time.addEvent({ delay: 150 - (upgradeLevels.fire * 20), callback: playerShoot, callbackScope: scene, loop: true });
         itemsTimer = scene.time.addEvent({ delay: 1000, callback: spawnItem, callbackScope: scene, loop: true });
     });
 
-    const shopBtn = scene.add.text(187, 330, ">> DATA SHOP", btnStyle).setOrigin(0.5).setInteractive();
+    hangarBtn.on('pointerdown', () => { menu.setVisible(false); showHangar(scene, menu); });
     shopBtn.on('pointerdown', () => { menu.setVisible(false); showShop(scene, menu); });
-
-    const soundBtn = scene.add.text(187, 400, `>> AUDIO: ${isSoundOn ? 'ON' : 'OFF'}`, btnStyle).setOrigin(0.5).setInteractive();
+    setBtn.on('pointerdown', () => { menu.setVisible(false); showSettings(scene, menu); });
+    rulesBtn.on('pointerdown', () => { menu.setVisible(false); showRules(scene, menu); });
     soundBtn.on('pointerdown', () => {
         isSoundOn = !isSoundOn;
         soundBtn.setText(`>> AUDIO: ${isSoundOn ? 'ON' : 'OFF'}`);
         if (!isSoundOn) scene.sound.stopAll();
     });
 
-    const rulesBtn = scene.add.text(187, 470, ">> HOW_TO_SURVIVE", btnStyle).setOrigin(0.5).setInteractive();
-    rulesBtn.on('pointerdown', () => { menu.setVisible(false); showRules(scene, menu); });
-
-    menu.add([bg, title, stats, startBtn, shopBtn, soundBtn, rulesBtn]);
+    menu.add([bg, title, startBtn, hangarBtn, shopBtn, setBtn, soundBtn, rulesBtn]);
     return menu;
 }
 
@@ -1263,5 +1265,159 @@ function refreshPlayerAppearance(scene) {
     const skin = SKIN_DATA[currentSkin] || SKIN_DATA.classic;
     if (trailEmitter) {
         trailEmitter.setParticleTint(skin.trail);
+    }
+}
+
+function showSettings(scene, mainMenu) {
+    const overlay = scene.add.container(0, 0).setDepth(4000);
+    const bg = scene.add.graphics().fillStyle(0x000000, 0.98).fillRect(0, 0, 375, 667);
+    const title = scene.add.text(187, 60, "PILOT_CALIBRATION", { fontSize: '24px', fill: '#00ffff' }).setOrigin(0.5);
+    overlay.add([bg, title]);
+
+    // Превью
+    const finger = scene.add.circle(187, 350, 15, 0xffffff, 0.3).setStrokeStyle(2, 0xffffff);
+    const shipPreview = scene.add.sprite(187, 350 + yOffset, player.texture.key).setScale(2);
+    overlay.add([finger, shipPreview]);
+
+    const info = scene.add.text(187, 450, `OFFSET: ${Math.abs(yOffset)}px`, { fontSize: '18px', fill: '#00ffff' }).setOrigin(0.5);
+    overlay.add(info);
+
+    const adjust = (v) => {
+        yOffset = Phaser.Math.Clamp(yOffset + v, -150, 0);
+        shipPreview.setY(350 + yOffset);
+        info.setText(`OFFSET: ${Math.abs(yOffset)}px`);
+        saveProgress();
+    };
+
+    const up = scene.add.text(120, 520, " [ HIGHER ] ", { backgroundColor: '#004400', padding: 10 }).setOrigin(0.5).setInteractive().on('pointerdown', () => adjust(-10));
+    const down = scene.add.text(254, 520, " [ LOWER ] ", { backgroundColor: '#440000', padding: 10 }).setOrigin(0.5).setInteractive().on('pointerdown', () => adjust(10));
+    overlay.add([up, down]);
+
+    const back = scene.add.text(187, 610, "<< APPLY & EXIT", {
+        fontSize: '18px', fill: '#ff00ff', backgroundColor: '#220022', padding: 12
+    }).setOrigin(0.5).setInteractive().on('pointerdown', () => {
+        overlay.destroy(); mainMenu.setVisible(true);
+    });
+    overlay.add(back);
+}
+
+function showHangar(scene, mainMenu) {
+    const overlay = scene.add.container(0, 0).setDepth(4000);
+    const bg = scene.add.graphics().fillStyle(0x000000, 0.98).fillRect(0, 0, 375, 667);
+    const title = scene.add.text(187, 40, "SHIP_HANGAR", { fontSize: '26px', fill: '#00ffff', fontWeight: 'bold' }).setOrigin(0.5);
+    overlay.add([bg, title]);
+
+    // Статистика корабля
+    const stats = getShipStats();
+    const statsText = scene.add.text(187, 80, stats.label, { fontSize: '12px', fill: '#ffff00', backgroundColor: '#222', padding: 5 }).setOrigin(0.5);
+    overlay.add(statsText);
+
+    // 1. ВЫБОР ФОРМЫ
+    overlay.add(scene.add.text(40, 110, "--- HULL_TYPE ---", { fontSize: '14px', fill: '#ff00ff' }));
+    const shapes = [
+        { id: 'classic', name: 'CLASSIC BOX', unlocked: true },
+        { id: 'striker', name: 'VOID STRIKER', unlocked: upgradeLevels.skin_striker > 0 }
+    ];
+
+    shapes.forEach((s, i) => {
+        if (!s.unlocked) return;
+        const btn = scene.add.text(60, 145 + (i * 40), `> ${s.name}`, {
+            fontSize: '18px', fill: currentShape === s.id ? '#00ffff' : '#666'
+        }).setInteractive().on('pointerdown', () => {
+            currentShape = s.id; saveProgress(); refreshPlayerAppearance(scene);
+            overlay.destroy(); showHangar(scene, mainMenu); // Перерисовать
+        });
+        overlay.add(btn);
+    });
+
+    // 2. ВЫБОР ЦВЕТА
+    overlay.add(scene.add.text(40, 260, "--- VISUAL_SKIN ---", { fontSize: '14px', fill: '#ff00ff' }));
+    const skins = [
+        { id: 'classic', name: 'CYAN NEON', unlocked: true },
+        { id: 'gold', name: 'PURE GOLD', unlocked: upgradeLevels.skin_gold > 0 },
+        { id: 'ghost', name: 'NEON GHOST', unlocked: upgradeLevels.skin_ghost > 0 }
+    ];
+
+    skins.forEach((sk, i) => {
+        if (!sk.unlocked) return;
+        const btn = scene.add.text(60, 300 + (i * 40), `> ${sk.name}`, {
+            fontSize: '18px', fill: currentSkin === sk.id ? '#00ffff' : '#666'
+        }).setInteractive().on('pointerdown', () => {
+            currentSkin = sk.id; saveProgress(); refreshPlayerAppearance(scene);
+            overlay.destroy(); showHangar(scene, mainMenu);
+        });
+        overlay.add(btn);
+    });
+
+    // ПРЕВЬЮ
+    const preview = scene.add.sprite(280, 180, player.texture.key).setScale(3.5);
+    overlay.add(preview);
+
+    // --- БЛОК BOSS INTEL ---
+    const intel = getBossIntel();
+    const intelBox = scene.add.rectangle(187, 480, 330, 90, 0xff00ff, 0.05).setStrokeStyle(1, 0xff00ff);
+    const intelTitle = scene.add.text(187, 450, `SCANNING_SECTOR_${level}...`, { fontSize: '10px', fill: '#ff00ff' }).setOrigin(0.5);
+
+    const bossName = scene.add.text(187, 470, `TARGET: ${intel.name}`, { fontSize: '16px', fill: '#fff', fontWeight: 'bold' }).setOrigin(0.5);
+    const bossDesc = scene.add.text(187, 490, intel.desc, { fontSize: '11px', fill: '#aaa' }).setOrigin(0.5);
+    const bossTip = scene.add.text(187, 515, intel.tip, { fontSize: '12px', fill: '#00ff00', fontWeight: 'bold' }).setOrigin(0.5);
+
+    overlay.add([intelBox, intelTitle, bossName, bossDesc, bossTip]);
+
+    // Кнопка BACK
+    const back = scene.add.text(187, 610, "<< RETURN TO MENU", {
+        fontSize: '18px', fill: '#fff', backgroundColor: '#330033', padding: 12
+    }).setOrigin(0.5).setInteractive().on('pointerdown', () => {
+        overlay.destroy(); mainMenu.setVisible(true);
+    });
+    overlay.add(back);
+}
+
+function getShipStats() {
+    let stats = { atk: 1, spd: 1, label: "STANDARD" };
+
+    // Бонус за форму
+    if (currentShape === 'striker') {
+        stats.atk += 0.2; // +20% Урон
+        stats.label = "STRIKER: +20% ATK";
+    }
+
+    // Бонус за цвет
+    if (currentSkin === 'gold') {
+        stats.atk += 0.1; // Золото чуть мощнее
+        stats.label += " | GOLD: +10% ATK";
+    } else if (currentSkin === 'ghost') {
+        stats.spd += 0.15; // Призрак быстрее
+        stats.label += " | GHOST: +15% SPD";
+    }
+
+    return stats;
+}
+
+function getBossIntel() {
+    if (level < 15) {
+        return {
+            name: "SCOUT_DRONE",
+            desc: "Light armor. Standard patterns.",
+            tip: "SUGGEST: GOLD (for farming)"
+        };
+    } else if (level < 20) {
+        return {
+            name: "MEGA_TURRET",
+            desc: "Dual side cannons. High fire rate.",
+            tip: "SUGGEST: STRIKER (+20% ATK)"
+        };
+    } else if (level < 30) {
+        return {
+            name: "SHIELD_MASTER",
+            desc: "Orbital protection. Hard to hit.",
+            tip: "SUGGEST: STRIKER (Break shields fast)"
+        };
+    } else {
+        return {
+            name: "CORE_OVERLOAD",
+            desc: "Rage mode. Bullet hell chaos.",
+            tip: "SUGGEST: GHOST (+15% SPD)"
+        };
     }
 }
