@@ -1511,17 +1511,23 @@ async function showLeaderboard(scene, mainMenu) {
             else if (i === 1) { color = '#C0C0C0'; medal = '🥈 '; }
             else if (i === 2) { color = '#CD7F32'; medal = '🥉 '; }
 
-            const rank = scene.add.text(30, y, `${medal}#${i+1}`, { fontSize: '15px', fill: color, fontWeight: 'bold' });
-            const name = scene.add.text(95, y, entry.username.substring(0, 12).toUpperCase(), { fontSize: '14px', fill: color });
-            const score = scene.add.text(345, y, `${entry.score}m`, { fontSize: '14px', fill: color, fontWeight: 'bold' }).setOrigin(1, 0);
+            const rank = scene.add.text(25, y, `${medal}#${i+1}`, { fontSize: '14px', fill: color, fontWeight: 'bold', fontFamily: 'Courier New' });
 
-            // Подсветка ТЕКУЩЕГО игрока
+            // Имя игрока
+            const name = scene.add.text(85, y, entry.username.substring(0, 10).toUpperCase(), { fontSize: '14px', fill: color, fontFamily: 'Courier New' });
+
+            // НОВОЕ: Сектор (Уровень)
+            const sector = scene.add.text(230, y, `S:${entry.level}`, { fontSize: '12px', fill: '#ff00ff', fontFamily: 'Courier New' }).setOrigin(0.5, 0);
+
+            // Дистанция
+            const score = scene.add.text(350, y, `${entry.score}m`, { fontSize: '14px', fill: color, fontWeight: 'bold', fontFamily: 'Courier New' }).setOrigin(1, 0);
+
             if (window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name === entry.username) {
-                const highlight = scene.add.rectangle(187, y + 10, 340, 30, 0x00ffff, 0.1).setOrigin(0.5, 0.3);
+                const highlight = scene.add.rectangle(187, y + 10, 345, 30, 0x00ffff, 0.1).setOrigin(0.5, 0.3);
                 overlay.add(highlight);
             }
 
-            overlay.add([rank, name, score]);
+            overlay.add([rank, name, sector, score]);
         });
     } catch (e) {
         console.error(e);
