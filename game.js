@@ -22,7 +22,7 @@ let isMagnetActive = false;
 let bossTurretL, bossTurretR;
 let bossTurretLTrail, bossTurretRTrail;
 let milestoneBar;
-let upgradeLevels = { fire: 0, ultra: 0, speed: 0, health: 0, shield: 0 };
+let upgradeLevels = { fire: 0, ultra: 0, speed: 0, health: 0, shield: 0, skin_striker: 0, skin_gold: 0 };
 let playerHealth = 100, bossHealth = 400, isShieldActive = false;
 let overdrive = 0, isVictory = false, isShopOpen = false, isDead = false, isBossFight = false, isStarted = false, isPhase2 = false, isPaused = false;
 
@@ -30,6 +30,15 @@ let player, boss, obstacles, bullets, playerBullets, scoreText, levelText, bestT
 let playerBar, bossBar, overdriveBar, roadBar, shieldAura, trailEmitter, bossTrail;
 let items, itemsTimer;
 let minions, minionBullets;
+let currentShape = 'classic';
+let currentSkin = 'classic';
+const SKIN_DATA = {
+    classic: { body: 0x00ffff, eyes: 0xffffff, trail: 0x00ffff, bullet: 0x00ffff, alpha: 1 },
+    phantom: { body: 0x9900ff, eyes: 0x00ffff, trail: 0x9900ff, bullet: 0x9900ff, alpha: 1 },
+    gold:    { body: 0xffff00, eyes: 0x000000, trail: 0xffaa00, bullet: 0xffff00, alpha: 1 }, // Золотые пули!
+    neon:    { body: 0xff0055, eyes: 0xffffff, trail: 0xff0055, bullet: 0xff0055, alpha: 1 },
+    ghost:   { body: 0x00ffff, eyes: 0xff00ff, trail: 0xffffff, bullet: 0xffffff, alpha: 0.5 } // Белые пули
+};
 
 // --- СИСТЕМА СОХРАНЕНИЯ (ЕДИНЫЙ КЛЮЧ) ---
 const saveProgress = () => {
@@ -40,6 +49,7 @@ const saveProgress = () => {
 
     // 2. Дистанция: проверяем, побит ли глобальный рекорд
     let currentDist = Math.floor(distance);
+
     if (currentDist > bestDistance) {
         bestDistance = currentDist;
     }
@@ -52,6 +62,8 @@ const saveProgress = () => {
         bestDistance,
         maxPlayerHealth,
         isShieldActive,
+        currentShape: currentShape,
+        currentSkin: currentSkin,
         shareClaimed: upgradeLevels.shareClaimed
     }));
 };
@@ -67,6 +79,8 @@ const loadProgress = () => {
         coins = p.coins || 0;
         maxPlayerHealth = p.maxPlayerHealth || 100;
         isShieldActive = p.isShieldActive || false;
+        currentShape = p.currentShape || 'classic';
+        currentSkin = p.currentSkin || 'classic';
         // КРИТИЧЕСКИЙ ФИКС: Пересчитываем цель для высоких уровней
         runGoal = 700 + (level - 1) * 100;
         upgradeLevels.shareClaimed = p.shareClaimed || false;
@@ -75,7 +89,16 @@ const loadProgress = () => {
 loadProgress();
 
 const config = {
-    type: Phaser.AUTO, width: 375, height: 667, backgroundColor: '#000000', parent: 'game-container',
+    type: Phaser.AUTO,
+    width: 375,
+    height: 667,
+    backgroundColor: '#000000',
+    parent: 'game-container',
+    render: {
+        pixelArt: false, // Для четких шрифтов
+        antialias: true,
+        roundPixels: true // Чтобы объекты не "дрожали" между пикселями
+    },
     physics: { default: 'arcade', arcade: { gravity: { y: 0 } } },
     scene: { preload, create, update }
 };
@@ -107,7 +130,7 @@ function create() {
     isDead = false;
     isBossFight = false;
     distance = 0; overdrive = 0; isPhase2 = false; isStarted = false; isPaused = false;
-    playerHealth = 100; bossHealth = 400 * (1 + level * 0.45);
+    playerHealth = maxPlayerHealth; bossHealth = 400 * (1 + level * 0.45);
     isMagnetActive = false; // Отключаем магнит
     isGlitchMode = false;   // Сбрасываем режим безумия
     this.physics.world.timeScale = 1; // Возвращаем время в норму
@@ -156,7 +179,17 @@ function create() {
     shieldAura = this.add.sprite(player.x, player.y, 'shield_aura').setDepth(11).setVisible(false);
 
     // НАСТОЯЩИЙ ШЛЕЙФ
-    trailEmitter = this.add.particles(0, 0, 'pixel', { speed: 60, scale: { start: 0.6, end: 0 }, alpha: { start: 0.4, end: 0 }, lifespan: 600, blendMode: 'ADD', follow: player, tint: 0x00ffff });
+    const skin = SKIN_DATA[currentSkin] || SKIN_DATA.classic;
+
+    trailEmitter = this.add.particles(0, 0, 'pixel', {
+        speed: 60,
+        scale: { start: 0.6, end: 0 },
+        alpha: { start: 0.4, end: 0 },
+        lifespan: 600,
+        blendMode: 'ADD',
+        follow: player,
+        tint: skin.trail // ТЕПЕРЬ ЦВЕТ ЗАВИСИТ ОТ СКИНА
+    });
 
     boss = this.physics.add.sprite(187, -200, 'boss')
     .setDepth(5)
@@ -560,7 +593,11 @@ function useOverdrive() {
     this.sound.play('sfx_ultra', { volume: 0.8 });
     this.cameras.main.shake(1000, 0.05);
 
-    let laser = this.add.sprite(player.x, player.y - 300, 'laser').setTint(0xffff00).setBlendMode('ADD').setDepth(6);
+    const skin = SKIN_DATA[currentSkin] || SKIN_DATA.classic;
+    let laser = this.add.sprite(player.x, player.y - 300, 'laser')
+        .setTint(skin.bullet) // Лазер в цвет пуль!
+        .setBlendMode('ADD')
+        .setDepth(6);
 
     this.tweens.add({
         targets: laser,
@@ -630,36 +667,53 @@ function showShop(scene, mainMenu) {
     const overlay = scene.add.container(0, 0).setDepth(4000);
     overlay.add(scene.add.graphics().fillStyle(0x000000, 0.98).fillRect(0, 0, 375, 667));
 
-    const creds = scene.add.text(187, 45, `CREDITS: ${coins}`, { fill: '#ffff00', fontSize: '24px', fontWeight: 'bold' }).setOrigin(0.5);
-    const stats = scene.add.text(187, 80, `RECORD: SEC ${bestLevel} | MAX: ${bestDistance}m`, {
-        fill: '#00ff00',
-        fontSize: '12px',
-        fontFamily: 'Courier New'
+    const creds = scene.add.text(187, 35, `CREDITS: ${coins}`, { fill: '#ffff00', fontSize: '24px', fontWeight: 'bold' }).setOrigin(0.5);
+    const stats = scene.add.text(187, 65, `RECORD: SEC ${bestLevel} | MAX: ${bestDistance}m`, {
+        fill: '#00ff00', fontSize: '11px', fontFamily: 'Courier New'
     }).setOrigin(0.5);
 
     const createBtn = (y, name, desc, cost, type, action) => {
-        // Проверяем статус в реальном времени
-        let isBought = type && (type === 'health' ? upgradeLevels[type] >= 10 : upgradeLevels[type] > 0);
-        if (type === 'shield') isBought = isShieldActive;
+        // ОПРЕДЕЛЯЕМ МАКСИМУМ: для здоровья 10, для остального пока 1
+        const maxLvl = (type === 'health') ? 10 : 1;
+        let curLvl = (type === 'shield') ? (isShieldActive ? 1 : 0) : (upgradeLevels[type] || 0);
 
-        const btnBg = scene.add.rectangle(187, y, 320, 55, isBought ? 0x004400 : 0x222222).setInteractive();
-        const btnText = scene.add.text(187, y - 10, isBought ? `${name} [INSTALLED]` : `${name} [${cost}]`, { fontSize: '15px', fill: '#fff', fontWeight: 'bold' }).setOrigin(0.5);
-        const descText = scene.add.text(187, y + 12, desc, { fontSize: '11px', fill: '#aaa' }).setOrigin(0.5);
+        // Кнопка станет зеленой только на макс. уровне
+        let isMaxed = curLvl >= maxLvl;
+
+        const btnBg = scene.add.rectangle(187, y, 320, 50, isMaxed ? 0x004400 : 0x222222).setInteractive();
+
+        // Добавляем счетчик в название
+        const label = isMaxed ? `${name} [MAXED]` : `${name} (${curLvl}/${maxLvl})`;
+        const btnText = scene.add.text(187, y - 10, `${label} [${cost}]`, { fontSize: '14px', fill: '#fff', fontWeight: 'bold' }).setOrigin(0.5);
+        if (isMaxed) btnText.setText(`${name} [INSTALLED]`).setTint(0x00ff88);
+
+        const descText = scene.add.text(187, y + 12, desc, { fontSize: '10px', fill: '#aaa' }).setOrigin(0.5);
 
         btnBg.on('pointerdown', () => {
-            if (isBought) return;
+            if (isMaxed) return;
             if (coins >= cost) {
                 coins -= cost;
+
                 if(type === 'shield') {
                     isShieldActive = true;
                     upgradeLevels.shield = 1;
-                } else { upgradeLevels[type]++; } // Фикс Shield
+                } else {
+                    upgradeLevels[type] = (upgradeLevels[type] || 0) + 1;
+                }
+
                 if(action) action();
                 saveProgress();
+
+                // Мгновенное обновление текста при покупке
+                let newLvl = (type === 'shield') ? 1 : upgradeLevels[type];
+                if (newLvl >= maxLvl) {
+                    btnBg.setFillStyle(0x004400);
+                    btnText.setText(`${name} [INSTALLED]`).setTint(0x00ff88);
+                } else {
+                    btnText.setText(`${name} (${newLvl}/${maxLvl}) [${cost}]`);
+                }
+
                 creds.setText(`CREDITS: ${coins}`);
-                btnBg.setFillStyle(0x004400);
-                btnText.setText("INSTALLED ✓").setTint(0x00ff88);
-                isBought = true;
                 if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
             } else {
                 scene.tweens.add({ targets: [btnBg, btnText, descText], x: 197, duration: 50, yoyo: true, repeat: 2, onComplete: () => btnBg.setX(187) });
@@ -668,15 +722,39 @@ function showShop(scene, mainMenu) {
         overlay.add([btnBg, btnText, descText]);
     };
 
-    createBtn(150, "ULTRA ANTENNA", "Ult charges 75% faster", 400, 'ultra');
-    createBtn(220, "DUAL CANNONS", "Extreme 3-way firepower", 800, 'fire');
-    createBtn(290, "SPEED BOOST", "+10% running speed", 300, 'speed');
-    createBtn(360, "REINFORCED HULL", "+25 Max HP & Full Heal", 500, 'health', () => { maxPlayerHealth += 25; playerHealth = maxPlayerHealth; });
-    createBtn(430, "EMERGENCY SHIELD", "Protects from one fatal hit", 150, 'shield', () => { isShieldActive = true; });
+    createBtn(115, "ULTRA ANTENNA", "Ult charges 75% faster", 400, 'ultra');
+    createBtn(170, "DUAL CANNONS", "Extreme 3-way firepower", 800, 'fire');
+    createBtn(225, "SPEED BOOST", "+10% running speed", 300, 'speed');
+    createBtn(280, "REINFORCED HULL", "+25 Max HP & Full Heal", 500, 'health', () => {
+        maxPlayerHealth += 25;
+        playerHealth = maxPlayerHealth;
+    });
+    createBtn(335, "EMERGENCY SHIELD", "Protects from one fatal hit", 150, 'shield');
+
+    // Скин STRIKER
+    createBtn(380, "VOID_STRIKER", "Ship shape: Dangerous Triangle", 1500, 'skin_striker', () => {
+        currentShape = 'striker';
+        saveProgress();
+        refreshPlayerAppearance(scene); // МГНОВЕННОЕ ОБНОВЛЕНИЕ
+    });
+
+    // Золотой скин
+    createBtn(430, "GOLD SKIN", "Pure gold style. Respect!", 2000, 'skin_gold', () => {
+        currentSkin = 'gold';
+        saveProgress();
+        refreshPlayerAppearance(scene); // МГНОВЕННОЕ ОБНОВЛЕНИЕ
+    });
+
+    // Neon Ghost
+    createBtn(480, "NEON GHOST", "Translucent cyberpunk style", 3000, 'skin_ghost', () => {
+        currentSkin = 'ghost';
+        saveProgress();
+        refreshPlayerAppearance(scene); // МГНОВЕННОЕ ОБНОВЛЕНИЕ
+    });
 
     if (isVictory) {
         // Уровень уже увеличен в triggerVictory, просто летим дальше
-        const nextBtn = scene.add.text(187, 575, `>> DEPLOY SECTOR ${level}`, {
+        const nextBtn = scene.add.text(187, 580, `>> DEPLOY SECTOR ${level}`, {
             fontSize: '22px', fill: '#00ffff', backgroundColor: '#003333', padding: 15
         }).setOrigin(0.5).setInteractive();
 
@@ -691,7 +769,7 @@ function showShop(scene, mainMenu) {
     }
 
     // КНОПКА SHARE
-    const share = scene.add.text(187, 520, "👥 INVITE FRIEND +500 GOLD", {
+    const share = scene.add.text(187, 530, "👥 INVITE FRIEND +500 GOLD", {
         fontSize: '16px', fill: '#00ff88', backgroundColor: '#003300', padding: 10
     }).setOrigin(0.5).setInteractive();
 
@@ -731,7 +809,7 @@ function showShop(scene, mainMenu) {
         share.setText("INVITATION SENT ✓").setFill("#aaa").disableInteractive();
     }
 
-    const back = scene.add.text(187, 635, "<< BACK TO MENU", { fontSize: '16px', fill: '#ff00ff' }).setOrigin(0.5).setInteractive().on('pointerdown', () => {
+    const back = scene.add.text(187, 630, "<< BACK TO MENU", { fontSize: '16px', fill: '#ff00ff' }).setOrigin(0.5).setInteractive().on('pointerdown', () => {
         overlay.destroy(); isShopOpen = false; saveProgress(); scene.scene.restart();
     });
     overlay.add([creds, stats, share, back]);
@@ -762,7 +840,24 @@ function bossShoot() {
     }
 }
 
-function playerShoot() { if (isShopOpen || isDead || !isStarted || isPaused) return; if(upgradeLevels.fire > 0) { playerBullets.create(player.x-18, player.y, 'pixel').setVelocityY(-750).setTint(0x00ffff); playerBullets.create(player.x+18, player.y, 'pixel').setVelocityY(-750).setTint(0x00ffff); } playerBullets.create(player.x, player.y-20, 'pixel').setVelocityY(-750).setTint(0x00ffff); }
+function playerShoot() {
+    if (isShopOpen || isDead || !isStarted || isPaused) return;
+
+    // Определяем цвет пули на основе скина
+    const skin = SKIN_DATA[currentSkin] || SKIN_DATA.classic;
+    const bColor = skin.bullet;
+
+    // Боковые пушки (если куплены)
+    if(upgradeLevels.fire > 0) {
+        playerBullets.create(player.x-18, player.y, 'pixel').setVelocityY(-750).setTint(bColor);
+        playerBullets.create(player.x+18, player.y, 'pixel').setVelocityY(-750).setTint(bColor);
+    }
+
+    // Центральная пушка
+    playerBullets.create(player.x, player.y-20, 'pixel').setVelocityY(-750).setTint(bColor);
+}
+
+
 function spawnObstacle() {
     if (!isStarted || isBossFight || isShopOpen || isPaused) return;
 
@@ -785,33 +880,46 @@ function togglePause() { isPaused = !isPaused; if (isPaused) this.physics.pause(
 
 function generatePlayerTexture(scene) {
     let g = scene.make.graphics({ x: 0, y: 0, add: false });
+    const skin = SKIN_DATA[currentSkin] || SKIN_DATA.classic;
 
-    // ТЕЛО (Голубое)
-    g.fillStyle(0x00ffff, 1);
-    g.fillRoundedRect(4, 10, 24, 18, 6);
+    // Используем прозрачность скина (для призрака - 0.5)
+    g.fillStyle(skin.body, skin.alpha || 1);
 
-    // ПУШКИ
+    if (currentShape === 'striker') {
+        // РИСУЕМ ТРЕУГОЛЬНИК
+        g.fillTriangle(16, 2, 0, 38, 32, 38);
+        g.fillRect(0, 30, 4, 10);
+        g.fillRect(28, 30, 4, 10);
+
+        // Глаза пониже, чтобы влезли в треугольник
+        g.fillStyle(skin.eyes, 1);
+        g.fillRect(12, 25, 2, 4);
+        g.fillRect(18, 25, 2, 4);
+    } else {
+        // КЛАССИКА
+        g.fillRoundedRect(4, 10, 24, 18, 6);
+        g.fillStyle(skin.eyes, 1);
+        g.fillRect(12, 16, 2, 2);
+        g.fillRect(18, 16, 2, 2);
+    }
+
+    // ДОПЫ (Пушки и Антенна)
     if (upgradeLevels.fire > 0) {
         g.fillStyle(0xff0000, 1);
         g.fillRect(0, 12, 6, 14);
         g.fillRect(26, 12, 6, 14);
     }
 
-    // АНТЕННА (Сделал её ВЫШЕ и ЯРЧЕ)
     g.lineStyle(3, 0x00ffff, 1);
     g.lineBetween(16, 10, 16, -5);
     if (upgradeLevels.ultra > 0) {
         g.fillStyle(0xffff00, 1);
-        g.fillCircle(16, -8, 8); // Большой желтый шар
+        g.fillCircle(16, -8, 8);
         g.lineStyle(2, 0xffff00, 0.5);
-        g.strokeCircle(16, -8, 12); // Эффект свечения
+        g.strokeCircle(16, -8, 12);
     }
 
-    g.fillStyle(0xffffff, 1);
-    g.fillRect(12, 6, 2, 2);
-    g.fillRect(18, 6, 2, 2);
-
-    const name = `p_v52_final_${Date.now()}`;
+    const name = `p_v_${currentShape}_${currentSkin}_${Date.now()}`;
     g.generateTexture(name, 32, 40);
     g.destroy();
     return name;
@@ -1139,4 +1247,21 @@ function showRules(scene, mainMenu) {
         mainMenu.setVisible(true);
     });
     rulesOverlay.add(back);
+}
+
+function refreshPlayerAppearance(scene) {
+    scene.cameras.main.flash(200, 255, 255, 255, 0.3);
+    if (!player) return; // Если игрока ещё нет на экране, ничего не делаем
+
+    // Генерируем новую текстуру с текущими скином и формой
+    const newTexName = generatePlayerTexture(scene);
+
+    // Применяем её к спрайту игрока
+    player.setTexture(newTexName);
+
+    // ОБНОВЛЯЕМ ЦВЕТ ШЛЕЙФА
+    const skin = SKIN_DATA[currentSkin] || SKIN_DATA.classic;
+    if (trailEmitter) {
+        trailEmitter.setParticleTint(skin.trail);
+    }
 }
