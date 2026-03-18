@@ -1517,7 +1517,7 @@ async function showLeaderboard(scene, mainMenu) {
             const name = scene.add.text(85, y, entry.username.substring(0, 10).toUpperCase(), { fontSize: '14px', fill: color, fontFamily: 'Courier New' });
 
             // НОВОЕ: Сектор (Уровень)
-            const sector = scene.add.text(230, y, `S:${entry.level}`, { fontSize: '12px', fill: '#ff00ff', fontFamily: 'Courier New' }).setOrigin(0.5, 0);
+            const sector = scene.add.text(230, y, `S:${entry.level}`, { fontSize: '14px', fill: color, fontWeight: 'bold', fontFamily: 'Courier New' }).setOrigin(1, 0);
 
             // Дистанция
             const score = scene.add.text(350, y, `${entry.score}m`, { fontSize: '14px', fill: color, fontWeight: 'bold', fontFamily: 'Courier New' }).setOrigin(1, 0);
