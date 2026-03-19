@@ -531,7 +531,9 @@ function startBossFight(scene) {
     }
 
     scene.bossShootEvent = scene.time.addEvent({
-        delay: isPhase2 ? 800 : 1200, callback: bossShoot,
+        // В фазе 2 задержка уменьшается, но зависит от уровня
+        delay: isPhase2 ? Math.max(800, 1300 - level * 30) : 1200,
+        callback: bossShoot,
         callbackScope: scene, loop: true
     });
     scene.phraseTimer = scene.time.addEvent({
@@ -831,8 +833,9 @@ function showShop(scene, mainMenu) {
 function bossShoot() {
     if (isShopOpen || isDead || !isBossFight || isPaused || bullets.getLength() > 200) return;
 
-    let count = isPhase3 ? 32 : (isPhase2 ? 24 : 12); // Увеличиваем плотность огня
-    let speed = isPhase3 ? 400 : 350;
+    // Плавное масштабирование сложности
+    let count = isPhase3 ? 32 : (isPhase2 ? Math.min(24, 12 + level) : 12);
+    let speed = isPhase3 ? 400 : (300 + level * 5);
 
     for (let i = 0; i < count; i++) {
         let angle = i * (Math.PI * 2 / count);
@@ -944,17 +947,24 @@ function spawnItem() {
     let x = Phaser.Math.Between(50, 320);
     let rand = Math.random();
     let type = 'coin';
-    // УВЕЛИЧИЛИ ШАНС: теперь на элитных уровнях сердечки падают часто
-    let heartChance = level >= 30 ? 0.60 : (level >= 25 ? 0.75 : 0.99);
 
-    if (rand > heartChance) {
-        type = 'heart';
-    } else if (rand > 0.97) {
-        type = 'magnet';
-    } else if (rand > 0.93) {
-        type = 'nuke';
-    } else if (rand > 0.85) {
-        type = 'slowmo';
+    // Сначала проверяем самые РЕДКИЕ бонусы
+    if (rand > 0.98) {
+        type = 'nuke';    // 2% шанс (станет в 2 раза реже, чем сейчас)
+    } else if (rand > 0.95) {
+        type = 'magnet';  // 3% шанс
+    } else if (rand > 0.90) {
+        type = 'slowmo';  // 5% шанс
+    } else {
+        // выбираем между Монетой и Сердцем
+        // На 1 уровне шанс сердца 1%, на 30 уровне — 40%
+        let heartChance = level >= 30 ? 0.40 : (level >= 25 ? 0.25 : 0.01);
+
+        if (Math.random() < heartChance) {
+            type = 'heart';
+        } else {
+            type = 'coin';
+        }
     }
 
     let item = items.create(x, -20, type === 'heart' ? 'heart' : 'pixel');
@@ -997,21 +1007,52 @@ function collectItem(p, item) {
     }
 
     if (type === 'nuke') {
-        // Проигрываем сирену (обрезаем программно до 2 секунд)
+        // 1. ЗВУК И СИРЕНА
         this.sound.play('sfx_nuke', { volume: 0.5, stopOnTerminate: true });
         this.time.delayedCall(2000, () => { this.sound.stopByKey('sfx_nuke'); });
 
-        // ВИБРАЦИЯ: Телефон взорвется в руках!
+        // 2. ВИБРАЦИЯ
         if (window.Telegram?.WebApp?.HapticFeedback) {
             Telegram.WebApp.HapticFeedback.notificationOccurred('success');
         }
 
-        // ЭФФЕКТ: Экран заливается розовым глитчем
-        this.cameras.main.flash(500, 255, 0, 255, 0.6);
-        this.cameras.main.shake(600, 0.04);
+        // 3. ВИЗУАЛЬНАЯ ВОЛНА ОТ ИГРОКА
+        let wave = this.add.circle(player.x, player.y, 20, 0xff00ff, 0.7).setDepth(2000);
+        this.tweens.add({
+            targets: wave,
+            radius: 800,
+            alpha: 0,
+            duration: 600,
+            ease: 'Expo.out',
+            onComplete: () => wave.destroy()
+        });
 
-        // Удаляем все препятствия
+        // 4. ЭФФЕКТЫ КАМЕРЫ
+        this.cameras.main.flash(400, 255, 0, 255, 0.4);
+        this.cameras.main.shake(500, 0.03);
+
+        // 5. КРАСИВОЕ РАЗРУШЕНИЕ БЛОКОВ
+        obstacles.children.each(obs => {
+            if (obs.active) {
+                // Создаем 6-8 мелких «осколков» на месте каждого блока
+                for (let i = 0; i < 6; i++) {
+                    let frag = this.add.rectangle(obs.x, obs.y, 6, 6, 0xff0000).setDepth(5);
+                    this.physics.add.existing(frag);
+                    // Разлетаются в случайные стороны с большой скоростью
+                    frag.body.setVelocity(
+                        Phaser.Math.Between(-500, 500),
+                        Phaser.Math.Between(-500, 500)
+                    );
+                    // Осколки быстро исчезают
+                    this.time.delayedCall(400, () => frag.destroy());
+                }
+            }
+        });
+
+        // 6. ОЧИСТКА ГРУППЫ (Только препятствия)
         obstacles.clear(true, true);
+
+        // 7. ТЕКСТ
         glitchText.setText("SYSTEM_PURIFIED").setFill("#ff00ff").setAlpha(1);
         this.time.delayedCall(1500, () => glitchText.setAlpha(0));
 
