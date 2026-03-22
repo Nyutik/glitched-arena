@@ -364,12 +364,12 @@ function update(time, delta) {
         if (isPhase3) {
             // Босс встает в центр и вибрирует
             boss.x = 187 + Math.sin(time * 0.05) * 5;
-            boss.y = 200 + Math.cos(time * 0.05) * 5;
+            boss.y = 150 + Math.cos(time * 0.05) * 5;
             boss.angle += 20; // Бешеное вращение
         } else {
             // Обычное движение
             boss.x = 187 + Math.sin(t * 1.8) * 140;
-            boss.y = 250 + Math.cos(t * 1.2) * 50;
+            boss.y = 160 + Math.cos(t * 1.2) * 50;
             boss.angle += isPhase2 ? 15 : 2;
         }
 
@@ -563,7 +563,7 @@ function startBossFight(scene) {
     obstacles.clear(true, true); // КРИТИЧЕСКИЙ ФИКС: Убираем старые блоки!
     bullets.clear(true, true);   // И пули тоже
     isBossFight = true;
-    boss.setVisible(true).setY(150);
+    boss.setVisible(true).setY(100);
     bossTrail.setVisible(true);
     distanceText.setText("");
     if (scene.obstacleTimer) scene.obstacleTimer.remove();
@@ -1000,10 +1000,10 @@ function spawnObstacle() {
         obstacle.setData('isDrone', true);
         obstacle.setTint(0xffaa00); // ЯРКО-ЗОЛОТИСТЫЙ ОРАНЖЕВЫЙ
         obstacle.setScale(1.1);      // Сделали крупнее обычных стен
-        obstacle.setVelocityY(480 + (level * 15));
+        obstacle.setVelocityY(320 + (level * 8));
     } else {
         obstacle.setTint(0xff0000);
-        obstacle.setVelocityY(450 + (level * 25));
+        obstacle.setVelocityY(300 + (level * 12));
     }
 }
 
