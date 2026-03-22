@@ -183,7 +183,7 @@ function create() {
         // AJAX к твоему боту API: fetch(`/api/boosts/${userId}`)
         // Если shield_active → isShieldActive = true;
     }
-    player = this.physics.add.sprite(187, 550, pTex).setDepth(10).setCollideWorldBounds(true);
+    player = this.physics.add.sprite(187, 600, pTex).setDepth(10).setCollideWorldBounds(true);
     shieldAura = this.add.sprite(player.x, player.y, 'shield_aura').setDepth(11).setVisible(false);
 
     // НАСТОЯЩИЙ ШЛЕЙФ
