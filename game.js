@@ -180,11 +180,25 @@ function create() {
     const pTex = generatePlayerTexture(this);
     if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
         const userId = Telegram.WebApp.initDataUnsafe.user.id;
-        // AJAX к твоему боту API: fetch(`/api/boosts/${userId}`)
-        // Если shield_active → isShieldActive = true;
     }
+    // Игрок всегда внизу (600px)
     player = this.physics.add.sprite(187, 600, pTex).setDepth(10).setCollideWorldBounds(true);
     shieldAura = this.add.sprite(player.x, player.y, 'shield_aura').setDepth(11).setVisible(false);
+    this.isFirstMove = false;
+
+    this.input.on('pointermove', (p) => {
+        if (isStarted && !isShopOpen && !isDead && !isPaused) {
+            // Двигаем корабль только если игрок уже начал вести пальцем/мышью
+            if (!this.isFirstMove) {
+                // Если курсор слишком далеко от низа при старте, игнорируем резкий скачок
+                if (Math.abs(p.y - 600) < 100) this.isFirstMove = true;
+                else return;
+            }
+            player.x = p.x;
+            player.y = p.y + yOffset;
+            shieldAura.setPosition(player.x, player.y);
+        }
+    });
 
     // НАСТОЯЩИЙ ШЛЕЙФ
     const skin = SKIN_DATA[currentSkin] || SKIN_DATA.classic;
@@ -242,12 +256,12 @@ function create() {
     glitchText = this.add.text(187, 300, '', { fontFamily: 'Courier New', fontSize: '24px', stroke: '#000', strokeThickness: 6, align: 'center' }).setOrigin(0.5).setDepth(100);
 
     // Графика полосок
-    playerBar = this.add.graphics().setDepth(100);
-    bossBar = this.add.graphics().setDepth(100);
+    //playerBar = this.add.graphics().setDepth(100);
+    //bossBar = this.add.graphics().setDepth(100);
     overdriveBar = this.add.graphics().setDepth(100);
     roadBar = this.add.graphics().setDepth(100);
     milestoneBar = this.add.graphics().setDepth(100);
-
+    this.overheadGfx = this.add.graphics().setDepth(11);
 
 
     this.physics.add.overlap(player, obstacles, (p, o) => { o.destroy(); handleDamage(this, 35); });
@@ -274,13 +288,6 @@ function create() {
 
     this.physics.add.overlap(bossShields, playerBullets, (s, b) => { b.destroy(); s.setAlpha(1); this.time.delayedCall(100, () => s.setAlpha(0.4)); });
 
-    this.input.on('pointermove', (p) => {
-        if (isStarted && !isShopOpen && !isDead && !isPaused) {
-            player.x = p.x;
-            player.y = p.y + yOffset;
-            shieldAura.setPosition(player.x, player.y);
-        }
-    });
     this.input.on('pointerdown', () => { if (isStarted && overdrive >= 100 && !isPaused) useOverdrive.call(this); });
 
     this.comboSound = this.sound.add('sfx_combo', { volume: 0.3 });
@@ -396,75 +403,67 @@ function update(time, delta) {
         player.clearTint();
     }
 
-    // НОВОЕ: Шлейфы для всех активных пуль
+    // 1. Эффект "огня" для пуль
     [bullets, playerBullets, minionBullets].forEach(group => {
         group.children.each(b => {
-            if (b.active) {
-                // Создаем маленькую копию пули
-                let tail = this.add.rectangle(b.x, b.y, b.displayWidth * 0.6, b.displayHeight * 0.6, b.tintTopLeft)
-                    .setAlpha(0.5)
-                    .setDepth(b.depth - 1);
-
-                // Хвостик быстро уменьшается и исчезает
-                this.tweens.add({
-                    targets: tail,
-                    scale: 0,
-                    alpha: 0,
-                    duration: 100,
-                    onComplete: () => tail.destroy()
-                });
+            if (b && b.active) {
+                let trail = this.add.rectangle(b.x, b.y, b.displayWidth * 0.4, b.displayHeight * 0.4, b.tintTopLeft).setAlpha(0.4).setDepth(b.depth - 1);
+                this.tweens.add({ targets: trail, scale: 0, alpha: 0, duration: 70, onComplete: () => trail.destroy() });
             }
         });
     });
 
+    // 2. ОТРИСОВКА ИНФО НАД ГОЛОВОЙ (Вне цикла пуль!)
+    this.overheadGfx.clear();
+
+    if (player && player.active) {
+        let pPct = playerHealth / maxPlayerHealth;
+        let hudY = player.y - (player.displayHeight / 2) - 20;
+        let barW = 40;
+        let barColor = 0x00ffff;
+
+        // ЭФФЕКТ ПАНИКИ (HP < 20)
+        if (playerHealth < 20) {
+            let pulse = Math.abs(Math.sin(time * 0.015));
+            barColor = pulse > 0.5 ? 0xff0000 : 0x660000;
+            // Трясем текст для эффекта страха
+            pHealthLabel.setX(player.x + Math.random() * 4 - 2);
+            pHealthLabel.setFill('#ff0000');
+        } else {
+            pHealthLabel.setX(player.x).setFill('#00ffff');
+        }
+
+        // Рисуем полоску
+        this.overheadGfx.fillStyle(0x000000, 0.5).fillRect(player.x - barW/2, hudY, barW, 4);
+        this.overheadGfx.fillStyle(barColor).fillRect(player.x - barW/2, hudY, barW * pPct, 4);
+
+        // Текст НАД полоской
+        pHealthLabel.setPosition(player.x, hudY - 12).setOrigin(0.5)
+            .setText(`${Math.ceil(playerHealth)} HP`).setFontSize('11px').setDepth(101);
+    }
+
+    // --- HUD БОССА ---
+    if (isBossFight && boss && boss.visible) {
+        let maxB = 400 * (1 + level * 0.45);
+        let bPct = Math.max(0, bossHealth / maxB);
+        let hudY = boss.y - (boss.displayHeight * boss.scale / 2) - 25;
+        let barW = 100;
+
+        // Цвет полоски босса (красный в ярости)
+        let bColor = isPhase2 ? 0xff0000 : 0xff00ff;
+
+        this.overheadGfx.fillStyle(0x000000, 0.5).fillRect(boss.x - barW/2, hudY, barW, 6);
+        this.overheadGfx.fillStyle(bColor).fillRect(boss.x - barW/2, hudY, barW * bPct, 6);
+
+        // Текст CORE над полоской
+        bHealthLabel.setPosition(boss.x, hudY - 15).setOrigin(0.5)
+            .setText(`CORE: ${Math.ceil(bPct * 100)}%`).setFontSize('12px').setFill(isPhase2 ? '#ff0000' : '#ff00ff').setDepth(101);
+    }
 
     milestoneBar.clear();
-    updateBars(this);
     shieldAura.setVisible(isShieldActive);
 }
 
-function updateBars(scene) {
-    // Ширина теперь зависит от maxPlayerHealth
-    // Игрок: Фикс ширина 120
-    let healthWidth = (playerHealth / maxPlayerHealth) * 120;
-    playerBar.clear();
-
-    // ЭФФЕКТ КРИТИЧЕСКОГО ЗДОРОВЬЯ
-    if (playerHealth < 20) {
-        // Вычисляем пульсацию: быстро меняем цвет между ярко-красным и темно-красным
-        let pulse = Math.abs(Math.sin(scene.time.now * 0.015));
-        let color = pulse > 0.5 ? 0xff0000 : 0x660000;
-
-        playerBar.fillStyle(0x222222).fillRect(10, 85, 120, 8);
-        playerBar.fillStyle(color).fillRect(10, 85, healthWidth, 8);
-
-        // Трясем текст здоровья для паники
-        pHealthLabel.setX(10 + Math.random() * 2);
-        pHealthLabel.setFill('#ff0000');
-    } else {
-        // Обычное состояние
-        playerBar.fillStyle(0x222222).fillRect(10, 85, 120, 8);
-        playerBar.fillStyle(0x00ffff).fillRect(10, 85, healthWidth, 8);
-        pHealthLabel.setX(10).setFill('#00ffff');
-    }
-
-    pHealthLabel.setText(`YOU: ${Math.ceil(playerHealth)}/${maxPlayerHealth}`);
-
-    if (isBossFight) {
-        let maxB = 400 * (1 + level * 0.45);
-        let pct = Math.max(0, bossHealth / maxB);
-        // Босс: Фикс ширина 120 (справа)
-        bossBar.clear().fillStyle(0x222222).fillRect(245, 85, 120, 8).fillStyle(isPhase2 ? 0xff0000 : 0xff00ff).fillRect(245, 85, pct * 120, 8);
-        bHealthLabel.setText(`CORE: ${Math.ceil(pct * 100)}%`).setFill(isPhase2 ? "#ff0000" : "#ff00ff");
-    }
-    overdriveBar.clear().fillStyle(0x333333).fillRect(87, 650, 200, 8).fillStyle(0xffff00).fillRect(87, 650, (overdrive/100) * 200, 8);
-    if (overdrive >= 100 && !scene.ovrReady) {
-        scene.cameras.main.shake(300, 0.01); // Лёгкая вибрация при готовности
-        scene.ovrReady = true;
-    } else if (overdrive < 100) {
-        scene.ovrReady = false;
-    }
-}
 
 function handleDamage(scene, dmg) {
     if (isDead || isVictory) return;
@@ -619,6 +618,20 @@ function startBossFight(scene) {
     scene.minionTimer = scene.time.addEvent({
         delay: 4000, callback: spawnMinion, callbackScope: scene, loop: true
     });
+
+    if (level >= 10) {
+        // Увеличиваем базу босса и заставляем пульсировать
+        scene.tweens.add({
+            targets: boss,
+            scale: { from: 1.2, to: 1.5 },
+            duration: 800,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Quad.easeInOut'
+        });
+    } else {
+        boss.setScale(1); // Сброс для обычных уровней
+    }
 }
 
 function hitBoss(b, bullet) {
@@ -682,7 +695,7 @@ function useOverdrive() {
 
     overdrive = 0;
     this.sound.play('sfx_ultra', { volume: 0.8 });
-    this.cameras.main.shake(1000, 0.01);
+    this.cameras.main.shake(1000, 0.02);
 
     const skin = SKIN_DATA[currentSkin] || SKIN_DATA.classic;
     let laser = this.add.sprite(player.x, player.y - 300, 'laser')
@@ -696,8 +709,10 @@ function useOverdrive() {
         alpha: 0,
         duration: 1200,
         onUpdate: () => {
-            if (isBossFight && !isVictory && Math.abs(laser.x - boss.x) < 130) {
-                bossHealth -= Math.max(3, (12 - level) * currentStats.atk);
+            if (isBossFight && !isVictory && Math.abs(laser.x - boss.x) < 100) {
+                let maxB = 400 * (1 + level * 0.45);
+                // Луч стабильно сносит ~15% HP босса за весь залп
+                bossHealth -= (maxB * 0.003) * currentStats.atk;
                 if (bossHealth <= 0) { bossHealth = 0; triggerVictory(this); }
             }
         },
@@ -910,11 +925,20 @@ function showShop(scene, mainMenu) {
 function bossShoot() {
     if (isShopOpen || isDead || !isBossFight || isPaused || bullets.getLength() > 200) return;
 
-    // 1. ПАРАМЕТРЫ
-    // На 1 уровне всего 10 пуль (огромные дыры в обороне), к 15 уровню — 24
-    let count = isPhase3 ? 32 : (isPhase2 ? Math.min(24, 10 + level) : 10);
+    // Быстрый рост сложности: +1 пуля каждые 2 уровня
+    let baseBullets = 10 + Math.floor(level / 2);
+    let count = isPhase3 ? 32 : (isPhase2 ? Math.min(26, baseBullets + 6) : Math.min(22, baseBullets));
     let speed = isPhase3 ? 400 : (280 + level * 7);
     let patternType = Math.floor(this.time.now / 5000) % 2;
+
+    // Снайперский режим (каждый 5-й уровень)
+    let isSniperLevel = (level % 5 === 0);
+    if (isSniperLevel && !isPhase3) {
+        speed += 120;
+        patternType = 1;
+    }
+
+    //let bColor = isPhase2 ? 0xff0000 : 0xbb00ff;
 
     if (isPhase3) {
         for (let i = 0; i < count; i++) {
@@ -1094,9 +1118,23 @@ function collectItem(p, item) {
     if (type === 'heart') {
         // Восстанавливаем 25% здоровья
         playerHealth = Math.min(maxPlayerHealth, playerHealth + 25);
+
+        // Всплывающий текст лечения (зеленый)
+        let txt = this.add.text(player.x, player.y, "+25 HP", {
+            fontFamily: 'Courier New', fontSize: '18px', fill: '#00ff00', fontWeight: 'bold', stroke: '#000', strokeThickness: 3
+        }).setDepth(100);
+
+        this.tweens.add({
+            targets: txt,
+            y: player.y - 100,
+            alpha: 0,
+            duration: 800,
+            onComplete: () => txt.destroy()
+        });
+
         glitchText.setText("INTEGRITY_RESTORED").setFill("#ff0088");
         this.time.delayedCall(1000, () => glitchText.setText(""));
-        this.cameras.main.flash(300, 255, 0, 136, 0.4); // Розовая вспышка хила
+        this.cameras.main.flash(300, 255, 0, 136, 0.4);
         if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
     }
 
