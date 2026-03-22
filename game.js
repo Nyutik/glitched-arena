@@ -380,7 +380,43 @@ function update(time, delta) {
 
     // 4. ЕДИНСТВЕННАЯ ЖЕЛТАЯ ПОЛОСКА
     overdriveBar.clear().fillStyle(0x333333).fillRect(87, 645, 200, 8).fillStyle(0xffff00).fillRect(87, 645, (overdrive/100) * 200, 8);
-    if (overdrive >= 100) overdriveBar.setX(Math.sin(time * 0.1) * 3); else overdriveBar.setX(0);
+        // Создаем или обновляем мигающую надпись
+        if (overdrive >= 100) {
+        overdriveBar.setX(Math.sin(time * 0.1) * 3);
+        if (!this.ovrText) {
+            this.ovrText = this.add.text(player.x, player.y - 65, "!! TAP TO BLAST !!", {
+                fontFamily: 'Courier New', fontSize: '20px', fill: '#ffff00', fontWeight: 'bold', stroke: '#000', strokeThickness: 5
+            }).setOrigin(0.5).setDepth(100);
+            this.tweens.add({ targets: this.ovrText, alpha: 0.3, duration: 300, yoyo: true, repeat: -1 });
+        }
+        this.ovrText.setPosition(player.x, player.y - 65);
+        player.setTint(0xffff00);
+    } else {
+        if (this.ovrText) { this.ovrText.destroy(); this.ovrText = null; }
+        player.clearTint();
+    }
+
+    // НОВОЕ: Шлейфы для всех активных пуль
+    [bullets, playerBullets, minionBullets].forEach(group => {
+        group.children.each(b => {
+            if (b.active) {
+                // Создаем маленькую копию пули
+                let tail = this.add.rectangle(b.x, b.y, b.displayWidth * 0.6, b.displayHeight * 0.6, b.tintTopLeft)
+                    .setAlpha(0.5)
+                    .setDepth(b.depth - 1);
+
+                // Хвостик быстро уменьшается и исчезает
+                this.tweens.add({
+                    targets: tail,
+                    scale: 0,
+                    alpha: 0,
+                    duration: 100,
+                    onComplete: () => tail.destroy()
+                });
+            }
+        });
+    });
+
 
     milestoneBar.clear();
     updateBars(this);
@@ -391,7 +427,27 @@ function updateBars(scene) {
     // Ширина теперь зависит от maxPlayerHealth
     // Игрок: Фикс ширина 120
     let healthWidth = (playerHealth / maxPlayerHealth) * 120;
-    playerBar.clear().fillStyle(0x222222).fillRect(10, 85, 120, 8).fillStyle(0x00ffff).fillRect(10, 85, healthWidth, 8);
+    playerBar.clear();
+
+    // ЭФФЕКТ КРИТИЧЕСКОГО ЗДОРОВЬЯ
+    if (playerHealth < 20) {
+        // Вычисляем пульсацию: быстро меняем цвет между ярко-красным и темно-красным
+        let pulse = Math.abs(Math.sin(scene.time.now * 0.015));
+        let color = pulse > 0.5 ? 0xff0000 : 0x660000;
+
+        playerBar.fillStyle(0x222222).fillRect(10, 85, 120, 8);
+        playerBar.fillStyle(color).fillRect(10, 85, healthWidth, 8);
+
+        // Трясем текст здоровья для паники
+        pHealthLabel.setX(10 + Math.random() * 2);
+        pHealthLabel.setFill('#ff0000');
+    } else {
+        // Обычное состояние
+        playerBar.fillStyle(0x222222).fillRect(10, 85, 120, 8);
+        playerBar.fillStyle(0x00ffff).fillRect(10, 85, healthWidth, 8);
+        pHealthLabel.setX(10).setFill('#00ffff');
+    }
+
     pHealthLabel.setText(`YOU: ${Math.ceil(playerHealth)}/${maxPlayerHealth}`);
 
     if (isBossFight) {
@@ -415,9 +471,17 @@ function handleDamage(scene, dmg) {
 
     combo = 0; // СБРОС КОМБО ПРИ УДАРЕ
 
+    // ОПРЕДЕЛЯЕМ СТИЛЬ: если HP < 20, цифры будут ГИГАНТСКИМИ и ярко-малиновыми
+    let isCrit = playerHealth < 20;
+    let dColor = isCrit ? '#ff0055' : '#ff0000';
+    let dSize = isCrit ? '26px' : '18px';
+
+    // ВЫЗЫВАЕМ КРАСНЫЕ ЦИФРЫ УРОНА ПО ИГРОКУ
+    showDamageText(scene, player.x, player.y, dmg, dColor, dSize);
+
     if (isShieldActive) {
         isShieldActive = false;
-        saveProgress(); // Сохраняем потерю щита
+        saveProgress();
         scene.cameras.main.flash(200, 0, 255, 255);
         return;
     }
@@ -433,7 +497,15 @@ function handleDamage(scene, dmg) {
     }
 
     playerHealth -= dmg;
-    scene.cameras.main.flash(100, 255, 0, 0, 0.4);
+    // ВИЗУАЛ УРОНА: Вспышка и Тряска
+    scene.cameras.main.flash(200, 255, 0, 0, 0.5);
+    scene.cameras.main.shake(200, 0.02);
+
+    // Красная виньетка (рамка) при низком HP
+    if (playerHealth < maxPlayerHealth * 0.4) {
+        glitchText.setText("!! SYSTEM_FAILURE !!").setFill("#ff0000");
+        scene.time.delayedCall(1000, () => glitchText.setText(""));
+    }
 
     if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.impactOccurred('medium');
     if (playerHealth <= 0) triggerDeath(scene);
@@ -553,7 +625,12 @@ function hitBoss(b, bullet) {
     if (isVictory) return;
     if (bullet) bullet.destroy();
 
-    bossHealth -= (10 * currentStats.atk);
+    let dmg = 10 * currentStats.atk;
+    bossHealth -= dmg;
+
+    // ВЫЗЫВАЕМ КРАСОТУ
+    showDamageText(this, bullet.x, bullet.y, dmg, '#00ff00', '16px');
+
     coinsThisRun += 2;
     scoreText.setText(`CREDITS: ${coins + coinsThisRun}`);
 
@@ -605,7 +682,7 @@ function useOverdrive() {
 
     overdrive = 0;
     this.sound.play('sfx_ultra', { volume: 0.8 });
-    this.cameras.main.shake(1000, 0.05);
+    this.cameras.main.shake(1000, 0.01);
 
     const skin = SKIN_DATA[currentSkin] || SKIN_DATA.classic;
     let laser = this.add.sprite(player.x, player.y - 300, 'laser')
@@ -833,28 +910,42 @@ function showShop(scene, mainMenu) {
 function bossShoot() {
     if (isShopOpen || isDead || !isBossFight || isPaused || bullets.getLength() > 200) return;
 
-    // Плавное масштабирование сложности
-    let count = isPhase3 ? 32 : (isPhase2 ? Math.min(24, 12 + level) : 12);
-    let speed = isPhase3 ? 400 : (300 + level * 5);
+    // 1. ПАРАМЕТРЫ
+    // На 1 уровне всего 10 пуль (огромные дыры в обороне), к 15 уровню — 24
+    let count = isPhase3 ? 32 : (isPhase2 ? Math.min(24, 10 + level) : 10);
+    let speed = isPhase3 ? 400 : (280 + level * 7);
+    let patternType = Math.floor(this.time.now / 5000) % 2;
 
-    for (let i = 0; i < count; i++) {
-        let angle = i * (Math.PI * 2 / count);
+    if (isPhase3) {
+        for (let i = 0; i < count; i++) {
+            let angle = i * (Math.PI * 2 / count) + Math.sin(this.time.now * 0.001) * 2;
+            bullets.create(boss.x, boss.y, 'pixel').setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed)
+                .setScale(2).setTint(Math.random() > 0.5 ? 0xffffff : 0xff0000);
+        }
+    }
+    else if (patternType === 0) {
+        // --- КРУГОВАЯ ВОЛНА ---
+        for (let i = 0; i < count; i++) {
+            let angle = i * (Math.PI * 2 / count);
+            bullets.create(boss.x, boss.y, 'pixel')
+                .setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed)
+                .setScale(1.5).setTint(isPhase2 ? 0xff0000 : 0xff00ff); // Фиолетовый/Красный
+        }
+    }
+    else {
+        // --- ПРИЦЕЛЬНЫЙ ВЕЕР ---
+        let angleToPlayer = Phaser.Math.Angle.Between(boss.x, boss.y, player.x, player.y);
+        // Делаем веер шире на первых уровнях (разлет пуль больше)
+        let spread = Math.max(0.2, 0.5 - level * 0.02);
+        let bColor = isPhase2 ? 0xff0000 : 0xbb00ff;
 
-        // В 3-й фазе пули закручиваются в спираль
-        if (isPhase3) angle += Math.sin(this.time.now * 0.001) * 2;
-
-        let b = bullets.create(boss.x, boss.y, 'pixel')
-            .setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed)
-            .setScale(isPhase3 ? 2 : 1.5);
-
-        // Цвета: Phase 3 мерцает белым и красным
-        if (isPhase3) {
-            b.setTint(Math.random() > 0.5 ? 0xffffff : 0xff0000);
-        } else {
-            b.setTint(isPhase2 ? 0xff0000 : 0xff00ff);
+        for (let i = -2; i <= 2; i++) {
+            let angle = angleToPlayer + (i * spread);
+            bullets.create(boss.x, boss.y, 'pixel').setVelocity(Math.cos(angle) * (speed + 40), Math.sin(angle) * (speed + 40)).setScale(1.5).setTint(bColor);
         }
     }
 }
+
 
 function playerShoot() {
     if (isShopOpen || isDead || !isStarted || isPaused) return;
@@ -958,9 +1049,12 @@ function spawnItem() {
     } else {
         // выбираем между Монетой и Сердцем
         // На 1 уровне шанс сердца 1%, на 30 уровне — 40%
-        let heartChance = level >= 30 ? 0.40 : (level >= 25 ? 0.25 : 0.01);
+        let baseHeartChance = level >= 30 ? 0.40 : (level >= 25 ? 0.25 : 0.01);
 
-        if (Math.random() < heartChance) {
+        // Если здоровья мало, система "помогает" выжить
+        let actualHeartChance = (playerHealth < 20) ? 0.45 : baseHeartChance;
+
+        if (Math.random() < actualHeartChance) {
             type = 'heart';
         } else {
             type = 'coin';
@@ -1582,4 +1676,25 @@ async function showLeaderboard(scene, mainMenu) {
         mainMenu.setVisible(true);
     });
     overlay.add(back);
+}
+
+function showDamageText(scene, x, y, damage, color = '#00ff00', size = '16px') {
+    let txt = scene.add.text(x, y, `-${Math.floor(damage)}`, {
+        fontFamily: 'Courier New',
+        fontSize: size,
+        fill: color,
+        fontWeight: 'bold',
+        stroke: '#000',
+        strokeThickness: 3
+    }).setDepth(100);
+
+    scene.tweens.add({
+        targets: txt,
+        y: y - 100,
+        x: x + Phaser.Math.Between(-40, 40),
+        alpha: 0,
+        scale: size === '26px' ? 1.5 : 1.2, // Критический урон еще и растет в полете
+        duration: 900,
+        onComplete: () => txt.destroy()
+    });
 }
