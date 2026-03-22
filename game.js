@@ -8,8 +8,8 @@ const ASSETS = {
     SFX_COMBO: 'assets/Cyberpunk_Alert.mp3',
     SFX_NUKE: 'assets/Star_Wars-Siren.mp3'
 };
-const PHRASES_P1 = ["SCANNING...", "TARGET_LOCKED", "DATA_TRESPASSER"];
-const PHRASES_P2 = ["SYSTEM_OVERLOAD", "CRITICAL_RAGE", "DELETING_YOU"];
+//const PHRASES_P1 = ["SCANNING...", "TARGET_LOCKED", "DATA_TRESPASSER"];
+//const PHRASES_P2 = ["SYSTEM_OVERLOAD", "CRITICAL_RAGE", "DELETING_YOU"];
 
 // Глобальные переменные
 let isPhase3 = false;
@@ -44,6 +44,219 @@ const SKIN_DATA = {
     neon:    { body: 0xff0055, eyes: 0xffffff, trail: 0xff0055, bullet: 0xff0055, alpha: 1 },
     ghost:   { body: 0x00ffff, eyes: 0xff00ff, trail: 0xffffff, bullet: 0xffffff, alpha: 0.5 } // Белые пули
 };
+let lang = 'ru';
+const TRANSLATIONS = {
+    en: {
+        // Меню
+        menu_title: "GLITCHED\nARENA",
+        start: ">> START SYSTEM",
+        shop: ">> DATA SHOP",
+        hangar: ">> SHIP HANGAR",
+        settings: ">> PILOT SETTINGS",
+        rules: ">> SYSTEM MANUAL",
+        top: ">> GLOBAL RANKINGS",
+        audio: "AUDIO",
+        back: "<< BACK TO MENU",
+        offset_label: "OFFSET",
+        higher: "HIGHER",
+        lower: "LOWER",
+        apply: "<< APPLY & EXIT",
+
+        // HUD
+        credits: "CREDITS",
+        sector: "SEC",
+        best: "BEST",
+        max_dist: "MAX DIST",
+        hp_label: "HP",
+        core_label: "CORE",
+        tap_ultra: "!! TAP TO BLAST !!",
+        combo_text: "COMBO",
+        hyper_glitch: "!!! HYPER_GLITCH: 3x GOLD !!!",
+        pause_text: "PAUSE",
+
+        p1: ["SCANNING...", "TARGET_LOCKED", "DATA_TRESPASSER"],
+        p2: ["SYSTEM_OVERLOAD", "CRITICAL_RAGE", "DELETING_YOU"],
+        audio_glitch: "SYSTEM_AUDIO_FAILURE",
+        boss_detected: "MEGA_BOSS_DETECTED",
+        defense_engaged: "ELITE_DEFENSE_ENGAGED",
+        core_destroyed: "CORE DESTROYED!",
+        v_on: "ON", v_off: "OFF",
+        share_taunt_1: "SCANNING_NEW_VICTIM... This human is weak. Can you do better?",
+        share_taunt_2: "SYSTEM_WARNING: Sector %lvl% breached! I need a real challenge. Are you the one?",
+        share_taunt_3: "!! CORE_OVERLOAD !! I've deleted thousands. You're next. Try to survive if you dare!",
+        share_invite: "I'm on Sector %lvl%! Beat my record of %dist%m in Glitched Arena!",
+        db_connecting: "CONNECTING_TO_DATABASE...",
+        db_empty: "NO RECORDS YET",
+        db_error: "CONNECTION_ERROR: OFFLINE",
+        sys_failure: "!! SYSTEM_FAILURE !!",
+        heroic_survival: "HEROIC_SURVIVAL",
+        revive_label: "REVIVE",
+        watch_ad_label: "WATCH AD (FREE REBOOT)",
+        hard_reboot_label: "HARD REBOOT (SEC 1)",
+        loading_ad: "LOADING_AD...",
+        to_mega_boss: "TO MEGA_BOSS",
+		distance_to: "DISTANCE TO BOSS",
+		elite_phase: "ELITE PHASE",
+        critical_race: "CRITICAL_RAGE",
+		system_halt: "!! SYSTEM_HALT: CORE_OVERLOAD !!",
+
+        // Магазин
+        shop_title: "DATA SHOP",
+        install: "INSTALLED",
+        maxed: "MAXED",
+        up_antenna: "ULTRA ANTENNA", desc_antenna: "Ult charges 75% faster",
+        up_cannons: "DUAL CANNONS", desc_cannons: "Extreme 3-way firepower",
+        up_speed: "SPEED BOOST", desc_speed: "+10% running speed",
+        up_hull: "REINFORCED HULL", desc_hull: "+25 Max HP & Full Heal",
+        up_shield: "EMERGENCY SHIELD", desc_shield: "Protects from one hit",
+        skin_striker: "VOID STRIKER", desc_striker: "Dangerous Triangle (+20% ATK)",
+        skin_gold: "GOLD SKIN", desc_gold: "Pure gold style (+10% ATK)",
+        skin_ghost: "NEON GHOST", desc_ghost: "Cyberpunk ghost (+15% SPD)",
+        invite: "👥 INVITE FRIEND +500",
+        invite_done: "INVITATION SENT ✓",
+        claimed: "BONUS CLAIMED ✓",
+        deploy_btn: ">> DEPLOY SECTOR",
+
+        // Ангар и Интел
+        hangar_title: "SHIP HANGAR",
+        hull_type: "--- HULL_TYPE ---",
+        visual_skin: "--- VISUAL_SKIN ---",
+        target: "TARGET",
+        suggest: "SUGGEST",
+        classic_box: "CLASSIC BOX",
+        cyan_neon: "CYAN NEON",
+        boss_scanning: "SCANNING_SECTOR_",
+
+        // Правила (Инструкция)
+        rules_header: "SYSTEM_MANUAL v1.2",
+        rule_wall: "RED_WALL: Lethal. Avoid it!",
+        rule_coin: "CREDITS: For upgrades.",
+        rule_heart: "HEART: +25% Hull Integrity.",
+        rule_nuke: "SYSTEM_NUKE: Purge all threats.",
+        rule_magnet: "MAGNET: Pull credits.",
+        rule_slowmo: "SLOW_MO: Stabilize time.",
+        rules_alerts: "--- SECTOR_ALERTS ---",
+        slide: "SLIDE TO MOVE",
+        rules_sec_15: "SEC 15: MEGA_BOSS (Side Turrets)",
+        rules_sec_20: "SEC 20: ELITE_SHIELDS (Orbital Defense)",
+        rules_sec_30: "SEC 30: CORE_OVERLOAD (Final Rage)",
+        strategy_tip: "STRATEGY: Visit the DATA_SHOP! Upgrade Firepower, Speed, and install SHIELDS to survive.",
+
+        // Состояния
+        lost: "CONNECTION_LOST",
+        revive: "REVIVE",
+        watch_ad: "FREE REBOOT (AD)",
+        hard_reboot: "HARD REBOOT (SEC 1)",
+        purified: "SYSTEM_PURIFIED",
+        magnet_on: "MAGNET_LINK_ACTIVE",
+        time_warp: "TIME_WARP_ACTIVE"
+    },
+    ru: {
+        // Меню
+        menu_title: "ГЛИТЧ\nАРЕНА",
+        start: ">> ЗАПУСК СИСТЕМЫ",
+        shop: ">> МАГАЗИН ДАННЫХ",
+        hangar: ">> АНГАР КОРАБЛЯ",
+        settings: ">> КАЛИБРОВКА",
+        rules: ">> ИНСТРУКЦИЯ",
+        top: ">> РЕЙТИНГ ПИЛОТОВ",
+        audio: "ЗВУК",
+        back: "<< В ГЛАВНОЕ МЕНЮ",
+        offset_label: "ОТСТУП",
+        higher: "ВЫШЕ",
+        lower: "НИЖЕ",
+        apply: "<< ПРИМЕНИТЬ",
+
+        // HUD
+        credits: "КРЕДИТЫ",
+        sector: "СЕКТОР",
+        best: "РЕКОРД",
+        max_dist: "ДИСТАНЦИЯ",
+        hp_label: "ОЗ",
+        core_label: "ЯДРО",
+        tap_ultra: "!! ЖМИ ДЛЯ УЛЬТЫ !!",
+        combo_text: "КОМБО",
+        hyper_glitch: "!!! ГИПЕР-ГЛИТЧ: 3x ЗОЛОТО !!!",
+        pause_text: "ПАУЗА",
+
+        p1: ["СКАНИРОВАНИЕ...", "ЦЕЛЬ_ЗАХВАЧЕНА", "НАРУШИТЕЛЬ_ДАННЫХ"],
+        p2: ["ПЕРЕГРУЗКА_СИСТЕМЫ", "КРИТИЧЕСКАЯ_ЯРОСТЬ", "УДАЛЕНИЕ_ОБЪЕКТА"],
+        audio_glitch: "ОШИБКА_АУДИО_СИСТЕМЫ",
+        boss_detected: "ОБНАРУЖЕН_МЕГА_БОСС",
+        defense_engaged: "ЭЛИТНАЯ_ЗАЩИТА_АКТИВНА",
+        core_destroyed: "ЯДРО УНИЧТОЖЕНО!",
+        v_on: "ВКЛ", v_off: "ВЫКЛ",
+        share_taunt_1: "СКАНИРОВАНИЕ_ЖЕРТВЫ... Этот человек слаб. Ты справишься лучше?",
+        share_taunt_2: "ВНИМАНИЕ: Сектор %lvl% взломан! Мне нужен достойный противник. Это ты?",
+        share_taunt_3: "!! ПЕРЕГРУЗКА_ЯДРА !! Я удалил тысячи. Ты следующий. Попробуй выжить, если рискнешь!",
+        share_invite: "Я в Секторе %lvl%! Побей мой рекорд в %dist%м в Glitched Arena!",
+        db_connecting: "ПОДКЛЮЧЕНИЕ_К_БАЗЕ_ДАННЫХ...",
+        db_empty: "ЗАПИСЕЙ ПОКА НЕТ",
+        db_error: "ОШИБКА_СВЯЗИ: ОФФЛАЙН",
+        sys_failure: "!! СИСТЕМНЫЙ_СБОЙ !!",
+        heroic_survival: "ГЕРОИЧЕСКОЕ_ВЫЖИВАНИЕ",
+        revive_label: "ВОСКРЕСНУТЬ",
+        watch_ad_label: "РЕКЛАМА (БЕСПЛАТНЫЙ РЕБУТ)",
+        hard_reboot_label: "ХАРД-РЕБУТ (СЕКТОР 1)",
+        loading_ad: "ЗАГРУЗКА_РЕКЛАМЫ...",
+        to_mega_boss: "ДО МЕГА_БОССА",
+        distance_to: "РАССТОЯНИЕ ДО БОССА",
+        elite_phase: "ЭЛИТНАЯ ФАЗА",
+        critical_race: "КРИТИЧЕСКИ ЯРОСТЬ",
+		system_halt:"!! СИСТЕМНАЯ ОСТАНОВКА: ПЕРЕГРУЗКА ЯДРА !!",
+
+        // Магазин
+        shop_title: "МАГАЗИН ДАННЫХ",
+        install: "УСТАНОВЛЕНО",
+        maxed: "МАКСИМУМ",
+        up_antenna: "УЛЬТРА-АНТЕННА", desc_antenna: "Зарядка ульты на 75% быстрее",
+        up_cannons: "ДВОЙНЫЕ ПУШКИ", desc_cannons: "Тройная огневая мощь",
+        up_speed: "УСКОРЕНИЕ", desc_speed: "+10% к скорости полета",
+        up_hull: "УСИЛЕННЫЙ КОРПУС", desc_hull: "+25 макс. ОЗ и лечение",
+        up_shield: "АВАРИЙНЫЙ ЩИТ", desc_shield: "Защита от одного удара",
+        skin_striker: "РАССЕКАТЕЛЬ БЕЗДНЫ", desc_striker: "Форма треугольника (+20% АТК)",
+        skin_gold: "ЗОЛОТОЙ ОБЛИК", desc_gold: "Стиль из чистого золота (+10% АТК)",
+        skin_ghost: "НЕОНОВЫЙ ПРИЗРАК", desc_ghost: "Призрачный стиль (+15% СКОР)",
+        invite: "👥 ПРИГЛАСИТЬ ДРУГА +500",
+        invite_done: "ПРИГЛАШЕНИЕ ОТПРАВЛЕНО ✓",
+        claimed: "БОНУС ПОЛУЧЕН ✓",
+        deploy_btn: ">> В СЛЕД. СЕКТОР",
+
+        // Ангар и Интел
+        hangar_title: "АНГАР КОРАБЛЯ",
+        hull_type: "--- ТИП КОРПУСА ---",
+        visual_skin: "--- ОБЛИК ---",
+        target: "ЦЕЛЬ",
+        suggest: "СОВЕТ",
+        classic_box: "КЛАССИКА",
+        cyan_neon: "ГОЛУБОЙ НЕОН",
+        boss_scanning: "СЕКТОР_СКАН_",
+
+        // Правила
+        rules_header: "ИНСТРУКЦИЯ v1.2",
+        rule_wall: "СТЕНА: Смертельно. Избегай!",
+        rule_coin: "КРЕДИТЫ: Для улучшений.",
+        rule_heart: "СЕРДЦЕ: +25% прочности.",
+        rule_nuke: "ЯДЕРКА: Очистка экрана.",
+        rule_magnet: "МАГНИТ: Притягивает золото.",
+        rule_slowmo: "ЗАМЕДЛЕНИЕ: Контроль времени.",
+        rules_alerts: "--- ТРЕВОГИ СЕКТОРОВ ---",
+        slide: "ВЕДИ, ЧТОБЫ ДВИГАТЬСЯ",
+        rules_sec_15: "СЕКТОР 15: МЕГА_БОСС (Боковые турели)",
+        rules_sec_20: "СЕКТОР 20: ЭЛИТНЫЕ ЩИТЫ (Орбитальная защита)",
+        rules_sec_30: "СЕКТОР 30: ПЕРЕГРУЗКА ЯДРА (Финальная ярость)",
+        strategy_tip: "СТРАТЕГИЯ: Зайди в МАГАЗИН! Качай пушки, скорость и ставь ЩИТЫ, чтобы выжить.",
+
+        // Состояния
+        lost: "СВЯЗЬ ПОТЕРЯНА",
+        revive: "ВОССТАНОВИТЬ",
+        watch_ad: "РЕБУТ (ЗА РЕКЛАМУ)",
+        hard_reboot: "ХАРД-РЕБУТ (СЕК 1)",
+        purified: "СИСТЕМА ОЧИЩЕНА",
+        magnet_on: "МАГНИТНЫЙ ЗАХВАТ",
+        time_warp: "ВРЕМЯ ЗАМЕДЛЕНО"
+    }
+};
 
 // --- СИСТЕМА СОХРАНЕНИЯ (ЕДИНЫЙ КЛЮЧ) ---
 const saveProgress = () => {
@@ -61,6 +274,7 @@ const saveProgress = () => {
 
     localStorage.setItem('GLITCHED_ARENA_MASTER_SAVE_V2', JSON.stringify({
         level,
+        lang,
         upgradeLevels,
         bestLevel,
         coins,
@@ -75,9 +289,17 @@ const saveProgress = () => {
 };
 
 const loadProgress = () => {
+    // Авто-определение языка
+    if (window.Telegram?.WebApp?.initDataUnsafe?.user?.language_code) {
+        let tgLang = window.Telegram.WebApp.initDataUnsafe.user.language_code;
+        lang = (tgLang === 'ru') ? 'ru' : 'en';
+    }
+
     const saved = localStorage.getItem('GLITCHED_ARENA_MASTER_SAVE_V2');
     if (saved) {
         const p = JSON.parse(saved);
+        // Если в сохранении есть язык, он приоритетнее авто-определения
+        if (p.lang) lang = p.lang;
         level = p.level || 1;
         bestLevel = p.bestLevel || 1;
         bestDistance = p.bestDistance || 0;
@@ -233,15 +455,15 @@ function create() {
 
     // --- HUD v5.5: АВТО-ДИЗАЙН ---
     // Строка 1: Основная инфа
-    scoreText = this.add.text(10, 15, `CREDITS: ${coins}`, { fontFamily: 'Courier New', fontSize: '14px', fill: '#ffff00' }).setDepth(100);
-    levelText = this.add.text(365, 15, `SEC: ${level}`, { fontFamily: 'Courier New', fontSize: '14px', fill: '#ff00ff' }).setOrigin(1, 0).setDepth(100);
+    scoreText = this.add.text(10, 15, `${TRANSLATIONS[lang].credits}: ${coins}`, { fontFamily: 'Courier New', fontSize: '14px', fill: '#ffff00' }).setDepth(100);
+    levelText = this.add.text(365, 15, `${TRANSLATIONS[lang].sector}: ${level}`, { fontFamily: 'Courier New', fontSize: '14px', fill: '#ff00ff' }).setOrigin(1, 0).setDepth(100);
     // Строка 2: Рекорды и Пауза
-    bestText = this.add.text(10, 35, `BEST: ${bestLevel}`, { fontFamily: 'Courier New', fontSize: '10px', fill: '#00ff00' }).setDepth(100);
-    bestDistText = this.add.text(187, 35, `MAX DIST: ${bestDistance}m`, { fontFamily: 'Courier New', fontSize: '12px', fill: '#ffff00', fontWeight: 'bold' }).setOrigin(0.5, 0).setDepth(100);
+    bestText = this.add.text(10, 35, `${TRANSLATIONS[lang].best}: ${bestLevel}`, { fontFamily: 'Courier New', fontSize: '10px', fill: '#00ff00' }).setDepth(100);
+    bestDistText = this.add.text(187, 35, `${TRANSLATIONS[lang].max_dist}: ${bestDistance}m`, { fontFamily: 'Courier New', fontSize: '12px', fill: '#ffff00', fontWeight: 'bold' }).setOrigin(0.5, 0).setDepth(100);
 
     // Кнопка паузы с неоновой подложкой
     let pauseBg = this.add.rectangle(335, 42, 60, 20, 0xff00ff, 0.2).setDepth(99).setInteractive();
-    pauseBtn = this.add.text(335, 42, 'PAUSE', { fontSize: '11px', fontFamily: 'Courier New', fill: '#fff' }).setOrigin(0.5).setDepth(100).setInteractive();
+    pauseBtn = this.add.text(335, 42, TRANSLATIONS[lang].pause_text, { fontSize: '11px', fontFamily: 'Courier New', fill: '#fff' }).setOrigin(0.5).setDepth(100).setInteractive();
 
     const doPause = () => togglePause.call(this);
     pauseBtn.on('pointerdown', doPause);
@@ -276,7 +498,7 @@ function create() {
         bullet.destroy();
 
         coinsThisRun += 5;
-        scoreText.setText(`CREDITS: ${coins + coinsThisRun}`);
+        scoreText.setText(`${TRANSLATIONS[lang].credits}: ${coins + coinsThisRun}`);
 
         // ЗАПУСКАЕМ ВАУ-ЭФФЕКТ
         minionExplode(this, mx, my);
@@ -345,7 +567,7 @@ function update(time, delta) {
 
         if (currentDist > bestDistance) {
             bestDistance = currentDist;
-            bestDistText.setText(`MAX DIST: ${bestDistance}m`).setFill('#ffff00');
+            bestDistText.setText(`${TRANSLATIONS[lang].max_dist}: ${bestDistance}m`).setFill('#ffff00');
         }
 
         // Полоска прогресса (под рекордом)
@@ -354,8 +576,8 @@ function update(time, delta) {
 
         // ТЕКСТ ДИСТАНЦИИ (Один блок вместо двух!)
         let toBoss = Math.max(0, Math.floor(runGoal - distance));
-        let label = level < 15 ? `TO MEGA_BOSS: ${15 - level} SEC` : `ELITE PHASE: ${level}`;
-        distanceText.setY(105).setText(`${currentDist}m\n${label}\nDISTANCE TO BOSS: ${toBoss}m`);
+        let label = level < 15 ? `${TRANSLATIONS[lang].to_mega_boss}: ${15 - level} ${TRANSLATIONS[lang].sector}` : `${TRANSLATIONS[lang].elite_phase}: ${level}`;
+        distanceText.setY(105).setText(`${currentDist}m\n${label}\n${TRANSLATIONS[lang].distance_to}: ${toBoss}m`);
 
         if (distance >= runGoal) startBossFight(this);
     } else {
@@ -457,10 +679,10 @@ function update(time, delta) {
 
         // Текст CORE над полоской
         bHealthLabel.setPosition(boss.x, hudY - 15).setOrigin(0.5)
-            .setText(`CORE: ${Math.ceil(bPct * 100)}%`).setFontSize('12px').setFill(isPhase2 ? '#ff0000' : '#ff00ff').setDepth(101);
+            .setText(`${TRANSLATIONS[lang].core}: ${Math.ceil(bPct * 100)}%`).setFontSize('12px').setFill(isPhase2 ? '#ff0000' : '#ff00ff').setDepth(101);
     }
 
-    milestoneBar.clear();
+    //milestoneBar.clear();
     shieldAura.setVisible(isShieldActive);
 }
 
@@ -489,7 +711,7 @@ function handleDamage(scene, dmg) {
     // Если урон смертельный, но босс почти мертв или уже взорвался
     if (playerHealth - dmg <= 0 && (bossHealth <= 0 || isVictory)) {
         playerHealth = 1; // Оставляем 1 жизнь
-        glitchText.setText("HEROIC_SURVIVAL").setFill("#ffff00");
+        glitchText.setText(TRANSLATIONS[lang].heroic_survival).setFill("#ffff00");
         scene.time.delayedCall(1000, () => glitchText.setText(""));
         if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('warning');
         return;
@@ -502,7 +724,7 @@ function handleDamage(scene, dmg) {
 
     // Красная виньетка (рамка) при низком HP
     if (playerHealth < maxPlayerHealth * 0.4) {
-        glitchText.setText("!! SYSTEM_FAILURE !!").setFill("#ff0000");
+        glitchText.setText(TRANSLATIONS[lang].sys_failure).setFill("#ff0000");
         scene.time.delayedCall(1000, () => glitchText.setText(""));
     }
 
@@ -515,7 +737,7 @@ function triggerDeath(scene) {
     isMagnetActive = false;
     isGlitchMode = false;
     coinsThisRun = 0; // Игрок погиб — всё собранное на уровне аннулируется
-    scoreText.setText(`CREDITS: ${coins}`); // Возвращаем визуально к основному счету
+    scoreText.setText(`${TRANSLATIONS[lang].credits}: ${coins}`); // Возвращаем визуально к основному счету
 
     if (Math.floor(distance) > bestDistance) {
         submitScore(Math.floor(distance), level);
@@ -527,7 +749,7 @@ function triggerDeath(scene) {
 
     const overlay = scene.add.container(0, 0).setDepth(5000);
     overlay.add(scene.add.graphics().fillStyle(0x000000, 0.9).fillRect(0, 0, 375, 667));
-    overlay.add(scene.add.text(187, 150, 'CONNECTION_LOST', { fontSize: '32px', fill: '#ff0000', fontWeight: 'bold' }).setOrigin(0.5));
+    overlay.add(scene.add.text(187, 150, TRANSLATIONS[lang].lost, { fontSize: '32px', fill: '#ff0000', fontWeight: 'bold' }).setOrigin(0.5));
 
     const btn = (y, txt, color, act) => {
         let b = scene.add.text(187, y, txt, { fontSize: '18px', fill: '#fff', backgroundColor: color, padding: 15 }).setOrigin(0.5).setInteractive().on('pointerdown', act);
@@ -535,18 +757,18 @@ function triggerDeath(scene) {
     };
 
     // 1. Возврат за деньги (текущий уровень)
-    btn(280, `REVIVE [300 CREDITS]`, coins >= 300 ? '#004444' : '#222', () => {
+    btn(280, `${TRANSLATIONS[lang].revive_label} [300]`, coins >= 300 ? '#004444' : '#222', () => {
         if (coins >= 300) { coins -= 300; playerHealth = maxPlayerHealth; isDead = false; shouldAutoStart = true; scene.scene.restart(); }
     });
 
     // 2. Бесплатная "реклама" (текущий уровень)
-    btn(360, "WATCH AD (FREE REBOOT)", '#444400', () => {
-        overlay.destroy(); glitchText.setText("LOADING_AD...").setAlpha(1);
+    btn(360, TRANSLATIONS[lang].watch_ad_label, '#444400', () => {
+        overlay.destroy(); glitchText.setText(TRANSLATIONS[lang].loading_ad).setAlpha(1);
         scene.time.delayedCall(2000, () => { playerHealth = maxPlayerHealth; isDead = false; glitchText.setAlpha(0); shouldAutoStart = true; scene.scene.restart(); });
     });
 
     // 3. Хард-ребут (Сектор 1, потеря всего)
-    btn(440, "HARD REBOOT (SEC 1)", '#440000', () => {
+    btn(440, TRANSLATIONS[lang].hard_reboot_label, '#440000', () => {
         level = 1;
         coins = 0;
         upgradeLevels = { fire: 0, ultra: 0, speed: 0, health: 0, shield: 0 };
@@ -570,7 +792,7 @@ function startBossFight(scene) {
 
     // 1. ПОМОЩНИКИ (С 15 уровня) - СТРЕЛЯЮТ ПУЛЯМИ
     if (level >= 15) {
-        glitchText.setText("MEGA_BOSS_DETECTED").setFill("#ff00ff");
+        glitchText.setText(TRANSLATIONS[lang].boss_detected).setFill("#ff00ff");
         bossTurretL = scene.add.rectangle(boss.x - 40, boss.y, 20, 20, 0x00ffff).setDepth(4);
         bossTurretR = scene.add.rectangle(boss.x + 40, boss.y, 20, 20, 0x00ffff).setDepth(4);
 
@@ -598,7 +820,7 @@ function startBossFight(scene) {
             let s = bossShields.create(boss.x, boss.y, 'pixel').setTint(0xff00ff).setScale(2.5).setAlpha(0.5);
             s.body.setImmovable(true);
         }
-        glitchText.setText("ELITE_DEFENSE_ENGAGED").setFill("#ff00ff");
+        glitchText.setText(TRANSLATIONS[lang].defense_engaged).setFill("#ff00ff");
     }
 
     scene.bossShootEvent = scene.time.addEvent({
@@ -608,15 +830,26 @@ function startBossFight(scene) {
         callbackScope: scene, loop: true
     });
     scene.phraseTimer = scene.time.addEvent({
-        delay: 3500, callback: () => {
+        delay: 3500,
+        callback: () => {
             if(isBossFight && !isVictory) {
-                glitchText.setText(Phaser.Utils.Array.GetRandom(
-                    isPhase2 ? PHRASES_P2 : PHRASES_P1)
-                ).setFill(isPhase2 ? "#ff0000" : "#ff00ff");
-                scene.time.delayedCall(1500, () => glitchText.setText('')); }
-            }, loop: true });
+                // Берем массив фраз в зависимости от фазы и языка
+                let pool = isPhase2 ? TRANSLATIONS[lang].p2 : TRANSLATIONS[lang].p1;
+                glitchText.setText(Phaser.Utils.Array.GetRandom(pool))
+                    .setFill(isPhase2 ? "#ff0000" : "#ff00ff");
+
+                scene.time.delayedCall(1500, () => glitchText.setText(''));
+            }
+        },
+        loop: true
+    });
+
+    // Запуск спавна миньонов (раз в 4 секунды)
     scene.minionTimer = scene.time.addEvent({
-        delay: 4000, callback: spawnMinion, callbackScope: scene, loop: true
+        delay: 4000,
+        callback: spawnMinion,
+        callbackScope: scene,
+        loop: true
     });
 
     if (level >= 10) {
@@ -645,7 +878,7 @@ function hitBoss(b, bullet) {
     showDamageText(this, bullet.x, bullet.y, dmg, '#00ff00', '16px');
 
     coinsThisRun += 2;
-    scoreText.setText(`CREDITS: ${coins + coinsThisRun}`);
+    scoreText.setText(`${TRANSLATIONS[lang].credits}: ${coins + coinsThisRun}`);
 
     let chargeBonus = 2 + (upgradeLevels.ultra * 1.5);
     overdrive = Math.min(100, overdrive + chargeBonus);
@@ -667,7 +900,7 @@ function hitBoss(b, bullet) {
         isPhase2 = true;
         boss.setTint(0xff0000); // Красим ядро в красный
         bHealthLabel.setFill('#ff0000');
-        glitchText.setText("CRITICAL_RAGE").setFill("#ff0000");
+        glitchText.setText(TRANSLATIONS[lang].critical_race).setFill("#ff0000");
 
         // ПРАВИЛЬНАЯ ПОКРАСКА ШЛЕЙФА
         if (bossTrail) {
@@ -678,7 +911,7 @@ function hitBoss(b, bullet) {
     // ФАЗА 3: УЛЬТРА-ЯРОСТЬ (на 25% HP)
     if (level >= 30 && bossHealth <= maxB * 0.25 && !isPhase3) {
         isPhase3 = true;
-        glitchText.setText("!! SYSTEM_HALT: CORE_OVERLOAD !!").setFill("#ffffff").setBackgroundColor("#ff0000");
+        glitchText.setText(TRANSLATIONS[lang].system_halt).setFill("#ffffff").setBackgroundColor("#ff0000");
         this.cameras.main.shake(500, 0.05);
         if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('error');
     }
@@ -741,7 +974,7 @@ function triggerVictory(scene) {
     if (bossTurretLTrail) { bossTurretLTrail.destroy(); bossTurretRTrail.destroy(); }
 
     // ТВОЙ ВАУ-ЭФФЕКТ (Оставляем как был!)
-    let vText = scene.add.text(187, 333, "CORE DESTROYED!", {
+    let vText = scene.add.text(187, 333, TRANSLATIONS[lang].core_destroyed, {
         fontFamily: 'Courier New', fontSize: '36px', fill: '#00ff00', fontWeight: 'bold', stroke: '#000', strokeThickness: 8
     }).setOrigin(0.5).setDepth(5000);
 
@@ -759,8 +992,8 @@ function triggerVictory(scene) {
     boss.setVisible(false);
     if (bossTrail) bossTrail.setVisible(false);
 
-    levelText.setText(`SEC: ${level}`); // Обновляем текст уровня на главном экране
-    bestText.setText(`BEST: ${bestLevel}`);
+    levelText.setText(`${TRANSLATIONS[lang].sector}: ${level}`);
+    bestText.setText(`${TRANSLATIONS[lang].best}: ${bestLevel}`);
 
     scene.time.delayedCall(3000, () => {
         vText.destroy();
@@ -774,149 +1007,91 @@ function showShop(scene, mainMenu) {
     const overlay = scene.add.container(0, 0).setDepth(4000);
     overlay.add(scene.add.graphics().fillStyle(0x000000, 0.98).fillRect(0, 0, 375, 667));
 
-    const creds = scene.add.text(187, 35, `CREDITS: ${coins}`, { fill: '#ffff00', fontSize: '24px', fontWeight: 'bold' }).setOrigin(0.5);
-    const stats = scene.add.text(187, 65, `RECORD: SEC ${bestLevel} | MAX: ${bestDistance}m`, {
-        fill: '#00ff00', fontSize: '11px', fontFamily: 'Courier New'
+    const creds = scene.add.text(187, 35, `${TRANSLATIONS[lang].credits}: ${coins}`, { fill: '#ffff00', fontSize: '24px', fontWeight: 'bold' }).setOrigin(0.5);
+    const stats = scene.add.text(187, 65, `${TRANSLATIONS[lang].best}: ${TRANSLATIONS[lang].sector} ${bestLevel} | ${TRANSLATIONS[lang].max_dist}: ${bestDistance}m`, {
+        fill: '#00ff00', fontSize: '14px',  fontWeight: 'bold'
     }).setOrigin(0.5);
 
-    const createBtn = (y, name, desc, cost, type, action) => {
-        // ОПРЕДЕЛЯЕМ МАКСИМУМ: для здоровья 10, для остального пока 1
+    const createBtn = (y, nameKey, descKey, cost, type, action) => {
         const maxLvl = (type === 'health') ? 10 : 1;
         let curLvl = (type === 'shield') ? (isShieldActive ? 1 : 0) : (upgradeLevels[type] || 0);
-
-        // Кнопка станет зеленой только на макс. уровне
         let isMaxed = curLvl >= maxLvl;
 
         const btnBg = scene.add.rectangle(187, y, 320, 50, isMaxed ? 0x004400 : 0x222222).setInteractive();
-
         // Добавляем счетчик в название
-        const label = isMaxed ? `${name} [MAXED]` : `${name} (${curLvl}/${maxLvl})`;
-        const btnText = scene.add.text(187, y - 10, `${label} [${cost}]`, { fontSize: '14px', fill: '#fff', fontWeight: 'bold' }).setOrigin(0.5);
-        if (isMaxed) btnText.setText(`${name} [INSTALLED]`).setTint(0x00ff88);
-
-        const descText = scene.add.text(187, y + 12, desc, { fontSize: '10px', fill: '#aaa' }).setOrigin(0.5);
+        const namet = TRANSLATIONS[lang][nameKey];
+        const statusText = isMaxed ? TRANSLATIONS[lang].install : `${curLvl}/${maxLvl}`;
+        const btnText = scene.add.text(187, y - 10, `${namet} [${statusText}] - ${cost}`, { fontSize: '14px', fill: '#fff', fontWeight: 'bold' }).setOrigin(0.5);
+        const descText = scene.add.text(187, y + 12, TRANSLATIONS[lang][descKey], { fontSize: '10px', fill: '#aaa' }).setOrigin(0.5);
 
         btnBg.on('pointerdown', () => {
             if (isMaxed) return;
             if (coins >= cost) {
                 coins -= cost;
-
-                if(type === 'shield') {
-                    isShieldActive = true;
-                    upgradeLevels.shield = 1;
-                } else {
-                    upgradeLevels[type] = (upgradeLevels[type] || 0) + 1;
-                }
-
+                if(type === 'shield') { isShieldActive = true; upgradeLevels.shield = 1; }
+                else { upgradeLevels[type] = (upgradeLevels[type] || 0) + 1; }
                 if(action) action();
                 saveProgress();
-
-                // Мгновенное обновление текста при покупке
-                let newLvl = (type === 'shield') ? 1 : upgradeLevels[type];
-                if (newLvl >= maxLvl) {
-                    btnBg.setFillStyle(0x004400);
-                    btnText.setText(`${name} [INSTALLED]`).setTint(0x00ff88);
-                } else {
-                    btnText.setText(`${name} (${newLvl}/${maxLvl}) [${cost}]`);
-                }
-
-                creds.setText(`CREDITS: ${coins}`);
-                if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-            } else {
-                scene.tweens.add({ targets: [btnBg, btnText, descText], x: 197, duration: 50, yoyo: true, repeat: 2, onComplete: () => btnBg.setX(187) });
+                scene.scene.restart(); // Перезагружаем магазин для обновления статусов
             }
         });
         overlay.add([btnBg, btnText, descText]);
     };
 
-    createBtn(115, "ULTRA ANTENNA", "Ult charges 75% faster", 400, 'ultra');
-    createBtn(170, "DUAL CANNONS", "Extreme 3-way firepower", 800, 'fire');
-    createBtn(225, "SPEED BOOST", "+10% running speed", 300, 'speed');
-    createBtn(280, "REINFORCED HULL", "+25 Max HP & Full Heal", 500, 'health', () => {
-        maxPlayerHealth += 25;
-        playerHealth = maxPlayerHealth;
-    });
-    createBtn(335, "EMERGENCY SHIELD", "Protects from one fatal hit", 150, 'shield');
-
+    createBtn(115, "up_antenna", "desc_antenna", 400, 'ultra');
+    createBtn(170, "up_cannons", "desc_cannons", 800, 'fire');
+    createBtn(225, "up_speed", "desc_speed", 300, 'speed');
+    createBtn(280, "up_hull", "desc_hull", 500, 'health', () => { maxPlayerHealth += 25; playerHealth = maxPlayerHealth; });
+    createBtn(335, "up_shield", "desc_shield", 150, 'shield');
     // Скин STRIKER
-    createBtn(380, "VOID_STRIKER", "Ship shape: Dangerous Triangle", 1500, 'skin_striker', () => {
-        currentShape = 'striker';
-        saveProgress();
-        refreshPlayerAppearance(scene); // МГНОВЕННОЕ ОБНОВЛЕНИЕ
-    });
-
+    createBtn(380, "skin_striker", "desc_striker", 1500, 'skin_striker', () => { currentShape = 'striker'; refreshPlayerAppearance(scene); });
     // Золотой скин
-    createBtn(430, "GOLD SKIN", "Pure gold style. Respect!", 2000, 'skin_gold', () => {
-        currentSkin = 'gold';
-        saveProgress();
-        refreshPlayerAppearance(scene); // МГНОВЕННОЕ ОБНОВЛЕНИЕ
-    });
-
+    createBtn(430, "skin_gold", "desc_gold", 2000, 'skin_gold', () => { currentSkin = 'gold'; refreshPlayerAppearance(scene); });
     // Neon Ghost
-    createBtn(480, "NEON GHOST", "Translucent cyberpunk style", 3000, 'skin_ghost', () => {
-        currentSkin = 'ghost';
-        saveProgress();
-        refreshPlayerAppearance(scene); // МГНОВЕННОЕ ОБНОВЛЕНИЕ
-    });
+    createBtn(480, "skin_ghost", "desc_ghost", 3000, 'skin_ghost', () => { currentSkin = 'ghost'; refreshPlayerAppearance(scene); });
 
     if (isVictory) {
-        // Уровень уже увеличен в triggerVictory, просто летим дальше
-        const nextBtn = scene.add.text(187, 580, `>> DEPLOY SECTOR ${level}`, {
-            fontSize: '22px', fill: '#00ffff', backgroundColor: '#003333', padding: 15
+        const nextBtn = scene.add.text(187, 580, `${TRANSLATIONS[lang].deploy_btn} ${level}`, {
+            fontSize: '20px', fill: '#00ffff', backgroundColor: '#003333', padding: 12
         }).setOrigin(0.5).setInteractive();
-
-        nextBtn.on('pointerdown', () => {
-            overlay.destroy();
-            isShopOpen = false;
-            isVictory = false;
-            shouldAutoStart = true;  // Автостарт следующего уровня
-            scene.scene.restart();
-        });
+        nextBtn.on('pointerdown', () => { overlay.destroy(); isShopOpen = false; isVictory = false; shouldAutoStart = true; scene.scene.restart(); });
         overlay.add(nextBtn);
     }
 
     // КНОПКА SHARE
-    const share = scene.add.text(187, 530, "👥 INVITE FRIEND +500 GOLD", {
-        fontSize: '16px', fill: '#00ff88', backgroundColor: '#003300', padding: 10
+    const share = scene.add.text(187, 530, upgradeLevels.shareClaimed ? TRANSLATIONS[lang].invite_done : TRANSLATIONS[lang].invite, {
+        fontSize: '14px', fill: '#00ff88', backgroundColor: '#003300', padding: 8
     }).setOrigin(0.5).setInteractive();
 
     share.on('pointerdown', () => {
-        // ДЕРЗКИЕ ФРАЗЫ БОССА
+        const isRu = (lang === 'ru');
         let bossTaunt = "";
-        if (level < 10) bossTaunt = "SCANNING_NEW_VICTIM... This human is weak. Can you do better?";
-        else if (level < 25) bossTaunt = "SYSTEM_WARNING: Sector " + level + " breached! I need a real challenge. Are you the one?";
-        else bossTaunt = "!! CORE_OVERLOAD !! I've deleted thousands. You're next. Try to survive if you dare!";
+        if (level < 10) bossTaunt = TRANSLATIONS[lang].share_taunt_1;
+        else if (level < 25) bossTaunt = TRANSLATIONS[lang].share_taunt_2.replace("%lvl%", level);
+        else bossTaunt = TRANSLATIONS[lang].share_taunt_3;
 
-        const shareText = encodeURIComponent("I'm on Sector " + level + "! Beat my record of " + bestDistance + "m in Glitched Arena!");
+        const shareText = encodeURIComponent(TRANSLATIONS[lang].share_invite.replace("%lvl%", level).replace("%dist%", bestDistance));
         const shareUrl = encodeURIComponent(SHARE_LINK);
         const fullLink = `https://t.me/share/url?url=${shareUrl}&text=${shareText}`;
 
-        // Проверяем, запущены ли мы внутри Telegram
         if (window.Telegram?.WebApp) {
-
             Telegram.WebApp.openTelegramLink(fullLink);
-
-            // Начисляем бонус (один раз за сессию)
             if (!upgradeLevels.shareClaimed) {
-                coins += 500;
-                upgradeLevels.shareClaimed = true;
-                saveProgress();
-                creds.setText(`CREDITS: ${coins}`);
-                share.setText("BONUS CLAIMED ✓").setFill("#aaa").disableInteractive();
-                if (Telegram.WebApp.HapticFeedback) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                coins += 500; upgradeLevels.shareClaimed = true; saveProgress();
+                creds.setText(`${TRANSLATIONS[lang].credits}: ${coins}`);
+                share.setText(TRANSLATIONS[lang].claimed).setFill("#aaa").disableInteractive();
             }
         } else {
-            // Если в обычном браузере
             window.open(fullLink, '_blank');
         }
     });
 
     // Если бонус уже был получен ранее, сразу меняем вид кнопки при открытии магазина
     if (upgradeLevels.shareClaimed) {
-        share.setText("INVITATION SENT ✓").setFill("#aaa").disableInteractive();
+        share.setText(TRANSLATIONS[lang].invite_done).setFill("#aaa").disableInteractive();
     }
 
-    const back = scene.add.text(187, 630, "<< BACK TO MENU", { fontSize: '16px', fill: '#ff00ff' }).setOrigin(0.5).setInteractive().on('pointerdown', () => {
+    const back = scene.add.text(187, 635, TRANSLATIONS[lang].back, { fontSize: '16px', fill: '#ff00ff' }).setOrigin(0.5).setInteractive().on('pointerdown', () => {
         overlay.destroy(); isShopOpen = false; saveProgress(); scene.scene.restart();
     });
     overlay.add([creds, stats, share, back]);
@@ -936,6 +1111,34 @@ function bossShoot() {
     if (isSniperLevel && !isPhase3) {
         speed += 120;
         patternType = 1;
+    }
+
+    // --- ФИШКА: ТИШИНА ПЕРЕД БУРЕЙ (Level 20+) ---
+    if (level >= 20 && Math.random() > 0.92 && !this.isSilenceEvent) {
+        this.isSilenceEvent = true;
+        let bgm = this.sound.get('bgm');
+
+        // 1. Выключаем музыку и пугаем игрока
+        if (bgm && isSoundOn) bgm.pause();
+        glitchText.setText(TRANSLATIONS[lang].audio_glitch).setFill("#ff0000").setAlpha(1);
+        this.cameras.main.flash(500, 255, 0, 0, 0.2);
+
+        // 2. Через 2 секунды возвращаем музыку и пускаем супер-атаку
+        this.time.delayedCall(2000, () => {
+            if (bgm && isSoundOn) bgm.resume();
+            glitchText.setText("");
+
+            // Запускаем ГИПЕР-ВЕЕР
+            let angleToPlayer = Phaser.Math.Angle.Between(boss.x, boss.y, player.x, player.y);
+            for (let i = -5; i <= 5; i++) { // Очень широкий и плотный веер
+                let angle = angleToPlayer + (i * 0.1);
+                bullets.create(boss.x, boss.y, 'pixel')
+                    .setVelocity(Math.cos(angle) * 550, Math.sin(angle) * 550)
+                    .setScale(2).setTint(0xff0000);
+            }
+            this.isSilenceEvent = false;
+        });
+        return; // Пропускаем обычный выстрел в этот раз
     }
 
     //let bColor = isPhase2 ? 0xff0000 : 0xbb00ff;
@@ -1093,6 +1296,14 @@ function spawnItem() {
         this.tweens.add({ targets: item, scale: 1.6, duration: 400, yoyo: true, repeat: -1 });
     } else if (type === 'coin') {
         item.setTint(0xffff00).setData('type', 'coin').setScale(1.5);
+        // Эффект «блеска»
+        this.tweens.add({
+            targets: item,
+            alpha: 0.5,
+            duration: 200,
+            yoyo: true,
+            repeat: -1
+        });
     } else if (type === 'slowmo') {
         item.setTint(0x00ff00).setData('type', 'slowmo').setScale(2.5);
     } else if (type === 'nuke') {
@@ -1111,16 +1322,16 @@ function collectItem(p, item) {
 
     if (type === 'magnet') {
         isMagnetActive = true;
-        glitchText.setText("MAGNET_LINK_ESTABLISHED").setFill("#ff00ff");
-        this.time.delayedCall(8000, () => { isMagnetActive = false; glitchText.setText(""); }); // Работает 8 секунд
+        // Перевод: МАГНИТНЫЙ ЗАХВАТ
+        glitchText.setText(TRANSLATIONS[lang].magnet_on).setFill("#ff00ff");
+        this.time.delayedCall(8000, () => { isMagnetActive = false; glitchText.setText(""); });
     }
 
     if (type === 'heart') {
-        // Восстанавливаем 25% здоровья
         playerHealth = Math.min(maxPlayerHealth, playerHealth + 25);
 
-        // Всплывающий текст лечения (зеленый)
-        let txt = this.add.text(player.x, player.y, "+25 HP", {
+        // Всплывающий текст теперь использует локализацию ОЗ/HP
+        let txt = this.add.text(player.x, player.y, `+25 ${TRANSLATIONS[lang].hp_label}`, {
             fontFamily: 'Courier New', fontSize: '18px', fill: '#00ff00', fontWeight: 'bold', stroke: '#000', strokeThickness: 3
         }).setDepth(100);
 
@@ -1132,68 +1343,51 @@ function collectItem(p, item) {
             onComplete: () => txt.destroy()
         });
 
-        glitchText.setText("INTEGRITY_RESTORED").setFill("#ff0088");
+        // Используем новую строку из словаря (добавь её в TRANSLATIONS, если нет)
+        glitchText.setText(lang === 'ru' ? "КОРПУС ВОССТАНОВЛЕН" : "INTEGRITY_RESTORED").setFill("#ff0088");
         this.time.delayedCall(1000, () => glitchText.setText(""));
         this.cameras.main.flash(300, 255, 0, 136, 0.4);
         if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
     }
 
     if (type === 'nuke') {
-        // 1. ЗВУК И СИРЕНА
         this.sound.play('sfx_nuke', { volume: 0.5, stopOnTerminate: true });
         this.time.delayedCall(2000, () => { this.sound.stopByKey('sfx_nuke'); });
 
-        // 2. ВИБРАЦИЯ
         if (window.Telegram?.WebApp?.HapticFeedback) {
             Telegram.WebApp.HapticFeedback.notificationOccurred('success');
         }
 
-        // 3. ВИЗУАЛЬНАЯ ВОЛНА ОТ ИГРОКА
         let wave = this.add.circle(player.x, player.y, 20, 0xff00ff, 0.7).setDepth(2000);
-        this.tweens.add({
-            targets: wave,
-            radius: 800,
-            alpha: 0,
-            duration: 600,
-            ease: 'Expo.out',
-            onComplete: () => wave.destroy()
-        });
+        this.tweens.add({ targets: wave, radius: 800, alpha: 0, duration: 600, ease: 'Expo.out', onComplete: () => wave.destroy() });
 
-        // 4. ЭФФЕКТЫ КАМЕРЫ
         this.cameras.main.flash(400, 255, 0, 255, 0.4);
         this.cameras.main.shake(500, 0.03);
 
-        // 5. КРАСИВОЕ РАЗРУШЕНИЕ БЛОКОВ
         obstacles.children.each(obs => {
             if (obs.active) {
-                // Создаем 6-8 мелких «осколков» на месте каждого блока
                 for (let i = 0; i < 6; i++) {
                     let frag = this.add.rectangle(obs.x, obs.y, 6, 6, 0xff0000).setDepth(5);
                     this.physics.add.existing(frag);
-                    // Разлетаются в случайные стороны с большой скоростью
-                    frag.body.setVelocity(
-                        Phaser.Math.Between(-500, 500),
-                        Phaser.Math.Between(-500, 500)
-                    );
-                    // Осколки быстро исчезают
+                    frag.body.setVelocity(Phaser.Math.Between(-500, 500), Phaser.Math.Between(-500, 500));
                     this.time.delayedCall(400, () => frag.destroy());
                 }
             }
         });
 
-        // 6. ОЧИСТКА ГРУППЫ (Только препятствия)
         obstacles.clear(true, true);
 
-        // 7. ТЕКСТ
-        glitchText.setText("SYSTEM_PURIFIED").setFill("#ff00ff").setAlpha(1);
+        // Перевод: СИСТЕМА ОЧИЩЕНА
+        glitchText.setText(TRANSLATIONS[lang].purified).setFill("#ff00ff").setAlpha(1);
         this.time.delayedCall(1500, () => glitchText.setAlpha(0));
 
     } else if (type === 'coin') {
-        coinsThisRun += (isGlitchMode ? 30 : 10); // Бонус безумия
-        scoreText.setText(`CREDITS: ${coins + coinsThisRun}`);
+        coinsThisRun += (isGlitchMode ? 30 : 10);
+        scoreText.setText(`${TRANSLATIONS[lang].credits}: ${coins + coinsThisRun}`);
     } else if (type === 'slowmo') {
-        glitchText.setText("TIME_WARP_ACTIVE").setFill("#00ff00");
-        this.physics.world.timeScale = 2; // Мир в 2 раза медленнее
+        // Перевод: ВРЕМЯ ЗАМЕДЛЕНО
+        glitchText.setText(TRANSLATIONS[lang].time_warp).setFill("#00ff00");
+        this.physics.world.timeScale = 2;
         this.time.delayedCall(3000, () => {
             this.physics.world.timeScale = 1;
             glitchText.setText("");
@@ -1205,25 +1399,22 @@ function showComboEffect(scene) {
     combo++;
     if (scene.comboSound) scene.comboSound.play();
 
-    // Настройка текста: ярче и заметнее
     comboPopText.setPosition(player.x, player.y - 60);
-    comboPopText.setText(`+COMBO x${combo}`);
+    // Используем перевод слова COMBO
+    comboPopText.setText(`+${TRANSLATIONS[lang].combo_text} x${combo}`);
     comboPopText.setAlpha(1).setScale(1.2).setFill(combo >= 10 ? '#ff0000' : '#00ff00');
 
-    // ЭФФЕКТ БЕЗУМИЯ НА x10
     if (combo === 10) {
         isGlitchMode = true;
-        // ЭФФЕКТ: Инверсия цветов (Негатив)
-        this.cameras.main.setPostPipeline('ColorMatrix'); // Если твой Phaser поддерживает конвейеры
-        // Или просто жесткая вспышка и смена фона:
-        this.cameras.main.setBackgroundColor('#ffffff'); // Белый фон для эффекта "выгорания"
-
+        this.cameras.main.setBackgroundColor('#ffffff');
         scene.cameras.main.shake(5000, 0.007);
-        glitchText.setText("!!! HYPER_GLITCH: 3x GOLD !!!").setFill("#000000").setBackgroundColor("#ff0000");
+
+        // Перевод надписи ГИПЕР-ГЛИТЧ
+        glitchText.setText(TRANSLATIONS[lang].hyper_glitch).setFill("#000000").setBackgroundColor("#ff0000");
 
         scene.time.delayedCall(5000, () => {
             isGlitchMode = false;
-            this.cameras.main.setBackgroundColor('#000000'); // Возвращаем тьму
+            this.cameras.main.setBackgroundColor('#000000');
             glitchText.setText("").setBackgroundColor(null);
         });
     }
@@ -1237,9 +1428,9 @@ function showComboEffect(scene) {
     });
 
     if (combo % 5 === 0) {
-        let reward = isGlitchMode ? 45 : 15; // Тройная награда в режиме безумия
+        let reward = isGlitchMode ? 45 : 15;
         coinsThisRun += reward;
-        scoreText.setText(`CREDITS: ${coins + coinsThisRun}`);
+        scoreText.setText(`${TRANSLATIONS[lang].credits}: ${coins + coinsThisRun}`);
         scene.cameras.main.flash(100, 255, 255, 255, 0.3);
     }
 }
@@ -1312,49 +1503,62 @@ function showMenu(scene) {
     const menu = scene.add.container(0, 0).setDepth(3000);
     const bg = scene.add.graphics().fillStyle(0x000000, 1).fillRect(0, 0, 375, 667);
 
-    const title = scene.add.text(187, 80, "GLITCHED\nARENA", {
+    const title = scene.add.text(187, 80, TRANSLATIONS[lang].menu_title, {
         fontSize: '42px', fill: '#00ffff', align: 'center', fontWeight: 'bold', stroke: '#ff00ff', strokeThickness: 4
     }).setOrigin(0.5);
 
+    // Кнопка смены языка: теперь без перезапуска сцены
+    const langBtn = scene.add.text(320, 30, lang.toUpperCase(), {
+        fontSize: '14px', fill: '#ffff00', backgroundColor: '#222', padding: 8
+    }).setOrigin(0.5).setInteractive();
+
+    langBtn.on('pointerdown', () => {
+        lang = (lang === 'ru') ? 'en' : 'ru';
+        saveProgress();
+        menu.destroy(); // Удаляем старое меню
+        showMenu(scene); // Рисуем новое на том же месте
+    });
+
     const btnStyle = { fontSize: '18px', fill: '#fff', backgroundColor: '#222', padding: 10 };
 
-    // Кнопки управления (сдвинуты для баланса)
-    const startBtn = scene.add.text(187, 210, ">> START SYSTEM", btnStyle).setOrigin(0.5).setInteractive();
-    const hangarBtn = scene.add.text(187, 275, ">> HANGAR [SKINS]", btnStyle).setOrigin(0.5).setInteractive();
-    const shopBtn = scene.add.text(187, 340, ">> DATA SHOP", btnStyle).setOrigin(0.5).setInteractive();
-    const setBtn = scene.add.text(187, 405, ">> PILOT SETTINGS", btnStyle).setOrigin(0.5).setInteractive();
-    const soundBtn = scene.add.text(187, 470, `>> AUDIO: ${isSoundOn ? 'ON' : 'OFF'}`, btnStyle).setOrigin(0.5).setInteractive();
-    const rulesBtn = scene.add.text(187, 535, ">> HOW_TO_SURVIVE", btnStyle).setOrigin(0.5).setInteractive();
-    const topBtn = scene.add.text(187, 600, ">> TOP PILOTS [GLOBAL]", {
+    const startBtn = scene.add.text(187, 210, TRANSLATIONS[lang].start, btnStyle).setOrigin(0.5).setInteractive();
+    const hangarBtn = scene.add.text(187, 275, TRANSLATIONS[lang].hangar, btnStyle).setOrigin(0.5).setInteractive();
+    const shopBtn = scene.add.text(187, 340, TRANSLATIONS[lang].shop, btnStyle).setOrigin(0.5).setInteractive();
+    const setBtn = scene.add.text(187, 405, TRANSLATIONS[lang].settings, btnStyle).setOrigin(0.5).setInteractive();
+
+    // Исправленный текст звука
+    let audioState = isSoundOn ? TRANSLATIONS[lang].v_on : TRANSLATIONS[lang].v_off;
+    const soundBtn = scene.add.text(187, 470, `>> ${TRANSLATIONS[lang].audio}: ${audioState}`, btnStyle).setOrigin(0.5).setInteractive();
+
+    const rulesBtn = scene.add.text(187, 535, TRANSLATIONS[lang].rules, btnStyle).setOrigin(0.5).setInteractive();
+    const topBtn = scene.add.text(187, 600, TRANSLATIONS[lang].top, {
         fontSize: '16px', fill: '#ffff00', backgroundColor: '#333300', padding: 10
     }).setOrigin(0.5).setInteractive();
 
-    topBtn.on('pointerdown', () => {
-        menu.setVisible(false);
-        showLeaderboard(scene, menu);
-    });
+    topBtn.on('pointerdown', () => { menu.setVisible(false); showLeaderboard(scene, menu); });
 
-    // Логика кнопок
     startBtn.on('pointerdown', () => {
         menu.destroy(); isStarted = true;
-        if (isSoundOn && !scene.sound.get('bgm')) scene.sound.play('bgm', {loop:true, volume:0.15});
+        let currentBgm = scene.sound.get('bgm');
+        if (isSoundOn && (!currentBgm || !currentBgm.isPlaying)) scene.sound.play('bgm', {loop:true, volume:0.15});
         scene.obstacleTimer = scene.time.addEvent({ delay: Math.max(300, 1150 - level * 50), callback: spawnObstacle, callbackScope: scene, loop: true });
         scene.shootEvent = scene.time.addEvent({ delay: 150 - (upgradeLevels.fire * 20), callback: playerShoot, callbackScope: scene, loop: true });
         itemsTimer = scene.time.addEvent({ delay: 1000, callback: spawnItem, callbackScope: scene, loop: true });
+    });
+
+    soundBtn.on('pointerdown', () => {
+        isSoundOn = !isSoundOn;
+        let newState = isSoundOn ? TRANSLATIONS[lang].v_on : TRANSLATIONS[lang].v_off;
+        soundBtn.setText(`>> ${TRANSLATIONS[lang].audio}: ${newState}`);
+        if (!isSoundOn) scene.sound.stopAll();
     });
 
     hangarBtn.on('pointerdown', () => { menu.setVisible(false); showHangar(scene, menu); });
     shopBtn.on('pointerdown', () => { menu.setVisible(false); showShop(scene, menu); });
     setBtn.on('pointerdown', () => { menu.setVisible(false); showSettings(scene, menu); });
     rulesBtn.on('pointerdown', () => { menu.setVisible(false); showRules(scene, menu); });
-    soundBtn.on('pointerdown', () => {
-        isSoundOn = !isSoundOn;
-        soundBtn.setText(`>> AUDIO: ${isSoundOn ? 'ON' : 'OFF'}`);
-        if (!isSoundOn) scene.sound.stopAll();
-    });
 
-    menu.add([bg, title, startBtn, hangarBtn, shopBtn, setBtn, soundBtn, rulesBtn, topBtn]);
-    return menu;
+    menu.add([bg, title, langBtn, startBtn, hangarBtn, shopBtn, setBtn, soundBtn, rulesBtn, topBtn]);
 }
 
 function showRules(scene, mainMenu) {
@@ -1362,77 +1566,71 @@ function showRules(scene, mainMenu) {
     const bg = scene.add.graphics().fillStyle(0x000000, 0.98).fillRect(0, 0, 375, 667);
     rulesOverlay.add(bg);
 
-    const header = scene.add.text(187, 40, "SYSTEM_MANUAL v1.1", {
-        fontSize: '24px', fill: '#00ffff', fontWeight: 'bold', fontFamily: 'Courier New'
+    // Заголовок
+    const header = scene.add.text(187, 40, TRANSLATIONS[lang].rules_header, {
+        fontSize: '22px', fill: '#00ffff', fontWeight: 'bold', fontFamily: 'Courier New'
     }).setOrigin(0.5);
     rulesOverlay.add(header);
 
-    // --- SECTION 1: ITEMS ---
-    const items = [
-        { key: 'wall', c: 0xff0000, t: "RED_WALL: Lethal. Avoid at all costs!" },
-        { key: 'pixel', c: 0xffff00, t: "CREDITS: Pick up for upgrades." },
-        { key: 'heart', c: 0xff0088, t: "HEART: Restores +25% Hull Integrity." },
-        { key: 'pixel', c: 0xff00ff, t: "SYSTEM_NUKE: Purge all threats + Siren.", angle: 45, scale: 2.8 },
-        { key: 'pixel', c: 0xff00ff, t: "MAGNET: Pull credits from distance.", angle: 180 },
-        { key: 'pixel', c: 0x00ff00, t: "SLOW_MO: Stabilize time for 3 sec." }
+    // --- СЕКЦИЯ 1: ПРЕДМЕТЫ (Теперь по центру) ---
+    const itemsList = [
+        { key: 'wall', c: 0xff0000, t: TRANSLATIONS[lang].rule_wall },
+        { key: 'pixel', c: 0xffff00, t: TRANSLATIONS[lang].rule_coin },
+        { key: 'heart', c: 0xff0088, t: TRANSLATIONS[lang].rule_heart },
+        { key: 'pixel', c: 0xff00ff, t: TRANSLATIONS[lang].rule_nuke, angle: 45, scale: 2.2 },
+        { key: 'pixel', c: 0xff00ff, t: TRANSLATIONS[lang].rule_magnet, angle: 180, scale: 1.6 },
+        { key: 'pixel', c: 0x00ff00, t: TRANSLATIONS[lang].rule_slowmo, scale: 1.6 }
     ];
 
-    items.forEach((item, i) => {
-        let y = 100 + (i * 45);
-        let icon = scene.add.sprite(40, y, item.key).setTint(item.c);
+    // Центрируем блок: иконки на 75, текст на 105
+    itemsList.forEach((item, i) => {
+        let y = 95 + (i * 42);
+        let icon = scene.add.sprite(75, y, item.key).setTint(item.c);
+        icon.setScale(item.scale || (item.key === 'pixel' ? 1.8 : 0.6));
+        if (item.angle) icon.setAngle(item.angle);
 
-        // 1. Устанавливаем масштаб: если в объекте есть свой scale — берем его, иначе стандарт
-        let finalScale = item.scale ? item.scale : (item.key === 'pixel' ? 2 : 0.7);
-        icon.setScale(finalScale);
+        // wordWrap чуть уже (240), чтобы текст не упирался в правый край
+        let txt = scene.add.text(105, y, item.t, {
+            fontSize: '11px',
+            fill: '#fff',
+            fontFamily: 'Courier New',
+            wordWrap: { width: 240 }
+        }).setOrigin(0, 0.5);
 
-        // 2. Устанавливаем угол: если есть angle — поворачиваем (так квадрат станет ромбом)
-        if (item.angle) {
-            icon.setAngle(item.angle);
-        }
-
-        let txt = scene.add.text(70, y, item.t, { fontSize: '12px', fill: '#fff', fontFamily: 'Courier New' }).setOrigin(0, 0.5);
         rulesOverlay.add([icon, txt]);
     });
 
-    // --- SECTION 2: SECTOR ALERTS ---
-    const stagesTitle = scene.add.text(187, 350, "--- SECTOR_ALERTS ---", {
-        fontSize: '16px', fill: '#00ffff', fontFamily: 'Courier New'
+    // --- СЕКЦИЯ 2: ТРЕВОГИ ---
+    const stagesTitle = scene.add.text(187, 355, TRANSLATIONS[lang].rules_alerts, {
+        fontSize: '15px', fill: '#ff00ff', fontWeight: 'bold'
     }).setOrigin(0.5);
 
-    const stagesDesc = scene.add.text(187, 400,
-        "SEC 15: MEGA_BOSS (Side Turrets Engaged)\n" +
-        "SEC 20: ELITE_SHIELDS (Orbital Protection)\n" +
-        "SEC 30: CORE_OVERLOAD (Final Rage Mode)",
-        { fontSize: '11px', fill: '#ffaa00', fontFamily: 'Courier New', align: 'center', lineSpacing: 10 }
+    const stagesDesc = scene.add.text(187, 405,
+        `${TRANSLATIONS[lang].rules_sec_15}\n${TRANSLATIONS[lang].rules_sec_20}\n${TRANSLATIONS[lang].rules_sec_30}`,
+        {
+            fontSize: '11px', fill: '#ffaa00', fontFamily: 'Courier New',
+            align: 'center', lineSpacing: 8, wordWrap: { width: 320 }
+        }
     ).setOrigin(0.5);
     rulesOverlay.add([stagesTitle, stagesDesc]);
 
-    // --- SECTION 3: DATA SHOP ---
-    const shopBox = scene.add.rectangle(187, 480, 330, 80, 0x00ffff, 0.1).setStrokeStyle(1, 0x00ffff);
-    const shopTxt = scene.add.text(187, 480,
-        "STRATEGY: Visit the DATA_SHOP!\n" +
-        "Upgrade Firepower, Speed, and\n" +
-        "install EMERGENCY_SHIELDS to survive.",
-        { fontSize: '12px', fill: '#00ffff', align: 'center', fontFamily: 'Courier New' }
-    ).setOrigin(0.5);
+    // --- СЕКЦИЯ 3: СТРАТЕГИЯ ---
+    const shopBox = scene.add.rectangle(187, 490, 330, 75, 0x00ffff, 0.05).setStrokeStyle(1, 0x00ffff);
+    const shopTxt = scene.add.text(187, 490, TRANSLATIONS[lang].strategy_tip, {
+        fontSize: '11px', fill: '#00ffff', align: 'center', fontFamily: 'Courier New',
+        wordWrap: { width: 300 }
+    }).setOrigin(0.5);
     rulesOverlay.add([shopBox, shopTxt]);
 
-    // --- OPTIONAL: ANIMATED HAND (TUTORIAL) ---
-    const hand = scene.add.circle(187, 630, 10, 0x00ffff, 0.5);
-    scene.tweens.add({
-        targets: hand,
-        x: { from: 120, to: 255 },
-        duration: 1500,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut'
-    });
-    const handTxt = scene.add.text(187, 650, "SLIDE TO MOVE", { fontSize: '10px', fill: '#00ffff' }).setOrigin(0.5);
+    // --- ОБУЧЕНИЕ (РУКА) ---
+    const hand = scene.add.circle(187, 625, 8, 0x00ffff, 0.5);
+    scene.tweens.add({ targets: hand, x: { from: 140, to: 235 }, duration: 1500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    const handTxt = scene.add.text(187, 645, TRANSLATIONS[lang].slide, { fontSize: '10px', fill: '#00ffff' }).setOrigin(0.5);
     rulesOverlay.add([hand, handTxt]);
 
-    // BACK BUTTON
-    const back = scene.add.text(187, 580, "<< RETURN_TO_MENU", {
-        fontSize: '18px', fill: '#fff', backgroundColor: '#330033', padding: 12, fontFamily: 'Courier New'
+    // КНОПКА НАЗАД
+    const back = scene.add.text(187, 575, TRANSLATIONS[lang].back, {
+        fontSize: '16px', fill: '#fff', backgroundColor: '#330033', padding: 12, fontWeight: 'bold'
     }).setOrigin(0.5).setInteractive().on('pointerdown', () => {
         rulesOverlay.destroy();
         mainMenu.setVisible(true);
@@ -1462,32 +1660,57 @@ function refreshPlayerAppearance(scene) {
 function showSettings(scene, mainMenu) {
     const overlay = scene.add.container(0, 0).setDepth(4000);
     const bg = scene.add.graphics().fillStyle(0x000000, 0.98).fillRect(0, 0, 375, 667);
-    const title = scene.add.text(187, 60, "PILOT_CALIBRATION", { fontSize: '24px', fill: '#00ffff' }).setOrigin(0.5);
+
+    // Заголовок из словаря (используем settings_title или settings)
+    const title = scene.add.text(187, 60, TRANSLATIONS[lang].settings, {
+        fontSize: '24px', fill: '#00ffff', fontWeight: 'bold'
+    }).setOrigin(0.5);
     overlay.add([bg, title]);
 
-    // Превью
+    // Визуальное превью касания
     const finger = scene.add.circle(187, 350, 15, 0xffffff, 0.3).setStrokeStyle(2, 0xffffff);
     const shipPreview = scene.add.sprite(187, 350 + yOffset, player.texture.key).setScale(2);
     overlay.add([finger, shipPreview]);
 
-    const info = scene.add.text(187, 450, `OFFSET: ${Math.abs(yOffset)}px`, { fontSize: '18px', fill: '#00ffff' }).setOrigin(0.5);
+    // Текст значения отступа
+    const info = scene.add.text(187, 450, `${TRANSLATIONS[lang].offset_label}: ${Math.abs(yOffset)}px`, {
+        fontSize: '18px', fill: '#00ffff', fontFamily: 'Courier New'
+    }).setOrigin(0.5);
     overlay.add(info);
 
     const adjust = (v) => {
         yOffset = Phaser.Math.Clamp(yOffset + v, -150, 0);
         shipPreview.setY(350 + yOffset);
-        info.setText(`OFFSET: ${Math.abs(yOffset)}px`);
+        info.setText(`${TRANSLATIONS[lang].offset_label}: ${Math.abs(yOffset)}px`);
         saveProgress();
+
+        // ЭФФЕКТ ПРЫЖКА
+        scene.tweens.add({
+            targets: shipPreview,
+            y: shipPreview.y - 15, // Подпрыгивает на 15 пикселей вверх
+            duration: 100,        // За 0.1 секунды
+            yoyo: true,           // И сразу обратно
+            ease: 'Back.easeOut'  // Плавный эффект отскока
+        });
     };
 
-    const up = scene.add.text(120, 520, " [ HIGHER ] ", { backgroundColor: '#004400', padding: 10 }).setOrigin(0.5).setInteractive().on('pointerdown', () => adjust(-10));
-    const down = scene.add.text(254, 520, " [ LOWER ] ", { backgroundColor: '#440000', padding: 10 }).setOrigin(0.5).setInteractive().on('pointerdown', () => adjust(10));
+    // Кнопки регулировки
+    const up = scene.add.text(120, 520, ` [ ${TRANSLATIONS[lang].higher} ] `, {
+        backgroundColor: '#004400', padding: 10, fontWeight: 'bold'
+    }).setOrigin(0.5).setInteractive().on('pointerdown', () => adjust(-10));
+
+    const down = scene.add.text(254, 520, ` [ ${TRANSLATIONS[lang].lower} ] `, {
+        backgroundColor: '#440000', padding: 10, fontWeight: 'bold'
+    }).setOrigin(0.5).setInteractive().on('pointerdown', () => adjust(10));
+
     overlay.add([up, down]);
 
-    const back = scene.add.text(187, 610, "<< APPLY & EXIT", {
-        fontSize: '18px', fill: '#ff00ff', backgroundColor: '#220022', padding: 12
+    // Кнопка выхода (Применить)
+    const back = scene.add.text(187, 610, TRANSLATIONS[lang].apply, {
+        fontSize: '18px', fill: '#ff00ff', backgroundColor: '#220022', padding: 12, fontWeight: 'bold'
     }).setOrigin(0.5).setInteractive().on('pointerdown', () => {
-        overlay.destroy(); mainMenu.setVisible(true);
+        overlay.destroy();
+        mainMenu.setVisible(true);
     });
     overlay.add(back);
 }
@@ -1495,120 +1718,123 @@ function showSettings(scene, mainMenu) {
 function showHangar(scene, mainMenu) {
     const overlay = scene.add.container(0, 0).setDepth(4000);
     const bg = scene.add.graphics().fillStyle(0x000000, 0.98).fillRect(0, 0, 375, 667);
-    const title = scene.add.text(187, 40, "SHIP_HANGAR", { fontSize: '26px', fill: '#00ffff', fontWeight: 'bold' }).setOrigin(0.5);
-    overlay.add([bg, title]);
+    overlay.add(bg);
 
-    // Статистика корабля
+    const title = scene.add.text(187, 40, TRANSLATIONS[lang].hangar_title, {
+        fontSize: '24px', fill: '#00ffff', fontWeight: 'bold', fontFamily: 'Courier New'
+    }).setOrigin(0.5);
+    overlay.add(title);
+
+    // Характеристики корабля (вверху)
     const stats = getShipStats();
-    const statsText = scene.add.text(187, 80, stats.label, { fontSize: '12px', fill: '#ffff00', backgroundColor: '#222', padding: 5 }).setOrigin(0.5);
-    overlay.add(statsText);
+    const statsBox = scene.add.rectangle(187, 80, 330, 25, 0x222222).setStrokeStyle(1, 0xffff00);
+    const statsText = scene.add.text(187, 80, stats.label, { fontSize: '11px', fill: '#ffff00', fontWeight: 'bold' }).setOrigin(0.5);
+    overlay.add([statsBox, statsText]);
 
-    // 1. ВЫБОР ФОРМЫ
-    overlay.add(scene.add.text(40, 110, "--- HULL_TYPE ---", { fontSize: '14px', fill: '#ff00ff' }));
+    // Колонки выбора (слева)
+    const colX = 25;
+    overlay.add(scene.add.text(colX, 120, TRANSLATIONS[lang].hull_type, { fontSize: '13px', fill: '#ff00ff', fontWeight: 'bold' }));
+
     const shapes = [
-        { id: 'classic', name: 'CLASSIC BOX', unlocked: true },
-        { id: 'striker', name: 'VOID STRIKER', unlocked: upgradeLevels.skin_striker > 0 }
+        { id: 'classic', name: TRANSLATIONS[lang].classic_box, unlocked: true },
+        { id: 'striker', name: TRANSLATIONS[lang].skin_striker, unlocked: upgradeLevels.skin_striker > 0 }
     ];
 
     shapes.forEach((s, i) => {
         if (!s.unlocked) return;
-        const btn = scene.add.text(60, 145 + (i * 40), `> ${s.name}`, {
-            fontSize: '18px', fill: currentShape === s.id ? '#00ffff' : '#666'
-        }).setInteractive().on('pointerdown', () => {
-            currentShape = s.id; saveProgress(); refreshPlayerAppearance(scene);
-            overlay.destroy(); showHangar(scene, mainMenu); // Перерисовать
-        });
+        const isSelected = currentShape === s.id;
+        const btn = scene.add.text(colX + 5, 145 + (i * 35), `> ${s.name}`, {
+            fontSize: '15px', fill: isSelected ? '#00ffff' : '#666',
+            backgroundColor: isSelected ? '#003333' : null, padding: 4
+        }).setInteractive().on('pointerdown', () => { currentShape = s.id; saveProgress(); refreshPlayerAppearance(scene); overlay.destroy(); showHangar(scene, mainMenu); });
         overlay.add(btn);
     });
 
-    // 2. ВЫБОР ЦВЕТА
-    overlay.add(scene.add.text(40, 260, "--- VISUAL_SKIN ---", { fontSize: '14px', fill: '#ff00ff' }));
+    overlay.add(scene.add.text(colX, 240, TRANSLATIONS[lang].visual_skin, { fontSize: '13px', fill: '#ff00ff', fontWeight: 'bold' }));
     const skins = [
-        { id: 'classic', name: 'CYAN NEON', unlocked: true },
-        { id: 'gold', name: 'PURE GOLD', unlocked: upgradeLevels.skin_gold > 0 },
-        { id: 'ghost', name: 'NEON GHOST', unlocked: upgradeLevels.skin_ghost > 0 }
+        { id: 'classic', name: TRANSLATIONS[lang].cyan_neon, unlocked: true },
+        { id: 'gold', name: TRANSLATIONS[lang].skin_gold, unlocked: upgradeLevels.skin_gold > 0 },
+        { id: 'ghost', name: TRANSLATIONS[lang].skin_ghost, unlocked: upgradeLevels.skin_ghost > 0 }
     ];
 
     skins.forEach((sk, i) => {
         if (!sk.unlocked) return;
-        const btn = scene.add.text(60, 300 + (i * 40), `> ${sk.name}`, {
-            fontSize: '18px', fill: currentSkin === sk.id ? '#00ffff' : '#666'
-        }).setInteractive().on('pointerdown', () => {
-            currentSkin = sk.id; saveProgress(); refreshPlayerAppearance(scene);
-            overlay.destroy(); showHangar(scene, mainMenu);
-        });
+        const isSelected = currentSkin === sk.id;
+        const btn = scene.add.text(colX + 5, 265 + (i * 35), `> ${sk.name}`, {
+            fontSize: '15px', fill: isSelected ? '#00ffff' : '#666',
+            backgroundColor: isSelected ? '#003333' : null, padding: 4
+        }).setInteractive().on('pointerdown', () => { currentSkin = sk.id; saveProgress(); refreshPlayerAppearance(scene); overlay.destroy(); showHangar(scene, mainMenu); });
         overlay.add(btn);
     });
 
-    // ПРЕВЬЮ
-    const preview = scene.add.sprite(280, 180, player.texture.key).setScale(3.5);
-    overlay.add(preview);
+    // ПРЕВЬЮ (Справа, масштаб 3.0 вместо 4.5)
+    const previewSprite = scene.add.sprite(290, 210, player.texture.key).setScale(3);
+    const glow = scene.add.circle(290, 210, 35, 0x00ffff, 0.1).setDepth(previewSprite.depth - 1);
+    overlay.add([glow, previewSprite]);
 
-    // --- БЛОК BOSS INTEL ---
+    // Блок BOSS INTEL (Внизу)
     const intel = getBossIntel();
-    const intelBox = scene.add.rectangle(187, 480, 330, 90, 0xff00ff, 0.05).setStrokeStyle(1, 0xff00ff);
-    const intelTitle = scene.add.text(187, 450, `SCANNING_SECTOR_${level}...`, { fontSize: '10px', fill: '#ff00ff' }).setOrigin(0.5);
-
-    const bossName = scene.add.text(187, 470, `TARGET: ${intel.name}`, { fontSize: '16px', fill: '#fff', fontWeight: 'bold' }).setOrigin(0.5);
-    const bossDesc = scene.add.text(187, 490, intel.desc, { fontSize: '11px', fill: '#aaa' }).setOrigin(0.5);
-    const bossTip = scene.add.text(187, 515, intel.tip, { fontSize: '12px', fill: '#00ff00', fontWeight: 'bold' }).setOrigin(0.5);
-
+    const intelBox = scene.add.rectangle(187, 500, 340, 105, 0x000000, 0.7).setStrokeStyle(1, 0xff00ff);
+    const intelTitle = scene.add.text(colX + 5, 450, `${TRANSLATIONS[lang].boss_scanning}${level}`, { fontSize: '10px', fill: '#ff00ff' });
+    const bossName = scene.add.text(187, 475, `${TRANSLATIONS[lang].target}: ${intel.name}`, { fontSize: '16px', fill: '#fff', fontWeight: 'bold' }).setOrigin(0.5);
+    const bossDesc = scene.add.text(187, 505, intel.desc, { fontSize: '11px', fill: '#aaa', align: 'center', wordWrap: { width: 300 } }).setOrigin(0.5);
+    const bossTip = scene.add.text(187, 535, `${TRANSLATIONS[lang].suggest}: ${intel.tip}`, { fontSize: '12px', fill: '#00ff00', fontWeight: 'bold' }).setOrigin(0.5);
     overlay.add([intelBox, intelTitle, bossName, bossDesc, bossTip]);
 
-    // Кнопка BACK
-    const back = scene.add.text(187, 610, "<< RETURN TO MENU", {
-        fontSize: '18px', fill: '#fff', backgroundColor: '#330033', padding: 12
-    }).setOrigin(0.5).setInteractive().on('pointerdown', () => {
-        overlay.destroy(); mainMenu.setVisible(true);
-    });
+    // Кнопка BACK (Самый низ)
+    const back = scene.add.text(187, 615, TRANSLATIONS[lang].back, {
+        fontSize: '16px', fill: '#fff', backgroundColor: '#330033', padding: 12
+    }).setOrigin(0.5).setInteractive().on('pointerdown', () => { overlay.destroy(); mainMenu.setVisible(true); });
     overlay.add(back);
 }
 
 function getShipStats() {
-    let stats = { atk: 1, spd: 1, label: "STANDARD" };
+    let stats = { atk: 1, spd: 1, label: "" };
+    const isRu = (lang === 'ru');
 
-    // Бонус за форму
     if (currentShape === 'striker') {
-        stats.atk += 0.2; // +20% Урон
-        stats.label = "STRIKER: +20% ATK";
+        stats.atk += 0.2;
+        stats.label = isRu ? "УДАРНИК: +20% АТК" : "STRIKER: +20% ATK";
+    } else {
+        stats.label = isRu ? "БАЗОВЫЙ КОРПУС" : "STANDARD HULL";
     }
 
-    // Бонус за цвет
     if (currentSkin === 'gold') {
-        stats.atk += 0.1; // Золото чуть мощнее
-        stats.label = (currentShape === 'striker') ? stats.label + " | GOLD: +10% ATK" : "GOLD: +10% ATK";
+        stats.atk += 0.1;
+        stats.label += isRu ? " | ЗОЛОТО: +10% АТК" : " | GOLD: +10% ATK";
     } else if (currentSkin === 'ghost') {
-        stats.spd += 0.15; // Призрак быстрее
-        stats.label = (currentShape === 'striker') ? stats.label + " | GHOST: +15% SPD" : "GHOST: +15% SPD";
+        stats.spd += 0.15;
+        stats.label += isRu ? " | ПРИЗРАК: +15% СКОР" : " | GHOST: +15% SPD";
     }
 
     return stats;
 }
 
 function getBossIntel() {
+    const isRu = (lang === 'ru');
     if (level < 15) {
         return {
-            name: "SCOUT_DRONE",
-            desc: "Light armor. Standard patterns.",
-            tip: "SUGGEST: GOLD (for farming)"
+            name: isRu ? "ДРОН-РАЗВЕДЧИК" : "SCOUT_DRONE",
+            desc: isRu ? "Легкая броня. Стандартные паттерны стрельбы." : "Light armor. Standard patterns.",
+            tip: isRu ? "ЗОЛОТО (для фарма)" : "GOLD (for farming)"
         };
     } else if (level < 20) {
         return {
-            name: "MEGA_TURRET",
-            desc: "Dual side cannons. High fire rate.",
-            tip: "SUGGEST: STRIKER (+20% ATK)"
+            name: isRu ? "МЕГА-ТУРЕЛЬ" : "MEGA_TURRET",
+            desc: isRu ? "Боковые пушки. Высокая скорострельность." : "Dual side cannons. High fire rate.",
+            tip: isRu ? "УДАРНИК (+20% АТК)" : "STRIKER (+20% ATK)"
         };
     } else if (level < 30) {
         return {
-            name: "SHIELD_MASTER",
-            desc: "Orbital protection. Hard to hit.",
-            tip: "SUGGEST: STRIKER (Break shields fast)"
+            name: isRu ? "МАСТЕР ЩИТА" : "SHIELD_MASTER",
+            desc: isRu ? "Орбитальная защита. Сложно попасть." : "Orbital protection. Hard to hit.",
+            tip: isRu ? "УДАРНИК (Пробивай щиты)" : "STRIKER (Break shields)"
         };
     } else {
         return {
-            name: "CORE_OVERLOAD",
-            desc: "Rage mode. Bullet hell chaos.",
-            tip: "SUGGEST: GHOST (+15% SPD)"
+            name: isRu ? "ПЕРЕГРУЗКА ЯДРА" : "CORE_OVERLOAD",
+            desc: isRu ? "Режим ярости. Пулевой ад." : "Rage mode. Bullet hell chaos.",
+            tip: isRu ? "ПРИЗРАК (+15% СКОР)" : "GHOST (+15% SPD)"
         };
     }
 }
@@ -1654,10 +1880,10 @@ async function submitScore(dist, lvl) {
 async function showLeaderboard(scene, mainMenu) {
     const overlay = scene.add.container(0, 0).setDepth(4000);
     const bg = scene.add.graphics().fillStyle(0x000000, 0.98).fillRect(0, 0, 375, 667);
-    const title = scene.add.text(187, 50, "GLOBAL_RANKINGS", { fontSize: '26px', fill: '#ffff00', fontWeight: 'bold', fontFamily: 'Courier New' }).setOrigin(0.5);
+    const title = scene.add.text(187, 50, TRANSLATIONS[lang].top, { fontSize: '26px', fill: '#ffff00', fontWeight: 'bold', fontFamily: 'Courier New' }).setOrigin(0.5);
     overlay.add([bg, title]);
 
-    const loadingText = scene.add.text(187, 300, "CONNECTING_TO_DATABASE...", { fontSize: '14px', fill: '#00ffff', fontFamily: 'Courier New' }).setOrigin(0.5);
+    const loadingText = scene.add.text(187, 300, TRANSLATIONS[lang].db_connecting, { fontSize: '14px', fill: '#00ffff', fontFamily: 'Courier New' }).setOrigin(0.5);
     overlay.add(loadingText);
 
     try {
@@ -1672,7 +1898,7 @@ async function showLeaderboard(scene, mainMenu) {
         loadingText.destroy();
 
         if (data.length === 0) {
-            overlay.add(scene.add.text(187, 300, "NO RECORDS YET", { fontSize: '16px', fill: '#aaa' }).setOrigin(0.5));
+            overlay.add(scene.add.text(187, 300, TRANSLATIONS[lang].db_empty, { fontSize: '16px', fill: '#aaa' }).setOrigin(0.5));
         }
 
         data.forEach((entry, i) => {
@@ -1690,7 +1916,7 @@ async function showLeaderboard(scene, mainMenu) {
             const name = scene.add.text(85, y, entry.username.substring(0, 10).toUpperCase(), { fontSize: '14px', fill: color, fontFamily: 'Courier New' });
 
             // НОВОЕ: Сектор (Уровень)
-            const sector = scene.add.text(230, y, `S:${entry.level}`, { fontSize: '14px', fill: color, fontWeight: 'bold', fontFamily: 'Courier New' }).setOrigin(1, 0);
+            const sector = scene.add.text(230, y, `${TRANSLATIONS[lang].sector}:${entry.level}`, { fontSize: '14px', fill: color, fontWeight: 'bold', fontFamily: 'Courier New' }).setOrigin(1, 0);
 
             // Дистанция
             const score = scene.add.text(350, y, `${entry.score}m`, { fontSize: '14px', fill: color, fontWeight: 'bold', fontFamily: 'Courier New' }).setOrigin(1, 0);
@@ -1704,10 +1930,10 @@ async function showLeaderboard(scene, mainMenu) {
         });
     } catch (e) {
         console.error(e);
-        loadingText.setText("CONNECTION_ERROR: OFFLINE");
+        loadingText.setText(TRANSLATIONS[lang].db_error);
     }
 
-    const back = scene.add.text(187, 610, "<< RETURN TO MENU", {
+    const back = scene.add.text(187, 610, TRANSLATIONS[lang].back, {
         fontSize: '18px', fill: '#fff', backgroundColor: '#330033', padding: 12
     }).setOrigin(0.5).setInteractive().on('pointerdown', () => {
         overlay.destroy();
