@@ -826,28 +826,39 @@ function triggerDeath(scene) {
             lastRunState = { isDead: false, pendingDeath: false }; shouldAutoStart = true; scene.scene.restart(); }
     });
 
-    // 2. Реклама
+    // 2. Кнопка Рекламы с "Золотым парашютом"
     btn(360, TRANSLATIONS[lang].watch_ad_label, '#444400', () => {
-        if (!adController) {
-            alert(lang === 'ru' ? "Реклама ещё не готова. Попробуйте через пару секунд." : "Ad not ready yet. Try again.");
+        const currentAds = window.adController;
+
+        if (!currentAds) {
+            alert(lang === 'ru' ? "Рекламный модуль не ответил. Попробуйте еще раз или используйте Хард-ребут." : "Ad module failed. Try again or use Hard Reboot.");
             return;
         }
 
-        adController.show().then((result) => {
-            // Проверка: досмотрел ли игрок до конца?
+        currentAds.show().then((result) => {
+            // Случай А: Реклама была показана и досмотрена
             if (result && result.done) {
-                lastRunState.pendingDeath = false;
-                isDead = false;
-                playerHealth = maxPlayerHealth;
-                saveProgress();
-                shouldAutoStart = true;
-                scene.scene.restart();
+                processRevive(scene);
             } else {
-                alert(lang === 'ru' ? "Нужно досмотреть рекламу до конца!" : "Watch the ad till the end!");
+                alert(lang === 'ru' ? "Нужно досмотреть до конца!" : "Watch till the end!");
             }
         }).catch((err) => {
-            console.error("Adsgram error:", err);
-            alert(lang === 'ru' ? "Ошибка сети или активен AdBlock" : "Network error or AdBlock active");
+            console.error("Adsgram Debug:", err);
+
+            // Случай Б: Ошибка "No fill" (Рекламы нет в сети)
+            if (err.error === 'No fill' || err.description === 'No ads') {
+                alert(lang === 'ru'
+                    ? "Рекламы сейчас нет, но за вашу готовность мы дарим вам БЕСПЛАТНЫЙ РЕБУТ! 🦾"
+                    : "No ads available, but we give you a FREE REBOOT for your patience! 🦾"
+                );
+                processRevive(scene);
+            } else {
+                // Случай В: Реальная ошибка интернета или AdBlock
+                alert(lang === 'ru'
+                    ? "Ошибка связи или активен AdBlock. Проверьте сеть!"
+                    : "Connection error or AdBlock active. Check your network!"
+                );
+            }
         });
     });
 
@@ -864,6 +875,19 @@ function triggerDeath(scene) {
         saveProgress();
         scene.scene.restart();
     });
+}
+
+function processRevive(scene) {
+    lastRunState.pendingDeath = false;
+    isDead = false;
+    playerHealth = maxPlayerHealth;
+    saveProgress();
+    shouldAutoStart = true;
+
+    // Если есть босс — останавливаем его музыку перед рестартом
+    scene.sound.stopAll();
+
+    scene.scene.restart();
 }
 
 function startBossFight(scene) {
