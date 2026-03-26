@@ -27,7 +27,7 @@ let upgradeLevels = { fire: 0, ultra: 0, speed: 0, health: 0, shield: 0, skin_st
 let playerHealth = 100, bossHealth = 400, isShieldActive = false;
 let overdrive = 0, isVictory = false, isShopOpen = false, isDead = false, isBossFight = false, isStarted = false, isPhase2 = false, isPaused = false;
 
-let player, boss, obstacles, bullets, playerBullets, scoreText, levelText, bestText, bestDistText, distanceText, pHealthLabel, bHealthLabel, glitchText;
+let player, boss, obstacles, bullets, playerBullets, scoreText, levelText, bestText, bestDistText, distanceText, pHealthLabel, bHealthLabel, glitchText, bossShields;
 let overdriveBar, roadBar, shieldAura, trailEmitter, bossTrail;
 let items, itemsTimer;
 let minions, minionBullets;
