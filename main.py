@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import os
 import asyncio
 from typing import List, Optional
@@ -62,24 +64,29 @@ async def get_invoice(item_type: str, user_id: str, username: str):
 @app.post("/submit_score")
 async def submit_score(data: ScoreData):
     try:
-        # Проверяем существующий рекорд
+        # Текущая дата в формате ISO
+        current_date = datetime.now().isoformat()
+
         res = supabase.table('leaderboard').select('score').eq('username', data.username).execute()
 
         if res.data:
             old_score = res.data[0]['score']
             if data.score > old_score:
+                # Обновляем счет и СТАВИМ ДАТУ
                 supabase.table('leaderboard').update({
                     "score": data.score,
                     "level": data.level,
-                    "skin": data.skin
+                    "skin": data.skin,
+                    "score_date": current_date
                 }).eq('username', data.username).execute()
         else:
-            # Новый игрок
+            # Новый игрок: записываем всё сразу с датой
             supabase.table('leaderboard').insert({
                 "username": data.username,
                 "score": data.score,
                 "level": data.level,
-                "skin": data.skin
+                "skin": data.skin,
+                "score_date": current_date
             }).execute()
         return {"status": "ok"}
     except Exception as e:

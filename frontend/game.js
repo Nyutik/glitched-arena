@@ -1,4 +1,7 @@
 const SHARE_LINK = "https://t.me/GlitchedArenaBot";
+const botUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:8000'
+    : 'https://glitched-arena.onrender.com';
 const ASSETS = {
     BGM: 'assets/Cyberpunk 2.mp3',
     SFX_ULTRA: 'assets/futuristic-cyberpunk-digi-ivvyqv4k.wav',
@@ -367,6 +370,8 @@ function preload() {
 
 function create() {
     currentStats = getShipStats();
+    // ВЫЗЫВАЕМ СИНХРОНИЗАЦИЮ
+    syncUserData.call(this);
     isPhase3 = false;
     isVictory = false;
     isShopOpen = false;
@@ -672,53 +677,55 @@ function update(time, delta) {
     });
 
     // 2. ОТРИСОВКА ИНФО НАД ГОЛОВОЙ (Вне цикла пуль!)
-    this.overheadGfx.clear();
+    if (this.overheadGfx && this.overheadGfx.active && !isVictory) {
+        this.overheadGfx.clear();
 
-    if (player && player.active) {
-        let pPct = playerHealth / maxPlayerHealth;
-        let hudY = player.y - (player.displayHeight / 2) - 20;
-        let barW = 40;
-        let barColor = 0x00ffff;
+        if (player && player.active) {
+            let pPct = playerHealth / maxPlayerHealth;
+            let hudY = player.y - (player.displayHeight / 2) - 20;
+            let barW = 40;
+            let barColor = 0x00ffff;
 
-        // ЭФФЕКТ ПАНИКИ (HP < 20)
-        if (playerHealth < 20) {
-            let pulse = Math.abs(Math.sin(time * 0.015));
-            barColor = pulse > 0.5 ? 0xff0000 : 0x660000;
-            // Трясем текст для эффекта страха
-            pHealthLabel.setX(player.x + Math.random() * 4 - 2);
-            pHealthLabel.setFill('#ff0000');
-        } else {
-            pHealthLabel.setX(player.x).setFill('#00ffff');
+            // ЭФФЕКТ ПАНИКИ (HP < 20)
+            if (playerHealth < 20) {
+                let pulse = Math.abs(Math.sin(time * 0.015));
+                barColor = pulse > 0.5 ? 0xff0000 : 0x660000;
+                // Трясем текст для эффекта страха
+                pHealthLabel.setX(player.x + Math.random() * 4 - 2);
+                pHealthLabel.setFill('#ff0000');
+            } else {
+                pHealthLabel.setX(player.x).setFill('#00ffff');
+            }
+
+            // Рисуем полоску
+            this.overheadGfx.fillStyle(0x000000, 0.5).fillRect(player.x - barW/2, hudY, barW, 4);
+            this.overheadGfx.fillStyle(barColor).fillRect(player.x - barW/2, hudY, barW * pPct, 4);
+
+            // Текст НАД полоской
+            pHealthLabel.setPosition(player.x, hudY - 12).setOrigin(0.5)
+            .setText(`${Math.ceil(playerHealth)} ${TRANSLATIONS[lang].hp_label}`);
         }
 
-        // Рисуем полоску
-        this.overheadGfx.fillStyle(0x000000, 0.5).fillRect(player.x - barW/2, hudY, barW, 4);
-        this.overheadGfx.fillStyle(barColor).fillRect(player.x - barW/2, hudY, barW * pPct, 4);
+        // --- HUD БОССА ---
+        if (isBossFight && boss && boss.visible) {
+            let maxB = 400 * (1 + level * 0.45);
+            let bPct = Math.max(0, bossHealth / maxB);
+            let hudY = boss.y - (boss.displayHeight * boss.scale / 2) - 25;
+            let barW = 100;
 
-        // Текст НАД полоской
-        pHealthLabel.setPosition(player.x, hudY - 12).setOrigin(0.5)
-        .setText(`${Math.ceil(playerHealth)} ${TRANSLATIONS[lang].hp_label}`);
+            // Цвет полоски босса (красный в ярости)
+            let bColor = level >= 35 ? 0x00ff00 : (isPhase2 ? 0xff0000 : 0xff00ff);
+
+            this.overheadGfx.fillStyle(0x000000, 0.5).fillRect(boss.x - barW/2, hudY, barW, 6);
+            this.overheadGfx.fillStyle(bColor).fillRect(boss.x - barW/2, hudY, barW * bPct, 6);
+
+            // Текст CORE над полоской
+            bHealthLabel.setPosition(boss.x, hudY - 15).setOrigin(0.5)
+                .setText(`${TRANSLATIONS[lang].core_label}: ${Math.ceil(bPct * 100)}%`).setFontSize('12px').setFill(isPhase2 ? '#ff0000' : '#ff00ff').setDepth(101);
+        }
+
+        shieldAura.setVisible(isShieldActive);
     }
-
-    // --- HUD БОССА ---
-    if (isBossFight && boss && boss.visible) {
-        let maxB = 400 * (1 + level * 0.45);
-        let bPct = Math.max(0, bossHealth / maxB);
-        let hudY = boss.y - (boss.displayHeight * boss.scale / 2) - 25;
-        let barW = 100;
-
-        // Цвет полоски босса (красный в ярости)
-        let bColor = level >= 35 ? 0x00ff00 : (isPhase2 ? 0xff0000 : 0xff00ff);
-
-        this.overheadGfx.fillStyle(0x000000, 0.5).fillRect(boss.x - barW/2, hudY, barW, 6);
-        this.overheadGfx.fillStyle(bColor).fillRect(boss.x - barW/2, hudY, barW * bPct, 6);
-
-        // Текст CORE над полоской
-        bHealthLabel.setPosition(boss.x, hudY - 15).setOrigin(0.5)
-            .setText(`${TRANSLATIONS[lang].core_label}: ${Math.ceil(bPct * 100)}%`).setFontSize('12px').setFill(isPhase2 ? '#ff0000' : '#ff00ff').setDepth(101);
-    }
-
-    shieldAura.setVisible(isShieldActive);
 }
 
 
@@ -1090,52 +1097,58 @@ function useOverdrive() {
 
 function triggerVictory(scene) {
     if (isDead || isVictory) return;
-    // --- МОЛНИЕНОСНАЯ ОЧИСТКА ЭКРАНА ---
-    if (this.overheadGfx) this.overheadGfx.clear();
-    if (glitchText) glitchText.setText("").setBackgroundColor(null);
-    // --- ФИКС РАССИНХРОНА ПОЛОСКИ ---
-    if (pHealthLabel) pHealthLabel.setVisible(false);
-    if (bHealthLabel) bHealthLabel.setVisible(false);
-    coins += coinsThisRun;
-    coinsThisRun = 0;
-    isPhase3 = false;
     isVictory = true;
-    if (this.ovrText) { this.ovrText.destroy(); this.ovrText = null; }
+
+    // 1. ОСТАНОВКА ВСЕХ СИСТЕМ (Используем scene!)
+    if (scene.shootEvent) scene.shootEvent.remove();
+    if (scene.bossShootEvent) scene.bossShootEvent.remove();
+    if (scene.turretShootEvent) scene.turretShootEvent.remove();
+    if (scene.minionTimer) scene.minionTimer.remove();
     if (scene.phraseTimer) scene.phraseTimer.remove();
     if (scene.teleportEvent) scene.teleportEvent.remove();
-    player.setVisible(false);
-    trailEmitter.stop();
-    glitchText.setText("").setBackgroundColor(null).setAlpha(0);
-    // отправляем в базу ТОТ уровень, который только что ПРОШЛИ
-    submitScore(Math.floor(distance), level);
+    if (scene.itemTimer) scene.itemTimer.remove();
+    if (itemsTimer) itemsTimer.remove();
 
-    // 1СРАЗУ СОХРАНЯЕМ ПРОГРЕСС УРОВНЯ
+    // 2. МГНОВЕННОЕ УДАЛЕНИЕ ВСЕХ ПУЛЬ И ВРАГОВ
+    [bullets, playerBullets, minionBullets, minions, obstacles, bossShields].forEach(g => {
+        if (g) g.clear(true, true);
+    });
+
+    // 3. ПОЛНАЯ ЗАЧИСТКА ГРАФИКИ (Тот самый фикс)
+    if (scene.overheadGfx) {
+        scene.overheadGfx.clear();
+        scene.overheadGfx.destroy(); // Удаляем объект жизни совсем
+    }
+    if (overdriveBar) { overdriveBar.clear(); overdriveBar.setVisible(false); }
+    if (roadBar) { roadBar.clear(); roadBar.setVisible(false); }
+
+    // Прячем текстовые метки (HP, Дистанция)
+    [pHealthLabel, bHealthLabel, distanceText, glitchText].forEach(t => {
+        if (t) { t.setVisible(false); t.setAlpha(0); }
+    });
+
+    if (scene.ovrText) { scene.ovrText.destroy(); scene.ovrText = null; }
+
+    // 4. ЛОГИКА СОХРАНЕНИЯ
+    coins += coinsThisRun;
+    coinsThisRun = 0;
+    player.setVisible(false);
+    if (trailEmitter) trailEmitter.stop();
+
+    submitScore(Math.floor(distance), level);
     level++;
-    runGoal = 700 + (level - 1) * 100;
     saveProgress();
 
-    // Остановка систем
-    if (scene.teleportEvent) scene.teleportEvent.remove();
-    if (scene.turretShootEvent) scene.turretShootEvent.remove();
-    if (scene.bossShootEvent) scene.bossShootEvent.remove();
-    if (bossTurretL) { bossTurretL.destroy(); bossTurretR.destroy(); }
-    if (bossTurretLTrail) { bossTurretLTrail.destroy(); bossTurretRTrail.destroy(); }
-
-    // ВАУ-ЭФФЕКТ
+    // 5. КРАСИВЫЙ ФИНАЛ
     let vText = scene.add.text(187, 333, TRANSLATIONS[lang].core_destroyed, {
-        fontFamily: 'Arial, sans-serif',
-        fontSize: '28px',
-        fill: '#00ff00',
-        fontWeight: 'bold',
-        stroke: '#000',
-        strokeThickness: 6,
-        align: 'center',
-        wordWrap: { width: 320 }
+        fontFamily: 'Arial', fontSize: '28px', fill: '#00ff00', fontWeight: 'bold',
+        stroke: '#000', strokeThickness: 6, align: 'center'
     }).setOrigin(0.5).setDepth(5000);
 
     scene.cameras.main.flash(1000, 255, 255, 255);
-    scene.cameras.main.shake(1500, 0.08);
+    scene.cameras.main.shake(1500, 0.05);
 
+    // Фейерверк из босса
     for(let i = 0; i < 80; i++) {
         let p = scene.add.rectangle(boss.x, boss.y, 6, 6, isPhase2 ? 0xff0000 : 0xff00ff);
         scene.physics.add.existing(p);
@@ -1145,9 +1158,6 @@ function triggerVictory(scene) {
 
     boss.setVisible(false);
     if (bossTrail) bossTrail.setVisible(false);
-
-    levelText.setText(`${TRANSLATIONS[lang].sector}: ${level}`);
-    bestText.setText(`${TRANSLATIONS[lang].best}: ${bestLevel}`);
 
     scene.time.delayedCall(3000, () => {
         vText.destroy();
@@ -1163,39 +1173,77 @@ function showShop(scene, mainMenu) {
     overlay.add(bg);
 
     const fontUI = 'Arial, sans-serif';
-    const creds = scene.add.text(187, 35, `${TRANSLATIONS[lang].credits}: ${coins}`, { fill: '#ffff00', fontSize: '22px', fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5);
-    overlay.add(creds);
-
-    const stats = scene.add.text(187, 65, `${TRANSLATIONS[lang].best}: ${TRANSLATIONS[lang].sector} ${bestLevel} | ${TRANSLATIONS[lang].max_dist}: ${bestDistance}m`, {
-        fill: '#00ff00', fontSize: '13px', fontWeight: 'bold', fontFamily: fontUI
+    const creds = scene.add.text(187, 25, `${TRANSLATIONS[lang].credits}: ${coins}`, {
+        fill: '#ffff00', fontSize: '22px', fontWeight: 'bold', fontFamily: fontUI
     }).setOrigin(0.5);
-
+    const stats = scene.add.text(187, 45, `${TRANSLATIONS[lang].best}: S${bestLevel} | ${bestDistance}m`, {
+        fill: '#00ff00', fontSize: '12px', fontWeight: 'bold', fontFamily: fontUI
+    }).setOrigin(0.5);
     overlay.add([creds, stats]);
 
+    // === ПРОКРУТКА ===
+    const scrollAreaTop = 65;
+    const scrollAreaBottom = 550;
+    const scrollHeight = scrollAreaBottom - scrollAreaTop;
+
+    const scrollContainer = scene.add.container(0, scrollAreaTop).setDepth(4001);
+    overlay.add(scrollContainer);
+
+    const maskShape = scene.add.graphics().fillStyle(0xffffff).fillRect(10, scrollAreaTop, 355, scrollHeight);
+    const mask = maskShape.createGeometryMask();
+    scrollContainer.setMask(mask);
+
+    let scrollY = 0;
+    let isDragging = false;
+    let dragStartY = 0;
+    let maxScroll = 0;
+
+    const clampScroll = () => {
+        scrollY = Phaser.Math.Clamp(scrollY, -maxScroll, 0);
+        scrollContainer.y = scrollAreaTop + scrollY;
+    };
+
+    scene.input.on('pointerdown', (pointer) => {
+        if (pointer.y >= scrollAreaTop && pointer.y <= scrollAreaBottom) {
+            isDragging = true;
+            dragStartY = pointer.y - scrollY;
+        }
+    });
+    scene.input.on('pointermove', (pointer) => {
+        if (!isDragging) return;
+        scrollY = pointer.y - dragStartY;
+        clampScroll();
+    });
+    scene.input.on('pointerup', () => { isDragging = false; });
+    scene.input.on('wheel', (pointer, gameObjects, deltaX, deltaY) => {
+        if (pointer.y < scrollAreaTop || pointer.y > scrollAreaBottom) return;
+        scrollY -= deltaY * 0.5;
+        clampScroll();
+    });
+
+    // === ФУНКЦИЯ КНОПКИ ===
     const createBtn = (y, nameKey, descKey, cost, type, action) => {
         const maxLvl = (type === 'health') ? 10 : 1;
         let curLvl = (type === 'shield') ? (isShieldActive ? 1 : 0) : (upgradeLevels[type] || 0);
         let isMaxed = curLvl >= maxLvl;
 
-        // предмет за Звезды или за Кредиты
         const isStarItem = ['skin_gold', 'skin_ghost', 'omega', 'buy_coins'].includes(type);
         const isLocked = (type === 'omega' && level < 40 && !upgradeLevels.omega);
 
-        // Цвета кнопок: бирюза (надето), черный (закрыто), золото (Stars), серый (обычное)
         let isCurrentEquipped = (type === 'skin_striker' && currentShape === 'striker') ||
                                 (type === 'skin_gold' && currentSkin === 'gold') ||
                                 (type === 'skin_ghost' && currentSkin === 'ghost');
 
-        let btnColor = isCurrentEquipped ? 0x006666 : (isLocked ? 0x1a1a1a : isStarItem ? 0x443300: (isMaxed ? 0x004400: 0x222222));
+        let btnColor = isCurrentEquipped ? 0x006666
+            : (isLocked ? 0x1a1a1a
+            : (isStarItem ? 0x443300
+            : (isMaxed ? 0x004400 : 0x222222)));
+
         const btnBg = scene.add.rectangle(187, y, 330, 48, btnColor).setInteractive();
 
-        if (isLocked) {
-            btnBg.setStrokeStyle(2, 0xff0000, 0.8);
-        } else if (isStarItem && !isMaxed) {
-            btnBg.setStrokeStyle(2, 0xffaa00, 1);
-        } else if (isCurrentEquipped) {
-            btnBg.setStrokeStyle(2, 0x00ffff, 1);
-        }
+        if (isLocked) btnBg.setStrokeStyle(2, 0xff0000, 0.8);
+        else if (isStarItem && !isMaxed) btnBg.setStrokeStyle(2, 0xffaa00, 1);
+        else if (isCurrentEquipped) btnBg.setStrokeStyle(2, 0x00ffff, 1);
 
         const namet = TRANSLATIONS[lang][nameKey];
         let priceTag = isMaxed ? `[${TRANSLATIONS[lang].install}]` : `- ${cost} ${isStarItem ? '⭐' : '💰'}`;
@@ -1211,120 +1259,128 @@ function showShop(scene, mainMenu) {
         }).setOrigin(0.5);
 
         btnBg.on('pointerdown', () => {
-            if (isLocked) {
-                scene.cameras.main.shake(100, 0.01);
-                return;
-            }
+            if (isLocked) { scene.cameras.main.shake(100, 0.01); return; }
 
-            // Если уже куплено — надеваем
             if (isMaxed && (type.includes('skin') || type.includes('striker'))) {
                 if (action) action();
-                saveProgress(); overlay.destroy(); showShop(scene, mainMenu);
+                saveProgress();
+                overlay.destroy();
+                showShop(scene, mainMenu);
                 return;
             }
 
             if (isMaxed) return;
 
-            // Логика покупки за Звезды (Stars)
             if (isStarItem) {
                 const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
-                const userId = user?.id || "0";
-                const username = user?.first_name || "YOU";
-
-                // ЗАМЕНИ НА СВОЮ ССЫЛКУ ИЗ NGROK
-                const botUrl = `https://ТВОЙ_АДРЕС_ИЗ_NGROK.ngrok-free.app`;
-
-                fetch(`${botUrl}/get_invoice?item_type=${type}&user_id=${userId}&username=${username}`)
-                .then(r => {
-                    if (!r.ok) throw new Error('Бот вернул ошибку');
-                    return r.json();
-                })
+                fetch(`${botUrl}/get_invoice?item_type=${type}&user_id=${user?.id}&username=${user?.first_name}`)
+                .then(r => r.json())
                 .then(data => {
                     if (data.url) {
                         window.Telegram.WebApp.openInvoice(data.url, (status) => {
                             if (status === 'paid') {
                                 if (type === 'buy_coins') coins += 5000;
                                 else upgradeLevels[type] = 1;
-                                saveProgress(); overlay.destroy(); showShop(scene, mainMenu);
+                                saveProgress();
+                                overlay.destroy();
+                                showShop(scene, mainMenu);
                             }
                         });
                     }
                 })
-                .catch(err => {
-                    console.error(err);
-                    alert("Ошибка: Бот не отвечает. Проверь ngrok и запущен ли main.py!");
-                });
+                .catch(() => alert("Бот временно недоступен!"));
                 return;
             }
 
-            // Обычная покупка за Кредиты
             if (coins >= cost) {
                 coins -= cost;
-                if(type === 'shield') { isShieldActive = true; upgradeLevels.shield = 1; }
+                if (type === 'shield') { isShieldActive = true; upgradeLevels.shield = 1; }
                 else { upgradeLevels[type] = (upgradeLevels[type] || 0) + 1; }
                 if (action) action();
-                saveProgress(); overlay.destroy(); showShop(scene, mainMenu);
+                saveProgress();
+                overlay.destroy();
+                showShop(scene, mainMenu);
             } else {
-                // ЭФФЕКТ НЕХВАТКИ ДЕНЕГ
                 btnBg.setFillStyle(0xff0000);
                 scene.cameras.main.shake(200, 0.01);
                 scene.time.delayedCall(200, () => { btnBg.setFillStyle(btnColor); });
             }
         });
-        overlay.add([btnBg, btnText, descText]);
+
+        // ВАЖНО: добавляем в scrollContainer, не в overlay!
+        scrollContainer.add([btnBg, btnText, descText]);
     };
 
-    // Отрисовка кнопок
-    createBtn(110, "up_antenna", "desc_antenna", 400, 'ultra');
-    createBtn(160, "up_cannons", "desc_cannons", 800, 'fire');
-    createBtn(210, "up_speed", "desc_speed", 300, 'speed');
-    createBtn(260, "up_hull", "desc_hull", 500, 'health', () => { maxPlayerHealth += 25; playerHealth = maxPlayerHealth; });
-    createBtn(310, "up_shield", "desc_shield", 150, 'shield');
-    createBtn(360, "skin_striker", "desc_striker", 1500, 'skin_striker', () => { currentShape = 'striker'; refreshPlayerAppearance(scene); });
-    createBtn(410, "skin_gold", "desc_gold", 20, 'skin_gold', () => { currentSkin = 'gold'; refreshPlayerAppearance(scene); });
-    createBtn(460, "skin_ghost", "desc_ghost", 30, 'skin_ghost', () => { currentSkin = 'ghost'; refreshPlayerAppearance(scene); });
+    // === СПИСОК КНОПОК ===
+    let sY = 20, step = 52;
+    createBtn(sY,          "up_antenna",   "desc_antenna",  400,  'ultra');
+    createBtn(sY+step,     "up_cannons",   "desc_cannons",  800,  'fire');
+    createBtn(sY+step*2,   "up_speed",     "desc_speed",    300,  'speed');
+    createBtn(sY+step*3,   "up_hull",      "desc_hull",     500,  'health', () => { maxPlayerHealth += 25; playerHealth = maxPlayerHealth; });
+    createBtn(sY+step*4,   "up_shield",    "desc_shield",   150,  'shield');
+    createBtn(sY+step*5,   "skin_striker", "desc_striker",  1500, 'skin_striker', () => { currentShape = 'striker'; refreshPlayerAppearance(scene); });
+    createBtn(sY+step*6,   "skin_gold",    "desc_gold",     300,  'skin_gold',    () => { currentSkin = 'gold';    refreshPlayerAppearance(scene); });
+    createBtn(sY+step*7,   "skin_ghost",   "desc_ghost",    300,  'skin_ghost',   () => { currentSkin = 'ghost';   refreshPlayerAppearance(scene); });
+    createBtn(sY+step*8,   "up_omega",     "desc_omega",    100,  'omega',        () => { upgradeLevels.omega = 1; });
+    createBtn(sY+step*9,   "up_coins",     "desc_coins",    50,   'buy_coins');
 
-    createBtn(510, "up_omega", "desc_omega", 15, 'omega', () => { upgradeLevels.omega = 1; });
-    createBtn(560, "up_coins", "desc_coins", 5, 'buy_coins', () => { coins += 1000; });
+    // Считаем максимальный скролл
+    const contentHeight = sY + step * 10 + 40;
+    maxScroll = Math.max(0, contentHeight - scrollHeight);
 
-    // Кнопки навигации
-    if (isVictory) {
-        const nextBtn = scene.add.text(187, 655, `${TRANSLATIONS[lang].deploy_btn} ${level}`, {
-            fontSize: '18px', fill: '#00ffff', backgroundColor: '#003333', padding: 12, fontFamily: fontUI, fontWeight: 'bold'
-        }).setOrigin(0.5).setInteractive();
-        nextBtn.on('pointerdown', () => { overlay.destroy(); isShopOpen = false; isVictory = false; shouldAutoStart = true; scene.scene.restart(); });
-        overlay.add(nextBtn);
-    }
-
-    const share = scene.add.text(187, 610, upgradeLevels.shareClaimed ? TRANSLATIONS[lang].invite_done : TRANSLATIONS[lang].invite, {
+    // === ФИКСИРОВАННЫЕ КНОПКИ СНИЗУ ===
+    const share = scene.add.text(187, 575, upgradeLevels.shareClaimed
+        ? TRANSLATIONS[lang].invite_done
+        : TRANSLATIONS[lang].invite, {
         fontSize: '13px', fill: '#00ff88', backgroundColor: '#003300', padding: 8, fontFamily: fontUI
     }).setOrigin(0.5).setInteractive();
 
     share.on('pointerdown', () => {
-        const shareText = encodeURIComponent(TRANSLATIONS[lang].share_invite.replace("%lvl%", level).replace("%dist%", bestDistance));
+        const shareText = encodeURIComponent(
+            TRANSLATIONS[lang].share_invite.replace("%lvl%", level).replace("%dist%", bestDistance)
+        );
         const fullLink = `https://t.me/share/url?url=${encodeURIComponent(SHARE_LINK)}&text=${shareText}`;
         if (window.Telegram?.WebApp) {
             Telegram.WebApp.openTelegramLink(fullLink);
             if (!upgradeLevels.shareClaimed) {
-                coins += 500; upgradeLevels.shareClaimed = true; saveProgress();
+                coins += 500;
+                upgradeLevels.shareClaimed = true;
+                saveProgress();
                 creds.setText(`${TRANSLATIONS[lang].credits}: ${coins}`);
                 share.setText(TRANSLATIONS[lang].invite_done).setFill("#aaa").disableInteractive();
             }
         } else window.open(fullLink, '_blank');
     });
 
-    const back = scene.add.text(187, 650, TRANSLATIONS[lang].back, {
-        fontSize: '15px', fill: '#ff00ff', fontFamily: fontUI, fontWeight: 'bold'
-    }).setOrigin(0.5).setInteractive().on('pointerdown', () => {
+    const cleanupAndClose = (restart, autoStart) => {
+        scene.input.off('pointerdown');
+        scene.input.off('pointermove');
+        scene.input.off('pointerup');
+        scene.input.off('wheel');
         overlay.destroy();
         isShopOpen = false;
         isVictory = false;
-        shouldAutoStart = false;
+        shouldAutoStart = autoStart || false;
+        if (restart) scene.scene.restart();
+    };
+
+    const back = scene.add.text(187, 605, TRANSLATIONS[lang].back, {
+        fontSize: '15px', fill: '#ff00ff', fontFamily: fontUI, fontWeight: 'bold'
+    }).setOrigin(0.5).setInteractive().on('pointerdown', () => {
         saveProgress();
-        scene.scene.restart();
+        cleanupAndClose(true, false);
     });
 
     overlay.add([share, back]);
+
+    if (isVictory) {
+        const nextBtn = scene.add.text(187, 635, `${TRANSLATIONS[lang].deploy_btn} ${level}`, {
+            fontSize: '17px', fill: '#00ffff', backgroundColor: '#003333',
+            padding: { left: 20, right: 20, top: 10, bottom: 10 }, fontFamily: fontUI, fontWeight: 'bold'
+        }).setOrigin(0.5).setInteractive();
+        nextBtn.on('pointerdown', () => { cleanupAndClose(true, true); });
+        overlay.add(nextBtn);
+    }
 }
 
 function bossShoot() {
@@ -2133,49 +2189,23 @@ function getBossIntel() {
 }
 
 async function submitScore(dist, lvl) {
-    if (!window.Telegram?.WebApp?.initDataUnsafe?.user) return;
-    const user = window.Telegram.WebApp.initDataUnsafe.user;
-    const userName = user.first_name;
-    const currentDate = new Date().toISOString();
+    const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
+    if (!user) return;
 
     try {
-        // 1. Проверяем, есть ли уже этот игрок в базе
-        const { data: existingEntry, error: fetchError } = await db
-            .from('leaderboard')
-            .select('score, level')
-            .eq('username', userName)
-            .maybeSingle();
-
-        if (fetchError) throw fetchError;
-
-        if (existingEntry) {
-            // ВАЖНО: Берем максимум из того что было и что пришло
-            const finalScore = Math.max(dist, existingEntry.score);
-            const finalLevel = Math.max(lvl, existingEntry.level);
-            // Обновляем только если хоть что-то стало лучше
-            if (finalScore > existingEntry.score || finalLevel > existingEntry.level) {
-                await db
-                    .from('leaderboard')
-                    .update({
-                        score: finalScore,
-                        level: finalLevel,
-                        skin: currentSkin,
-                        score_date: currentDate
-                    })
-                    .eq('username', userName);
-                console.log("Record UPDATED in Supabase!");
-            } else {
-                console.log("New score isn't higher. Skipping DB update.");
-            }
-        } else {
-            // 3. Если игрока нет в базе — создаем новую запись
-            await db
-                .from('leaderboard')
-                .insert([{ username: userName, score: dist, level: lvl, skin: currentSkin, score_date: currentDate }]);
-            console.log("New player SAVED to Supabase!");
-        }
+        await fetch(`${botUrl}/submit_score`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username: user.first_name,
+                score: Math.floor(dist),
+                level: lvl,
+                skin: currentSkin
+            })
+        });
+        console.log("Рекорд отправлен на сервер!");
     } catch (e) {
-        console.error("Supabase Sync Error:", e);
+        console.error("Ошибка связи с сервером Render:", e);
     }
 }
 
@@ -2206,15 +2236,17 @@ async function showLeaderboard(scene, mainMenu) {
 
     try {
         // Берем ТОП-50
-        const { data, error } = await db.from('leaderboard').select('*').order('score', { ascending: false }).limit(50);
-        if (error) throw error;
+        const response = await fetch(`${botUrl}/get_leaderboard`);
+        const data = await response.json();
+
         loadingText.destroy();
 
-        if (data.length === 0) {
+        if (!data || data.length === 0) {
             overlay.add(scene.add.text(187, 300, TRANSLATIONS[lang].db_empty, { fontSize: '16px', fill: '#aaa' }).setOrigin(0.5));
             return;
         }
 
+        // Определяем ник текущего игрока для подсветки
         const myName = window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name || "YOU";
         let userInTop = false;
 
@@ -2332,4 +2364,40 @@ function showDamageText(scene, x, y, damage, color = '#00ff00', size = '16px') {
         duration: 900,
         onComplete: () => txt.destroy()
     });
+}
+
+async function syncUserData() {
+    const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
+    if (!user) return;
+
+    try {
+        const response = await fetch(`${botUrl}/get_leaderboard`);
+        const data = await response.json();
+
+        // Ищем данные текущего игрока в топе
+        const myData = data.find(d => d.username === user.first_name);
+
+        if (myData) {
+            console.log("Данные игрока найдены в базе, синхронизирую...");
+
+            // Восстанавливаем покупки
+            if (myData.omega) upgradeLevels.omega = 1;
+
+            if (myData.skin && myData.skin !== 'classic') {
+                currentSkin = myData.skin;
+                upgradeLevels[`skin_${myData.skin}`] = 1;
+                // Обновляем визуально корабль, если мы уже в игре
+                if (this.scene && player) {
+                    refreshPlayerAppearance(this);
+                }
+            }
+
+            // Если в базе уровень или монеты больше, чем в локальном сейве
+            if (myData.level > level) level = myData.level;
+
+            saveProgress();
+        }
+    } catch (e) {
+        console.error("Sync error:", e);
+    }
 }
