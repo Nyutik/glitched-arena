@@ -1,12 +1,12 @@
-from datetime import datetime
-
 import os
 import asyncio
+from datetime import datetime
 from typing import List, Optional
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.types import LabeledPrice, PreCheckoutQuery
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from supabase import create_client, Client
 from dotenv import load_dotenv
@@ -23,7 +23,6 @@ dp = Dispatcher()
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 app = FastAPI()
 
-# Разрешаем фронтенду общаться с бэкендом
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -31,18 +30,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-# --- МОДЕЛИ ДАННЫХ ---
 class ScoreData(BaseModel):
     username: str
     score: int
     level: int
     skin: str
 
+# --- API ЭНДПОИНТЫ ---
 
-# --- API ЭНДПОИНТЫ (Для игры) ---
-
-# 1. Получить ссылку на оплату Stars
 @app.get("/get_invoice")
 async def get_invoice(item_type: str, user_id: str, username: str):
     prices_map = {"skin_gold": 300, "skin_ghost": 300, "omega": 100, "buy_coins": 50}
@@ -53,26 +48,21 @@ async def get_invoice(item_type: str, user_id: str, username: str):
         title=f"Glitched Arena: {item_type}",
         description=f"Цифровой апгрейд для {username}",
         payload=payload,
-        provider_token="",  # Пусто для Telegram Stars
+        provider_token="",
         currency="XTR",
         prices=[LabeledPrice(label="Покупка", amount=amount)]
     )
     return {"url": invoice_link}
 
-
-# 2. Безопасно отправить рекорд в базу
 @app.post("/submit_score")
 async def submit_score(data: ScoreData):
     try:
-        # Текущая дата в формате ISO
         current_date = datetime.now().isoformat()
-
         res = supabase.table('leaderboard').select('score').eq('username', data.username).execute()
 
         if res.data:
             old_score = res.data[0]['score']
             if data.score > old_score:
-                # Обновляем счет и СТАВИМ ДАТУ
                 supabase.table('leaderboard').update({
                     "score": data.score,
                     "level": data.level,
@@ -80,7 +70,6 @@ async def submit_score(data: ScoreData):
                     "score_date": current_date
                 }).eq('username', data.username).execute()
         else:
-            # Новый игрок: записываем всё сразу с датой
             supabase.table('leaderboard').insert({
                 "username": data.username,
                 "score": data.score,
@@ -92,8 +81,6 @@ async def submit_score(data: ScoreData):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
-# 3. Получить таблицу лидеров для игры
 @app.get("/get_leaderboard")
 async def get_leaderboard():
     try:
@@ -102,19 +89,16 @@ async def get_leaderboard():
     except Exception as e:
         return {"error": str(e)}
 
-
-# --- ОБРАБОТКА ПЛАТЕЖЕЙ (Для Telegram) ---
+# --- ТЕЛЕГРАМ ОБРАБОТЧИКИ ---
 
 @dp.pre_checkout_query()
 async def checkout(query: PreCheckoutQuery):
     await query.answer(ok=True)
 
-
 @dp.message(F.successful_payment)
 async def got_payment(message: types.Message):
     payload = message.successful_payment.invoice_payload
     item_type, username = payload.split(":")
-
     try:
         if item_type == "buy_coins":
             res = supabase.table('leaderboard').select('coins').eq('username', username).execute()
@@ -126,19 +110,18 @@ async def got_payment(message: types.Message):
             skin_name = item_type.replace("skin_", "")
             supabase.table('leaderboard').update({"skin": skin_name}).eq('username', username).execute()
 
-        await message.answer(f"🦾 СИСТЕМА ОБНОВЛЕНА! {item_type} разблокирован навсегда.")
+        await message.answer(f"🦾 СИСТЕМА ОБНОВЛЕНА! {item_type} теперь твой.")
     except Exception as e:
-        print(f"Ошибка после оплаты: {e}")
+        print(f"Ошибка оплаты: {e}")
 
+# --- ПОДКЛЮЧЕНИЕ ФРОНТЕНДА ---
+app.mount("/", StaticFiles(directory=".", html=True), name="static")
 
 async def main():
-    # Render использует переменную окружения PORT
     port = int(os.getenv("PORT", 8000))
     config = uvicorn.Config(app, host="0.0.0.0", port=port)
     server = uvicorn.Server(config)
-    # Запускаем сервер API и бота параллельно
     await asyncio.gather(server.serve(), dp.start_polling(bot))
-
 
 if __name__ == "__main__":
     asyncio.run(main())
