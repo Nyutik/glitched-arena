@@ -827,38 +827,35 @@ function triggerDeath(scene) {
     });
 
     // 2. Кнопка Рекламы с "Золотым парашютом"
-    btn(360, TRANSLATIONS[lang].watch_ad_label, '#444400', () => {
+    btn(360, level <= 3 ? TRANSLATIONS[lang].revive_label : TRANSLATIONS[lang].watch_ad_label, '#444400', () => {
+        // 1. ЛЬГОТНЫЙ ПЕРИОД: Если уровень 1, 2 или 3 — воскрешаем мгновенно
+        if (level <= 3) {
+            processRevive(scene);
+            return;
+        }
+
+        // 2. ДЛЯ СТАРШИХ УРОВНЕЙ: Пробуем показать рекламу
         const currentAds = window.adController;
 
+        // Если модуля вообще нет (заблокирован совсем) — просто пускаем в игру
         if (!currentAds) {
-            alert(lang === 'ru' ? "Рекламный модуль не ответил. Попробуйте еще раз или используйте Хард-ребут." : "Ad module failed. Try again or use Hard Reboot.");
+            console.log("Adsgram missing - silent bypass");
+            processRevive(scene);
             return;
         }
 
         currentAds.show().then((result) => {
-            // Случай А: Реклама была показана и досмотрена
+            // Успешный просмотр
             if (result && result.done) {
                 processRevive(scene);
             } else {
                 alert(lang === 'ru' ? "Нужно досмотреть до конца!" : "Watch till the end!");
             }
         }).catch((err) => {
-            console.error("Adsgram Debug:", err);
-
-            // Случай Б: Ошибка "No fill" (Рекламы нет в сети)
-            if (err.error === 'No fill' || err.description === 'No ads') {
-                alert(lang === 'ru'
-                    ? "Рекламы сейчас нет, но за вашу готовность мы дарим вам БЕСПЛАТНЫЙ РЕБУТ! 🦾"
-                    : "No ads available, but we give you a FREE REBOOT for your patience! 🦾"
-                );
-                processRevive(scene);
-            } else {
-                // Случай В: Реальная ошибка интернета или AdBlock
-                alert(lang === 'ru'
-                    ? "Ошибка связи или активен AdBlock. Проверьте сеть!"
-                    : "Connection error or AdBlock active. Check your network!"
-                );
-            }
+            // ЛЮБАЯ ОШИБКА (нет интернета, нет рекламы, AdBlock)
+            console.log("Adsgram failure - silent bypass:", err);
+            // Никаких алертов! Просто даем играть.
+            processRevive(scene);
         });
     });
 
