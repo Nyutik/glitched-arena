@@ -4,15 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Glitched Arena</title>
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser-arcade-physics.min.js"></script>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://static.adsgram.ai/js/adsgram-ad-sdk.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="icon" href="data:,">
     <style>
         body {
-            margin: 0;
-            padding: 0;
+            margin: 0; padding: 0;
             background-color: #000;
             overflow: hidden;
             display: flex;
@@ -20,12 +15,28 @@
             align-items: center;
             height: 100vh;
         }
-        canvas {
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
-        }
+        canvas { box-shadow: 0 0 20px rgba(0, 255, 255, 0.2); }
     </style>
 </head>
 <body>
-    <script src="game.js?v=1.6.6"></script>
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://static.adsgram.ai/js/adsgram-ad-sdk.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser-arcade-physics.min.js"></script>
+<script src="game.js?v=1.6.7"></script>
+
+<script>
+    window.addEventListener('load', () => {
+        if (window.Adsgram) {
+            window.adController = window.Adsgram.init({ blockId: "25945" });
+            console.log("✅ Adsgram ready:", window.adController);
+        } else {
+            console.warn("❌ Adsgram SDK not found!");
+            window.adController = null;
+        }
+    });
+</script>
+
 </body>
 </html>

@@ -369,6 +369,7 @@ function preload() {
 }
 
 function create() {
+    if (window.adController) adController = window.adController;
     currentStats = getShipStats();
     // ВЫЗЫВАЕМ СИНХРОНИЗАЦИЮ
     syncUserData.call(this);
