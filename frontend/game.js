@@ -2387,9 +2387,7 @@ async function syncUserData() {
                 currentSkin = myData.skin;
                 upgradeLevels[`skin_${myData.skin}`] = 1;
                 // Обновляем визуально корабль, если мы уже в игре
-                if (this.scene && player) {
-                    refreshPlayerAppearance(this);
-                }
+                if (player) { refreshPlayerAppearance(this); }
             }
 
             // Если в базе уровень или монеты больше, чем в локальном сейве
