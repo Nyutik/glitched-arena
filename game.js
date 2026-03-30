@@ -2429,7 +2429,7 @@ async function showLeaderboard(scene, mainMenu) {
             listContainer.add([rankTxt, nameTxt, sectorTxt, scoreTxt]);
         });
 
-        const amIInTop = data.some(entry => entry.username === myName);
+        const amIInTop = data.some(entry => entry.telegram_id === myId);
 
         if (!amIInTop) {
             // Если меня нет в Топ-50, запрашиваем мое личное место
