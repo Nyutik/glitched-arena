@@ -2316,11 +2316,12 @@ async function submitScore() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                telegram_id: tgUser.id,   // ОТПРАВЛЯЕМ ID
+                telegram_id: tgUser.id,
                 username: tgUser.first_name,
                 score: bestDistance,
                 level: level,
                 skin: currentSkin,
+                shape: currentShape,
                 coins: coins,
                 upgrades: upgradeLevels
             })
@@ -2388,19 +2389,22 @@ async function showLeaderboard(scene, mainMenu) {
             const isMe = (entry.telegram_id === myId);
             if (isMe) {
                 userInTop = true;
-                // Рисуем подложку для игрока всегда
                 const highlight = scene.add.rectangle(187, y + 10, 340, 35, 0x00ffff, 0.2).setOrigin(0.5, 0.3);
                 listContainer.add(highlight);
-
-                // Перекрашиваем текст в голубой ТОЛЬКО если игрок НЕ в топ-3
                 if (i >= 3) color = '#00ffff';
             }
 
-            // ДОБАВЛЯЕМ ЦВЕТНОЙ ИНДИКАТОР СКИНА ---
+            // --- РИСУЕМ МИНИ-КОРАБЛЬ ВМЕСТО ТОЧКИ ---
             const skinInfo = SKIN_DATA[entry.skin] || SKIN_DATA.classic;
-            const skinMarker = scene.add.circle(60, y + 7, 5, skinInfo.body).setOrigin(0.5);
-            if (entry.skin === 'ghost') skinMarker.setAlpha(0.5);
-            listContainer.add(skinMarker);
+            let shipIcon;
+            if (entry.shape === 'striker') {
+                // Маленький треугольник
+                shipIcon = scene.add.triangle(60, y + 8, 0, 8, 4, 0, 8, 8, skinInfo.body).setScale(1);
+            } else {
+                // Маленький квадратик (классика)
+                shipIcon = scene.add.rectangle(60, y + 8, 7, 7, skinInfo.body);
+            }
+            if (entry.skin === 'ghost') shipIcon.setAlpha(0.5);
 
             const rankTxt = scene.add.text(20, y, medal, { fontSize: '13px', fill: color, fontWeight: 'bold', fontFamily: fontUI });
             const displayName = [...entry.username].slice(0, 9).join('').toUpperCase();
@@ -2426,7 +2430,7 @@ async function showLeaderboard(scene, mainMenu) {
             const sectorTxt = scene.add.text(265, y, `S:${entry.level}`, { fontSize: '12px', fill: color, fontFamily: fontUI }).setOrigin(1, 0);
             const scoreTxt = scene.add.text(355, y, `${entry.score}m`, { fontSize: '13px', fill: color, fontWeight: 'bold', fontFamily: fontUI }).setOrigin(1, 0);
 
-            listContainer.add([rankTxt, nameTxt, sectorTxt, scoreTxt]);
+            listContainer.add([shipIcon, rankTxt, nameTxt, dateTxt, sectorTxt, scoreTxt]);
         });
 
         const amIInTop = data.some(entry => entry.telegram_id === myId);

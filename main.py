@@ -36,6 +36,7 @@ class ScoreData(BaseModel):
     score: int
     level: int
     skin: str
+    shape: str
     coins: Optional[int] = 0
     upgrades: Optional[dict] = {}
 
@@ -70,6 +71,7 @@ async def submit_score(data: ScoreData):
             "score": data.score,
             "level": data.level,
             "skin": data.skin,
+            "shape": data.shape,
             "coins": data.coins,
             "upgrades": data.upgrades,
             "score_date": current_date
