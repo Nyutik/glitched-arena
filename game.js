@@ -821,8 +821,8 @@ function triggerDeath(scene) {
     };
 
     // 1. Возврат за деньги (текущий уровень)
-    btn(280, `${TRANSLATIONS[lang].revive_label} [300]`, coins >= 300 ? '#004444' : '#222', () => {
-        if (coins >= 300) { coins -= 300; playerHealth = maxPlayerHealth; isDead = false;
+    btn(280, `${TRANSLATIONS[lang].revive_label} [100]`, coins >= 100 ? '#004444' : '#222', () => {
+        if (coins >= 100) { coins -= 100; playerHealth = maxPlayerHealth; isDead = false;
             lastRunState = { isDead: false, pendingDeath: false }; shouldAutoStart = true; scene.scene.restart(); }
     });
 
@@ -1121,7 +1121,7 @@ function triggerVictory(scene) {
     if (isDead || isVictory) return;
     isVictory = true;
 
-    // 1. ОСТАНОВКА ВСЕХ СИСТЕМ (Используем scene!)
+    // 1. ОСТАНОВКА ВСЕХ СИСТЕМ
     if (scene.shootEvent) scene.shootEvent.remove();
     if (scene.bossShootEvent) scene.bossShootEvent.remove();
     if (scene.turretShootEvent) scene.turretShootEvent.remove();
@@ -1136,7 +1136,7 @@ function triggerVictory(scene) {
         if (g) g.clear(true, true);
     });
 
-    // 3. ПОЛНАЯ ЗАЧИСТКА ГРАФИКИ (Тот самый фикс)
+    // 3. ПОЛНАЯ ЗАЧИСТКА ГРАФИКИ
     if (scene.overheadGfx) {
         scene.overheadGfx.clear();
         scene.overheadGfx.destroy(); // Удаляем объект жизни совсем
@@ -1148,6 +1148,14 @@ function triggerVictory(scene) {
     [pHealthLabel, bHealthLabel, distanceText, glitchText].forEach(t => {
         if (t) { t.setVisible(false); t.setAlpha(0); }
     });
+
+    // --- УДАЛЯЕМ ПОМОЩНИКОВ БОССА ---
+    if (bossTurretL) { bossTurretL.destroy(); bossTurretL = null; }
+    if (bossTurretR) { bossTurretR.destroy(); bossTurretR = null; }
+    if (bossTurretLTrail) { bossTurretLTrail.destroy(); bossTurretLTrail = null; }
+    if (bossTurretRTrail) { bossTurretRTrail.destroy(); bossTurretRTrail = null; }
+
+    boss.setVisible(false);
 
     if (scene.ovrText) { scene.ovrText.destroy(); scene.ovrText = null; }
 
@@ -1182,9 +1190,66 @@ function triggerVictory(scene) {
     if (bossTrail) bossTrail.setVisible(false);
 
     scene.time.delayedCall(3000, () => {
-        vText.destroy();
-        showShop(scene);
+        //vText.destroy();
+        //showShop(scene);
+        showRewardUI(scene, vText);
     });
+}
+
+function showRewardUI(scene, titleText) {
+    const container = scene.add.container(0, 0).setDepth(5001);
+    const bg = scene.add.graphics().fillStyle(0x000000, 0.8).fillRect(0, 0, 375, 667);
+    container.add(bg);
+
+    const amount = coinsThisRun;
+    const info = scene.add.text(187, 330, `${lang === 'ru' ? 'ДОБЫТО' : 'COLLECTED'}: ${amount} 💰`, {
+        fontSize: '24px', fill: '#ffff00', fontWeight: 'bold'
+    }).setOrigin(0.5);
+
+    // Кнопка 1: Удвоить за рекламу
+    const doubleBtn = scene.add.text(187, 420, ` x2 ${lang === 'ru' ? 'ЗА РЕКЛАМУ' : 'WITH AD'} `, {
+        fontSize: '20px', fill: '#fff', backgroundColor: '#004400', padding: 15
+    }).setOrigin(0.5).setInteractive();
+
+    // Кнопка 2: Просто забрать
+    const collectBtn = scene.add.text(187, 500, ` ${lang === 'ru' ? 'ПРОСТО ЗАБРАТЬ' : 'JUST COLLECT'} `, {
+        fontSize: '16px', fill: '#aaa', padding: 10
+    }).setOrigin(0.5).setInteractive();
+
+    container.add([info, doubleBtn, collectBtn]);
+
+    // Логика удвоения
+    doubleBtn.on('pointerdown', () => {
+        const ads = window.adController;
+        if (!ads) {
+            finalizeCollection();
+            return;
+        }
+
+        ads.show().then(result => {
+            if (result && result.done) {
+                coins += coinsThisRun; // Добавляем еще столько же
+                finalizeCollection(true);
+            } else {
+                alert(lang === 'ru' ? "Нужно досмотреть до конца!" : "Watch till the end!");
+            }
+        }).catch(() => {
+            // Если рекламы нет — просто отдаем бонус (Silent Bypass)
+            coins += coinsThisRun;
+            finalizeCollection(true);
+        });
+    });
+
+    collectBtn.on('pointerdown', () => finalizeCollection());
+
+    function finalizeCollection(isDoubled = false) {
+        coins += coinsThisRun;
+        coinsThisRun = 0;
+        saveProgress();
+        container.destroy();
+        titleText.destroy();
+        showShop(scene); // Теперь переходим в магазин
+    }
 }
 
 function showShop(scene, mainMenu) {
@@ -1268,10 +1333,11 @@ function showShop(scene, mainMenu) {
         else if (isCurrentEquipped) btnBg.setStrokeStyle(2, 0x00ffff, 1);
 
         const namet = TRANSLATIONS[lang][nameKey];
-        let priceTag = isMaxed ? `[${TRANSLATIONS[lang].install}]` : `- ${cost} ${isStarItem ? '⭐' : '💰'}`;
+        let levelInfo = (maxLvl > 1) ? ` [${curLvl}/${maxLvl}]` : "";
+        let priceTag = isMaxed ? `[${TRANSLATIONS[lang].maxed || 'MAX'}]` : `- ${cost} ${isStarItem ? '⭐' : '💰'}`;
         if (isLocked) priceTag = `[${TRANSLATIONS[lang].sector} 40+]`;
 
-        const btnText = scene.add.text(187, y - 9, `${namet} ${priceTag}`, {
+        const btnText = scene.add.text(187, y - 10, `${namet}${levelInfo} ${priceTag}`, {
             fontSize: '13px', fill: isLocked ? '#777' : '#fff', fontWeight: 'bold', fontFamily: fontUI
         }).setOrigin(0.5);
 
@@ -2260,6 +2326,9 @@ async function showLeaderboard(scene, mainMenu) {
         // Берем ТОП-50
         const response = await fetch(`${botUrl}/get_leaderboard`);
         const data = await response.json();
+
+        // --- НОВАЯ СОРТИРОВКА: УРОВЕНЬ (ГЛАВНЫЙ), ПОТОМ ДИСТАНЦИЯ ---
+        data.sort((a, b) => b.level - a.level || b.score - a.score);
 
         loadingText.destroy();
 
