@@ -379,7 +379,9 @@ function create() {
     isDead = false;
     isBossFight = false;
     distance = 0; overdrive = 0; isPhase2 = false; isStarted = false; isPaused = false;
-    playerHealth = maxPlayerHealth; bossHealth = 400 * (1 + level * 0.45);
+    playerHealth = maxPlayerHealth;
+    let healthMult = level > 30 ? (30 * 0.45 + (level - 30) * 0.22) : (level * 0.45);
+    bossHealth = 400 * (1 + healthMult);
     isMagnetActive = false;
     isGlitchMode = false;
     this.physics.world.timeScale = 1;
@@ -709,7 +711,8 @@ function update(time, delta) {
 
         // --- HUD БОССА ---
         if (isBossFight && boss && boss.visible) {
-            let maxB = 400 * (1 + level * 0.45);
+            let hM = level > 30 ? (13.5 + (level - 30) * 0.22) : (level * 0.45);
+            let maxB = 400 * (1 + hM);
             let bPct = Math.max(0, bossHealth / maxB);
             let hudY = boss.y - (boss.displayHeight * boss.scale / 2) - 25;
             let barW = 100;
@@ -1055,7 +1058,8 @@ function hitBoss(b, bullet) {
     });
 
     // ОПРЕДЕЛЯЕМ МАКСИМАЛЬНОЕ HP БОССА
-    let maxB = 400 * (1 + level * 0.45);
+    let hM = level > 30 ? (13.5 + (level - 30) * 0.22) : (level * 0.45);
+    let maxB = 400 * (1 + hM);
 
     // ФАЗА 2: ПЕРЕХОД (на 50% HP)
     if (bossHealth <= maxB / 2 && !isPhase2) {
@@ -1106,7 +1110,8 @@ function useOverdrive() {
         duration: 1200,
         onUpdate: () => {
             if (isBossFight && !isVictory && Math.abs(laser.x - boss.x) < 100) {
-                let maxB = 400 * (1 + level * 0.45);
+                let hM = level > 30 ? (13.5 + (level - 30) * 0.22) : (level * 0.45);
+                let maxB = 400 * (1 + hM);
                 // С 30 уровня урон лазера снижается в 2 раза
                 let damageMultiplier = level >= 35 ? 0.0005 : (level >= 30 ? 0.0015 : 0.003);
                 bossHealth -= (maxB * damageMultiplier) * currentStats.atk;
@@ -1309,7 +1314,7 @@ function showShop(scene, mainMenu) {
 
     // === ФУНКЦИЯ КНОПКИ ===
     const createBtn = (y, nameKey, descKey, cost, type, action) => {
-        const maxLvl = (type === 'health') ? 10 : 1;
+        const maxLvl = (type === 'health') ? 20 : 1;
         let curLvl = (type === 'shield') ? (isShieldActive ? 1 : 0) : (upgradeLevels[type] || 0);
         let isMaxed = curLvl >= maxLvl;
 
@@ -1408,7 +1413,7 @@ function showShop(scene, mainMenu) {
     createBtn(sY+step*5,   "skin_striker", "desc_striker",  1500, 'skin_striker', () => { currentShape = 'striker'; refreshPlayerAppearance(scene); });
     createBtn(sY+step*6,   "skin_gold",    "desc_gold",     300,  'skin_gold',    () => { currentSkin = 'gold';    refreshPlayerAppearance(scene); });
     createBtn(sY+step*7,   "skin_ghost",   "desc_ghost",    300,  'skin_ghost',   () => { currentSkin = 'ghost';   refreshPlayerAppearance(scene); });
-    createBtn(sY+step*8,   "up_omega",     "desc_omega",    100,  'omega',        () => { upgradeLevels.omega = 1; });
+    createBtn(sY+step*8,   "up_omega",     "desc_omega",    0,  'omega',        () => { upgradeLevels.omega = 1; });
     createBtn(sY+step*9,   "up_coins",     "desc_coins",    50,   'buy_coins');
 
     // Считаем максимальный скролл
