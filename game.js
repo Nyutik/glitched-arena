@@ -1332,6 +1332,34 @@ function showShop(scene, mainMenu) {
         clampScroll();
     });
 
+    const showConfirm = (title, cost, isStars, onConfirm) => {
+        const confirmOverlay = scene.add.container(0, 0).setDepth(6000);
+        const cBg = scene.add.graphics().fillStyle(0x000000, 0.9).fillRect(0, 0, 375, 667);
+        cBg.setInteractive(new Phaser.Geom.Rectangle(0, 0, 375, 667), Phaser.Geom.Rectangle.Contains);
+
+        const panel = scene.add.rectangle(187, 333, 280, 180, 0x222222).setStrokeStyle(2, 0x00ffff);
+        const txt = scene.add.text(187, 280, `${lang === 'ru' ? 'КУПИТЬ' : 'BUY'}\n${title}?`, {
+            fontSize: '18px', fill: '#fff', align: 'center', fontWeight: 'bold'
+        }).setOrigin(0.5);
+
+        const price = scene.add.text(187, 325, `${cost} ${isStars ? '⭐' : '💰'}`, {
+            fontSize: '22px', fill: isStars ? '#ffaa00' : '#ffff00', fontWeight: 'bold'
+        }).setOrigin(0.5);
+
+        const yesBtn = scene.add.text(120, 385, `[ ${lang === 'ru' ? 'ДА' : 'YES'} ]`, {
+            fontSize: '20px', fill: '#00ff00', backgroundColor: '#003300', padding: 10
+        }).setOrigin(0.5).setInteractive().on('pointerdown', () => {
+            confirmOverlay.destroy();
+            onConfirm();
+        });
+
+        const noBtn = scene.add.text(254, 385, `[ ${lang === 'ru' ? 'НЕТ' : 'NO'} ]`, {
+            fontSize: '20px', fill: '#ff0000', backgroundColor: '#330000', padding: 10
+        }).setOrigin(0.5).setInteractive().on('pointerdown', () => confirmOverlay.destroy());
+
+        confirmOverlay.add([cBg, panel, txt, price, yesBtn, noBtn]);
+    };
+
     // === ФУНКЦИЯ КНОПКИ ===
     const createBtn = (y, nameKey, descKey, cost, type, action) => {
         const maxLvl = (type === 'health') ? 20 : 1;
@@ -1372,61 +1400,50 @@ function showShop(scene, mainMenu) {
 
         btnBg.on('pointerdown', () => {
             if (isLocked) { scene.cameras.main.shake(100, 0.01); return; }
-
-            if (isMaxed && (type.includes('skin') || type.includes('striker'))) {
-                if (action) action();
-                saveProgress();
-                overlay.destroy();
-                showShop(scene, mainMenu);
-                return;
-            }
-
             if (isMaxed) return;
 
-            if (isStarItem) {
-                if (cost === 0) {
-                    upgradeLevels[type] = 1;
-                    saveProgress();
-                    overlay.destroy();
-                    showShop(scene, mainMenu);
-                    return;
-                }
-                const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
-                fetch(`${botUrl}/get_invoice?item_type=${type}&user_id=${user?.id}&username=${user?.first_name}`)
-                .then(r => r.json())
-                .then(data => {
-                    if (data.url) {
-                        window.Telegram.WebApp.openInvoice(data.url, (status) => {
-                            if (status === 'paid') {
-                                if (type === 'buy_coins') coins += 5000;
-                                else upgradeLevels[type] = 1;
-                                saveProgress();
-                                overlay.destroy();
-                                showShop(scene, mainMenu);
-                            }
-                        });
+            // Вызываем подтверждение вместо мгновенной покупки
+            showConfirm(namet, cost, isStarItem, () => {
+                if (isStarItem) {
+                    if (cost === 0) {
+                        upgradeLevels[type] = 1;
+                        saveProgress();
+                        overlay.destroy();
+                        showShop(scene, mainMenu);
+                        return;
                     }
-                })
-                .catch(() => alert("Бот временно недоступен!"));
-                return;
-            }
-
-            if (coins >= cost) {
-                coins -= cost;
-                if (type === 'shield') { isShieldActive = true; upgradeLevels.shield = 1; }
-                else { upgradeLevels[type] = (upgradeLevels[type] || 0) + 1; }
-                if (action) action();
-                saveProgress();
-                overlay.destroy();
-                showShop(scene, mainMenu);
-            } else {
-                btnBg.setFillStyle(0xff0000);
-                scene.cameras.main.shake(200, 0.01);
-                scene.time.delayedCall(200, () => { btnBg.setFillStyle(btnColor); });
-            }
+                    const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
+                    fetch(`${botUrl}/get_invoice?item_type=${type}&user_id=${user?.id}&username=${user?.first_name}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.url) {
+                            window.Telegram.WebApp.openInvoice(data.url, (status) => {
+                                if (status === 'paid') {
+                                    if (type === 'buy_coins') coins += 5000;
+                                    else upgradeLevels[type] = 1;
+                                    saveProgress();
+                                    overlay.destroy();
+                                    showShop(scene, mainMenu);
+                                }
+                            });
+                        }
+                    });
+                } else {
+                    if (coins >= cost) {
+                        coins -= cost;
+                        if (type === 'shield') { isShieldActive = true; upgradeLevels.shield = 1; }
+                        else { upgradeLevels[type] = (upgradeLevels[type] || 0) + 1; }
+                        if (action) action();
+                        saveProgress();
+                        overlay.destroy();
+                        showShop(scene, mainMenu);
+                    } else {
+                        scene.cameras.main.shake(200, 0.01);
+                    }
+                }
+            });
         });
 
-        // ВАЖНО: добавляем в scrollContainer, не в overlay!
         scrollContainer.add([btnBg, btnText, descText]);
     };
 
@@ -2308,11 +2325,15 @@ function getBossIntel() {
 }
 
 async function submitScore() {
-    const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-    if (!tgUser || !tgUser.id) return;
+    const tg = window.Telegram?.WebApp;
+    const tgUser = tg?.initDataUnsafe?.user;
+    if (!tgUser) {
+        console.warn("Синхронизация пропущена: данные пользователя Telegram не найдены.");
+        return;
+    }
 
     try {
-        await fetch(`${botUrl}/submit_score`, {
+        const response = await fetch(`${botUrl}/submit_score`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -2326,7 +2347,9 @@ async function submitScore() {
                 upgrades: upgradeLevels
             })
         });
-        console.log("✅ Облачный сейв обновлен: S" + level + " | " + bestDistance + "m");
+        const res = await response.json();
+        console.log("Данные в Бд отправлены:", res);
+        //console.log("✅ Облачный сейв обновлен: S" + level + " | " + bestDistance + "m");
     } catch (e) {
         console.error("Ошибка синхронизации:", e);
     }
@@ -2398,11 +2421,9 @@ async function showLeaderboard(scene, mainMenu) {
             const skinInfo = SKIN_DATA[entry.skin] || SKIN_DATA.classic;
             let shipIcon;
             if (entry.shape === 'striker') {
-                // Маленький треугольник
-                shipIcon = scene.add.triangle(60, y + 8, 0, 8, 4, 0, 8, 8, skinInfo.body).setScale(1);
+                shipIcon = scene.add.triangle(60, y + 10, 0, 14, 7, 0, 14, 14, skinInfo.body);
             } else {
-                // Маленький квадратик (классика)
-                shipIcon = scene.add.rectangle(60, y + 8, 7, 7, skinInfo.body);
+                shipIcon = scene.add.rectangle(60, y + 10, 10, 10, skinInfo.body);
             }
             if (entry.skin === 'ghost') shipIcon.setAlpha(0.5);
 
