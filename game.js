@@ -1160,8 +1160,8 @@ function triggerVictory(scene) {
     if (scene.ovrText) { scene.ovrText.destroy(); scene.ovrText = null; }
 
     // 4. ЛОГИКА СОХРАНЕНИЯ
-    coins += coinsThisRun;
-    coinsThisRun = 0;
+    //coins += coinsThisRun;
+    //coinsThisRun = 0;
     player.setVisible(false);
     if (trailEmitter) trailEmitter.stop();
 
@@ -1198,57 +1198,56 @@ function triggerVictory(scene) {
 
 function showRewardUI(scene, titleText) {
     const container = scene.add.container(0, 0).setDepth(5001);
-    const bg = scene.add.graphics().fillStyle(0x000000, 0.8).fillRect(0, 0, 375, 667);
+    const bg = scene.add.graphics().fillStyle(0x000000, 0.9).fillRect(0, 0, 375, 667);
     container.add(bg);
 
-    const amount = coinsThisRun;
-    const info = scene.add.text(187, 330, `${lang === 'ru' ? 'ДОБЫТО' : 'COLLECTED'}: ${amount} 💰`, {
-        fontSize: '24px', fill: '#ffff00', fontWeight: 'bold'
+    // Берем точное значение, которое игрок накопил за этот сектор
+    const earnedAmount = coinsThisRun;
+
+    const info = scene.add.text(187, 330, `${lang === 'ru' ? 'ДОБЫТО' : 'COLLECTED'}: ${earnedAmount} 💰`, {
+        fontSize: '24px', fill: '#ffff00', fontWeight: 'bold', fontFamily: 'Arial'
     }).setOrigin(0.5);
 
-    // Кнопка 1: Удвоить за рекламу
     const doubleBtn = scene.add.text(187, 420, ` x2 ${lang === 'ru' ? 'ЗА РЕКЛАМУ' : 'WITH AD'} `, {
-        fontSize: '20px', fill: '#fff', backgroundColor: '#004400', padding: 15
+        fontSize: '20px', fill: '#fff', backgroundColor: '#004400', padding: 15, fontWeight: 'bold'
     }).setOrigin(0.5).setInteractive();
 
-    // Кнопка 2: Просто забрать
     const collectBtn = scene.add.text(187, 500, ` ${lang === 'ru' ? 'ПРОСТО ЗАБРАТЬ' : 'JUST COLLECT'} `, {
         fontSize: '16px', fill: '#aaa', padding: 10
     }).setOrigin(0.5).setInteractive();
 
     container.add([info, doubleBtn, collectBtn]);
 
-    // Логика удвоения
+    // ЛОГИКА УДВОЕНИЯ
     doubleBtn.on('pointerdown', () => {
         const ads = window.adController;
         if (!ads) {
-            finalizeCollection();
+            finalizeCollection(earnedAmount * 2);
             return;
         }
 
         ads.show().then(result => {
             if (result && result.done) {
-                coins += coinsThisRun; // Добавляем еще столько же
-                finalizeCollection(true);
+                finalizeCollection(earnedAmount * 2);
             } else {
                 alert(lang === 'ru' ? "Нужно досмотреть до конца!" : "Watch till the end!");
             }
         }).catch(() => {
-            // Если рекламы нет — просто отдаем бонус (Silent Bypass)
-            coins += coinsThisRun;
-            finalizeCollection(true);
+            finalizeCollection(earnedAmount * 2);
         });
     });
 
-    collectBtn.on('pointerdown', () => finalizeCollection());
+    collectBtn.on('pointerdown', () => finalizeCollection(earnedAmount));
 
-    function finalizeCollection(isDoubled = false) {
-        coins += coinsThisRun;
+    function finalizeCollection(finalSum) {
+        // Только ТЕПЕРЬ прибавляем деньги к общему счету
+        coins += finalSum;
         coinsThisRun = 0;
+
         saveProgress();
         container.destroy();
-        titleText.destroy();
-        showShop(scene); // Теперь переходим в магазин
+        if (titleText) titleText.destroy();
+        showShop(scene);
     }
 }
 
