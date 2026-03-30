@@ -35,6 +35,8 @@ class ScoreData(BaseModel):
     score: int
     level: int
     skin: str
+    coins: int
+    upgrades: dict
 
 # --- API ЭНДПОИНТЫ ---
 
@@ -54,31 +56,28 @@ async def get_invoice(item_type: str, user_id: str, username: str):
     )
     return {"url": invoice_link}
 
+
 @app.post("/submit_score")
 async def submit_score(data: ScoreData):
     try:
         current_date = datetime.now().isoformat()
-        res = supabase.table('leaderboard').select('score').eq('username', data.username).execute()
 
-        if res.data:
-            old_score = res.data[0]['score']
-            if data.score > old_score:
-                supabase.table('leaderboard').update({
-                    "score": data.score,
-                    "level": data.level,
-                    "skin": data.skin,
-                    "score_date": current_date
-                }).eq('username', data.username).execute()
-        else:
-            supabase.table('leaderboard').insert({
-                "username": data.username,
-                "score": data.score,
-                "level": data.level,
-                "skin": data.skin,
-                "score_date": current_date
-            }).execute()
+        # Данные для сохранения
+        payload = {
+            "username": data.username,
+            "score": data.score,
+            "level": data.level,
+            "skin": data.skin,
+            "coins": data.coins,
+            "upgrades": data.upgrades,
+            "score_date": current_date
+        }
+
+        res = supabase.table('leaderboard').upsert(payload, on_conflict="username").execute()
+
         return {"status": "ok"}
     except Exception as e:
+        print(f"Ошибка сохранения: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/get_leaderboard")

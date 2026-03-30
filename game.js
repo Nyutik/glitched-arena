@@ -1364,6 +1364,13 @@ function showShop(scene, mainMenu) {
             if (isMaxed) return;
 
             if (isStarItem) {
+                if (cost === 0) {
+                    upgradeLevels[type] = 1;
+                    saveProgress();
+                    overlay.destroy();
+                    showShop(scene, mainMenu);
+                    return;
+                }
                 const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
                 fetch(`${botUrl}/get_invoice?item_type=${type}&user_id=${user?.id}&username=${user?.first_name}`)
                 .then(r => r.json())
@@ -2292,12 +2299,13 @@ async function submitScore(dist, lvl) {
                 username: user.first_name,
                 score: Math.floor(dist),
                 level: lvl,
-                skin: currentSkin
+                skin: currentSkin,
+                coins: coins,
+                upgrades: upgradeLevels
             })
         });
-        console.log("Рекорд отправлен на сервер!");
     } catch (e) {
-        console.error("Ошибка связи с сервером Render:", e);
+        console.error("Ошибка синхронизации данных:", e);
     }
 }
 
@@ -2468,29 +2476,30 @@ async function syncUserData() {
     try {
         const response = await fetch(`${botUrl}/get_leaderboard`);
         const data = await response.json();
-
-        // Ищем данные текущего игрока в топе
         const myData = data.find(d => d.username === user.first_name);
 
         if (myData) {
-            console.log("Данные игрока найдены в базе, синхронизирую...");
+            console.log("Синхронизация прогресса из облака...");
 
-            // Восстанавливаем покупки
-            if (myData.omega) upgradeLevels.omega = 1;
+            // Берем уровень, если в облаке он выше (или просто актуальный)
+            if (myData.level >= level) level = myData.level;
 
-            if (myData.skin && myData.skin !== 'classic') {
-                currentSkin = myData.skin;
-                upgradeLevels[`skin_${myData.skin}`] = 1;
-                // Обновляем визуально корабль, если мы уже в игре
-                if (player) { refreshPlayerAppearance(this); }
+            // Берем монеты
+            if (myData.coins !== undefined) coins = myData.coins;
+
+            // Восстанавливаем все апгрейды
+            if (myData.upgrades) {
+                upgradeLevels = { ...upgradeLevels, ...myData.upgrades };
             }
 
-            // Если в базе уровень или монеты больше, чем в локальном сейве
-            if (myData.level > level) level = myData.level;
+            currentSkin = myData.skin || 'classic';
+
+            // Пересчитываем цель уровня, чтобы босс не вылез раньше времени
+            runGoal = 700 + (level - 1) * 100;
 
             saveProgress();
         }
     } catch (e) {
-        console.error("Sync error:", e);
+        console.error("Ошибка получения данных:", e);
     }
 }
