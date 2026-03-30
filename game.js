@@ -805,8 +805,9 @@ function triggerDeath(scene) {
     scoreText.setText(`${TRANSLATIONS[lang].credits}: ${coins}`);
 
     if (Math.floor(distance) > bestDistance) {
-        submitScore(Math.floor(distance), level);
+        bestDistance = Math.floor(distance);
     }
+    submitScore();
 
     lastRunState = { isDead: true, pendingDeath: true };
     if (this.ovrText) { this.ovrText.destroy(); this.ovrText = null; }
@@ -1182,8 +1183,8 @@ function triggerVictory(scene) {
     if (trailEmitter) trailEmitter.stop();
 
     level++;
-
-    submitScore(Math.floor(distance), level);
+    if (Math.floor(distance) > bestDistance) bestDistance = Math.floor(distance);
+    //submitScore(Math.floor(distance), level);
 
     saveProgress();
 
@@ -1263,6 +1264,9 @@ function showRewardUI(scene, titleText) {
         coinsThisRun = 0;
 
         saveProgress();
+
+        submitScore();
+
         container.destroy();
         if (titleText) titleText.destroy();
         showShop(scene);
@@ -2303,25 +2307,27 @@ function getBossIntel() {
     }
 }
 
-async function submitScore(dist, lvl) {
-    const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
-    if (!user) return;
+async function submitScore() {
+    const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+    if (!tgUser || !tgUser.id) return;
 
     try {
         await fetch(`${botUrl}/submit_score`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                username: user.first_name,
-                score: Math.floor(dist),
-                level: lvl,
+                telegram_id: tgUser.id,   // ОТПРАВЛЯЕМ ID
+                username: tgUser.first_name,
+                score: bestDistance,
+                level: level,
                 skin: currentSkin,
                 coins: coins,
                 upgrades: upgradeLevels
             })
         });
+        console.log("✅ Облачный сейв обновлен: S" + level + " | " + bestDistance + "m");
     } catch (e) {
-        console.error("Ошибка синхронизации данных:", e);
+        console.error("Ошибка синхронизации:", e);
     }
 }
 
@@ -2366,7 +2372,7 @@ async function showLeaderboard(scene, mainMenu) {
         }
 
         // Определяем ник текущего игрока для подсветки
-        const myName = window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name || "YOU";
+        const myId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || "YOU";
         let userInTop = false;
 
         data.forEach((entry, i) => {
@@ -2379,7 +2385,7 @@ async function showLeaderboard(scene, mainMenu) {
             else if (i === 1) color = '#C0C0C0';
             else if (i === 2) color = '#CD7F32';
 
-            const isMe = (entry.username === myName);
+            const isMe = (entry.telegram_id === myId);
             if (isMe) {
                 userInTop = true;
                 // Рисуем подложку для игрока всегда
@@ -2390,9 +2396,15 @@ async function showLeaderboard(scene, mainMenu) {
                 if (i >= 3) color = '#00ffff';
             }
 
+            // ДОБАВЛЯЕМ ЦВЕТНОЙ ИНДИКАТОР СКИНА ---
+            const skinInfo = SKIN_DATA[entry.skin] || SKIN_DATA.classic;
+            const skinMarker = scene.add.circle(60, y + 7, 5, skinInfo.body).setOrigin(0.5);
+            if (entry.skin === 'ghost') skinMarker.setAlpha(0.5);
+            listContainer.add(skinMarker);
+
             const rankTxt = scene.add.text(20, y, medal, { fontSize: '13px', fill: color, fontWeight: 'bold', fontFamily: fontUI });
             const displayName = [...entry.username].slice(0, 9).join('').toUpperCase();
-            const nameTxt = scene.add.text(65, y, displayName, { fontSize: '13px', fill: color, fontFamily: fontUI });
+            const nameTxt = scene.add.text(75, y, displayName, { fontSize: '13px', fill: color, fontFamily: fontUI });
 
             // --- НОВЫЙ БЛОК: ФОРМАТИРОВАНИЕ И ОТРИСОВКА ДАТЫ ---
             let dateStr = '--.--.--';
@@ -2421,7 +2433,7 @@ async function showLeaderboard(scene, mainMenu) {
 
         if (!amIInTop) {
             // Если меня нет в Топ-50, запрашиваем мое личное место
-            const myRes = await fetch(`${botUrl}/get_user_personal/${encodeURIComponent(myName)}`);
+            const myRes = await fetch(`${botUrl}/get_user_personal/${myId}`);
             const myPersonal = await myRes.json();
 
             if (myPersonal && !myPersonal.error) {
@@ -2513,67 +2525,53 @@ function showDamageText(scene, x, y, damage, color = '#00ff00', size = '16px') {
 }
 
 async function syncUserData() {
-    const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
-    if (!user) return;
+    const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+    if (!tgUser || !tgUser.id) return;
 
     try {
-        const response = await fetch(`${botUrl}/get_user_personal/${encodeURIComponent(user.first_name)}`);
+        const response = await fetch(`${botUrl}/get_user_personal/${tgUser.id}`);
         const myData = await response.json();
 
         if (myData && !myData.error) {
-            console.log("Синхронизация прогресса (Двусторонний режим)...");
             let needsPush = false;
 
-            // 1. УРОВЕНЬ: Берем только максимальный
+            // СИНХРОНИЗАЦИЯ УРОВНЯ
             if (myData.level > level) {
                 level = myData.level;
+                if (level - 1 > bestLevel) bestLevel = level - 1;
                 runGoal = 700 + (level - 1) * 100;
-                console.log("📈 Уровень подтянут из облака: " + level);
-            } else if (level > myData.level) {
-                needsPush = true; // Наш локальный уровень выше, надо обновить облако
-            }
+            } else if (level > myData.level) { needsPush = true; }
 
-            // 2. КРЕДИТЫ: Берем только если в облаке больше
-            if (myData.coins !== undefined && myData.coins > coins) {
+            // СИНХРОНИЗАЦИЯ РЕКОРДА (SCORE)
+            if (myData.score > bestDistance) {
+                bestDistance = myData.score;
+            } else if (bestDistance > (myData.score || 0)) { needsPush = true; }
+
+            // СИНХРОНИЗАЦИЯ МОНЕТ
+            if (myData.coins > coins) {
                 coins = myData.coins;
-                console.log("💰 Кошелек синхронизирован: " + coins);
-            } else if (coins > (myData.coins || 0)) {
-                needsPush = true;
-            }
+            } else if (coins > (myData.coins || 0)) { needsPush = true; }
 
-            // 3. АПГРЕЙДЫ: Проверяем каждый предмет
-            if (myData.upgrades || upgradeLevels) {
-                const serverUpgrades = myData.upgrades || {};
-
-                // Проходим по всем возможным ключам апгрейдов
-                for (let key in upgradeLevels) {
-                    let serverVal = serverUpgrades[key] || 0;
-                    let localVal = upgradeLevels[key] || 0;
-
-                    if (serverVal > localVal) {
-                        upgradeLevels[key] = serverVal;
-                        console.log(`🛠 Апгрейд ${key} подтянут: ${serverVal}`);
-                    } else if (localVal > serverVal) {
-                        needsPush = true; // У нас прокачка лучше
+            // СИНХРОНИЗАЦИЯ АПГРЕЙДОВ
+            if (myData.upgrades) {
+                for (let key in myData.upgrades) {
+                    if ((myData.upgrades[key] || 0) > (upgradeLevels[key] || 0)) {
+                        upgradeLevels[key] = myData.upgrades[key];
+                    } else if ((upgradeLevels[key] || 0) > (myData.upgrades[key] || 0)) {
+                        needsPush = true;
                     }
                 }
             }
 
-            // 4. СКИН: Если в базе стоит другой, берем его (или оставляем свой, если в базе пусто)
-            if (myData.skin && myData.skin !== currentSkin && myData.skin !== 'classic') {
-                currentSkin = myData.skin;
-            }
-
             saveProgress();
             if (scoreText) scoreText.setText(`${TRANSLATIONS[lang].credits}: ${coins}`);
+            if (bestDistText) bestDistText.setText(`${TRANSLATIONS[lang].max_dist}: ${bestDistance}m`);
 
-            // ФИНАЛЬНЫЙ ШТРИХ: Если локальные данные круче облачных, пушим их прямо сейчас!
+            // Если телефон новее базы — обновляем базу ПРАВИЛЬНЫМИ данными
             if (needsPush) {
-                console.log("🚀 Локальный сейв новее, обновляю базу данных...");
-                submitScore(Math.floor(distance), level);
+                submitScore();
             }
+            console.log("Облако подтянуто для ID: " + tgUser.id);
         }
-    } catch (e) {
-        console.error("Ошибка личной синхронизации:", e);
-    }
+    } catch (e) { console.error("Sync error:", e); }
 }

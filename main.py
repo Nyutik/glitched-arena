@@ -31,6 +31,7 @@ app.add_middleware(
 )
 
 class ScoreData(BaseModel):
+    telegram_id: int
     username: str
     score: int
     level: int
@@ -41,10 +42,12 @@ class ScoreData(BaseModel):
 # --- API ЭНДПОИНТЫ ---
 
 @app.get("/get_invoice")
-async def get_invoice(item_type: str, user_id: str, username: str):
+async def get_invoice(item_type: str, user_id: int, username: str):
     prices_map = {"skin_gold": 300, "skin_ghost": 300, "omega": 100, "buy_coins": 50}
     amount = prices_map.get(item_type, 100)
-    payload = f"{item_type}:{username}"
+
+    # Теперь в полезную нагрузку пишем ID, а не имя!
+    payload = f"{item_type}:{user_id}"
 
     invoice_link = await bot.create_invoice_link(
         title=f"Glitched Arena: {item_type}",
@@ -61,9 +64,8 @@ async def get_invoice(item_type: str, user_id: str, username: str):
 async def submit_score(data: ScoreData):
     try:
         current_date = datetime.now().isoformat()
-
-        # Данные для сохранения
         payload = {
+            "telegram_id": data.telegram_id,
             "username": data.username,
             "score": data.score,
             "level": data.level,
@@ -72,9 +74,8 @@ async def submit_score(data: ScoreData):
             "upgrades": data.upgrades,
             "score_date": current_date
         }
-
-        res = supabase.table('leaderboard').upsert(payload, on_conflict="username").execute()
-
+        # Теперь конфликт проверяем по telegram_id!
+        res = supabase.table('leaderboard').upsert(payload, on_conflict="telegram_id").execute()
         return {"status": "ok"}
     except Exception as e:
         print(f"Ошибка сохранения: {e}")
@@ -97,48 +98,46 @@ async def get_leaderboard():
 async def checkout(query: PreCheckoutQuery):
     await query.answer(ok=True)
 
+
 @dp.message(F.successful_payment)
 async def got_payment(message: types.Message):
     payload = message.successful_payment.invoice_payload
-    item_type, username = payload.split(":")
+    item_type, tg_id = payload.split(":")
+    tg_id = int(tg_id)  # Превращаем строку обратно в число
+
     try:
         if item_type == "buy_coins":
-            res = supabase.table('leaderboard').select('coins').eq('username', username).execute()
+            # Ищем по telegram_id
+            res = supabase.table('leaderboard').select('coins').eq('telegram_id', tg_id).execute()
             current = res.data[0]['coins'] if (res.data and 'coins' in res.data[0]) else 0
-            supabase.table('leaderboard').update({"coins": current + 5000}).eq('username', username).execute()
+            supabase.table('leaderboard').update({"coins": current + 5000}).eq('telegram_id', tg_id).execute()
+
         elif item_type == "omega":
-            supabase.table('leaderboard').update({"omega": 1}).eq('username', username).execute()
+            supabase.table('leaderboard').update({"omega": 1}).eq('telegram_id', tg_id).execute()
+
         elif "skin_" in item_type:
             skin_name = item_type.replace("skin_", "")
-            supabase.table('leaderboard').update({"skin": skin_name}).eq('username', username).execute()
+            supabase.table('leaderboard').update({"skin": skin_name}).eq('telegram_id', tg_id).execute()
 
-        await message.answer(f"🦾 СИСТЕМА ОБНОВЛЕНА! {item_type} теперь твой.")
+        await message.answer(f"🦾 СИСТЕМА ОБНОВЛЕНА! Апгрейд успешно привязан к вашему ID: {tg_id}")
     except Exception as e:
         print(f"Ошибка оплаты: {e}")
 
 
-@app.get("/get_user_personal/{username}")
-async def get_user_personal(username: str):
+@app.get("/get_user_personal/{tg_id}")
+async def get_user_personal(tg_id: int):
     try:
-        # 1. Получаем данные самого игрока
-        res = supabase.table('leaderboard').select('*').eq('username', username).execute()
-
-        if not res.data:
-            return {"error": "New Player"}
+        res = supabase.table('leaderboard').select('*').eq('telegram_id', tg_id).execute()
+        if not res.data: return {"error": "New Player"}
 
         user_data = res.data[0]
-
-        # 2. Высчитываем ранг (место в топе)
-        # Считаем, сколько людей имеют уровень выше, ИЛИ такой же уровень, но больше метров
-        rank_res = supabase.table('leaderboard').select('username', count='exact') \
+        rank_res = supabase.table('leaderboard').select('telegram_id', count='exact') \
             .or_(f"level.gt.{user_data['level']},and(level.eq.{user_data['level']},score.gt.{user_data['score']})") \
             .execute()
 
-        user_data['rank'] = (rank_res.count or 0) + 1  # Место = (кол-во тех, кто лучше) + 1
-
+        user_data['rank'] = (rank_res.count or 0) + 1
         return user_data
     except Exception as e:
-        print(f"Personal Data Error: {e}")
         return {"error": str(e)}
 
 
