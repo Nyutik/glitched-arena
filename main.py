@@ -35,8 +35,8 @@ class ScoreData(BaseModel):
     score: int
     level: int
     skin: str
-    coins: int
-    upgrades: dict
+    coins: Optional[int] = 0
+    upgrades: Optional[dict] = {}
 
 # --- API ЭНДПОИНТЫ ---
 
@@ -83,7 +83,10 @@ async def submit_score(data: ScoreData):
 @app.get("/get_leaderboard")
 async def get_leaderboard():
     try:
-        res = supabase.table('leaderboard').select('*').order('score', desc=True).limit(50).execute()
+        res = supabase.table('leaderboard').select('*') \
+            .order('level', desc=True) \
+            .order('score', desc=True) \
+            .limit(50).execute()
         return res.data
     except Exception as e:
         return {"error": str(e)}
@@ -112,6 +115,32 @@ async def got_payment(message: types.Message):
         await message.answer(f"🦾 СИСТЕМА ОБНОВЛЕНА! {item_type} теперь твой.")
     except Exception as e:
         print(f"Ошибка оплаты: {e}")
+
+
+@app.get("/get_user_personal/{username}")
+async def get_user_personal(username: str):
+    try:
+        # 1. Получаем данные самого игрока
+        res = supabase.table('leaderboard').select('*').eq('username', username).execute()
+
+        if not res.data:
+            return {"error": "New Player"}
+
+        user_data = res.data[0]
+
+        # 2. Высчитываем ранг (место в топе)
+        # Считаем, сколько людей имеют уровень выше, ИЛИ такой же уровень, но больше метров
+        rank_res = supabase.table('leaderboard').select('username', count='exact') \
+            .or_(f"level.gt.{user_data['level']},and(level.eq.{user_data['level']},score.gt.{user_data['score']})") \
+            .execute()
+
+        user_data['rank'] = (rank_res.count or 0) + 1  # Место = (кол-во тех, кто лучше) + 1
+
+        return user_data
+    except Exception as e:
+        print(f"Personal Data Error: {e}")
+        return {"error": str(e)}
+
 
 # --- ПОДКЛЮЧЕНИЕ ФРОНТЕНДА ---
 app.mount("/", StaticFiles(directory=".", html=True), name="static")

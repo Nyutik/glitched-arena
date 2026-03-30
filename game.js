@@ -335,10 +335,16 @@ loadProgress();
 
 const config = {
     type: Phaser.AUTO,
-    width: 375,
-    height: 667,
-    backgroundColor: '#000000',
+    //width: 375,
+    //height: 667,
     parent: 'game-container',
+    backgroundColor: '#000000',
+    scale: {
+        mode: Phaser.Scale.FIT, // Игра будет растягиваться под размер окна
+        autoCenter: Phaser.Scale.CENTER_BOTH, // Центрируем игру
+        width: 375,
+        height: 667
+    },
     render: {
         pixelArt: false, // Для четких шрифтов
         antialias: true,
@@ -369,6 +375,11 @@ function preload() {
 }
 
 function create() {
+    // Сообщаем Телеграму, что мы хотим расшириться
+    if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.expand();
+        window.Telegram.WebApp.ready();
+    }
     if (window.adController) adController = window.adController;
     currentStats = getShipStats();
     // ВЫЗЫВАЕМ СИНХРОНИЗАЦИЮ
@@ -1170,8 +1181,10 @@ function triggerVictory(scene) {
     player.setVisible(false);
     if (trailEmitter) trailEmitter.stop();
 
-    submitScore(Math.floor(distance), level);
     level++;
+
+    submitScore(Math.floor(distance), level);
+
     saveProgress();
 
     // 5. КРАСИВЫЙ ФИНАЛ
@@ -1302,7 +1315,10 @@ function showShop(scene, mainMenu) {
     });
     scene.input.on('pointermove', (pointer) => {
         if (!isDragging) return;
-        scrollY = pointer.y - dragStartY;
+        // Используем разницу координат для плавности
+        let deltaY = pointer.y - dragStartY;
+        scrollY += deltaY;
+        dragStartY = pointer.y; // Обновляем точку отсчета
         clampScroll();
     });
     scene.input.on('pointerup', () => { isDragging = false; });
@@ -1420,7 +1436,7 @@ function showShop(scene, mainMenu) {
     createBtn(sY+step*5,   "skin_striker", "desc_striker",  1500, 'skin_striker', () => { currentShape = 'striker'; refreshPlayerAppearance(scene); });
     createBtn(sY+step*6,   "skin_gold",    "desc_gold",     300,  'skin_gold',    () => { currentSkin = 'gold';    refreshPlayerAppearance(scene); });
     createBtn(sY+step*7,   "skin_ghost",   "desc_ghost",    300,  'skin_ghost',   () => { currentSkin = 'ghost';   refreshPlayerAppearance(scene); });
-    createBtn(sY+step*8,   "up_omega",     "desc_omega",    0,  'omega',        () => { upgradeLevels.omega = 1; });
+    createBtn(sY+step*8,   "up_omega",     "desc_omega",    100,  'omega',        () => { upgradeLevels.omega = 1; });
     createBtn(sY+step*9,   "up_coins",     "desc_coins",    50,   'buy_coins');
 
     // Считаем максимальный скролл
@@ -2401,6 +2417,33 @@ async function showLeaderboard(scene, mainMenu) {
             listContainer.add([rankTxt, nameTxt, sectorTxt, scoreTxt]);
         });
 
+        const amIInTop = data.some(entry => entry.username === myName);
+
+        if (!amIInTop) {
+            // Если меня нет в Топ-50, запрашиваем мое личное место
+            const myRes = await fetch(`${botUrl}/get_user_personal/${encodeURIComponent(myName)}`);
+            const myPersonal = await myRes.json();
+
+            if (myPersonal && !myPersonal.error) {
+                // Рисуем разделитель (троеточие)
+                const dots = scene.add.text(187, 120 + (data.length * 45), ". . .", {
+                    fontSize: '20px', fill: '#555'
+                }).setOrigin(0.5);
+                listContainer.add(dots);
+
+                // Рисуем карточку игрока (например, на 105 месте)
+                const y = 120 + ((data.length + 1) * 45);
+
+                const highlight = scene.add.rectangle(187, y + 10, 340, 35, 0x00ffff, 0.3).setOrigin(0.5, 0.3);
+                const rankTxt = scene.add.text(20, y, `#${myPersonal.rank}`, { fontSize: '13px', fill: '#00ffff', fontWeight: 'bold' });
+                const nameTxt = scene.add.text(65, y, myName.toUpperCase(), { fontSize: '13px', fill: '#00ffff' });
+                const sectorTxt = scene.add.text(265, y, `S:${myPersonal.level}`, { fontSize: '12px', fill: '#00ffff' }).setOrigin(1, 0);
+                const scoreTxt = scene.add.text(355, y, `${myPersonal.score}m`, { fontSize: '13px', fill: '#00ffff', fontWeight: 'bold' }).setOrigin(1, 0);
+
+                listContainer.add([highlight, rankTxt, nameTxt, sectorTxt, scoreTxt]);
+            }
+        }
+
         // Подсказка "Листай вниз"
         if (data.length > 10) {
             const scrollHint = scene.add.text(187, 535, lang === 'ru' ? "▼ ЛИСТАЙ ВНИЗ ▼" : "▼ SCROLL DOWN ▼", {
@@ -2474,32 +2517,63 @@ async function syncUserData() {
     if (!user) return;
 
     try {
-        const response = await fetch(`${botUrl}/get_leaderboard`);
-        const data = await response.json();
-        const myData = data.find(d => d.username === user.first_name);
+        const response = await fetch(`${botUrl}/get_user_personal/${encodeURIComponent(user.first_name)}`);
+        const myData = await response.json();
 
-        if (myData) {
-            console.log("Синхронизация прогресса из облака...");
+        if (myData && !myData.error) {
+            console.log("Синхронизация прогресса (Двусторонний режим)...");
+            let needsPush = false;
 
-            // Берем уровень, если в облаке он выше (или просто актуальный)
-            if (myData.level >= level) level = myData.level;
-
-            // Берем монеты
-            if (myData.coins !== undefined) coins = myData.coins;
-
-            // Восстанавливаем все апгрейды
-            if (myData.upgrades) {
-                upgradeLevels = { ...upgradeLevels, ...myData.upgrades };
+            // 1. УРОВЕНЬ: Берем только максимальный
+            if (myData.level > level) {
+                level = myData.level;
+                runGoal = 700 + (level - 1) * 100;
+                console.log("📈 Уровень подтянут из облака: " + level);
+            } else if (level > myData.level) {
+                needsPush = true; // Наш локальный уровень выше, надо обновить облако
             }
 
-            currentSkin = myData.skin || 'classic';
+            // 2. КРЕДИТЫ: Берем только если в облаке больше
+            if (myData.coins !== undefined && myData.coins > coins) {
+                coins = myData.coins;
+                console.log("💰 Кошелек синхронизирован: " + coins);
+            } else if (coins > (myData.coins || 0)) {
+                needsPush = true;
+            }
 
-            // Пересчитываем цель уровня, чтобы босс не вылез раньше времени
-            runGoal = 700 + (level - 1) * 100;
+            // 3. АПГРЕЙДЫ: Проверяем каждый предмет
+            if (myData.upgrades || upgradeLevels) {
+                const serverUpgrades = myData.upgrades || {};
+
+                // Проходим по всем возможным ключам апгрейдов
+                for (let key in upgradeLevels) {
+                    let serverVal = serverUpgrades[key] || 0;
+                    let localVal = upgradeLevels[key] || 0;
+
+                    if (serverVal > localVal) {
+                        upgradeLevels[key] = serverVal;
+                        console.log(`🛠 Апгрейд ${key} подтянут: ${serverVal}`);
+                    } else if (localVal > serverVal) {
+                        needsPush = true; // У нас прокачка лучше
+                    }
+                }
+            }
+
+            // 4. СКИН: Если в базе стоит другой, берем его (или оставляем свой, если в базе пусто)
+            if (myData.skin && myData.skin !== currentSkin && myData.skin !== 'classic') {
+                currentSkin = myData.skin;
+            }
 
             saveProgress();
+            if (scoreText) scoreText.setText(`${TRANSLATIONS[lang].credits}: ${coins}`);
+
+            // ФИНАЛЬНЫЙ ШТРИХ: Если локальные данные круче облачных, пушим их прямо сейчас!
+            if (needsPush) {
+                console.log("🚀 Локальный сейв новее, обновляю базу данных...");
+                submitScore(Math.floor(distance), level);
+            }
         }
     } catch (e) {
-        console.error("Ошибка получения данных:", e);
+        console.error("Ошибка личной синхронизации:", e);
     }
 }
