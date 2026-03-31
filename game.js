@@ -59,6 +59,8 @@ const TRANSLATIONS = {
         higher: "HIGHER",
         lower: "LOWER",
         apply: "<< APPLY & EXIT",
+        share_duel: "⚔️ CHALLENGE FRIEND",
+        share_duel_text: "I reached Sector %lvl% in Glitched Arena! Can you survive longer?",
 
         // HUD
         credits: "CREDITS",
@@ -171,6 +173,8 @@ const TRANSLATIONS = {
         higher: "ВЫШЕ",
         lower: "НИЖЕ",
         apply: "<< ПРИМЕНИТЬ",
+        share_duel: "⚔️ ВЫЗВАТЬ НА ДУЭЛЬ",
+        share_duel_text: "Я дошел до Сектора %lvl% в Glitched Arena! Выживешь дольше?",
 
         // HUD
         credits: "КРЕДИТЫ",
@@ -372,6 +376,16 @@ function preload() {
     g.clear().lineStyle(2, 0x00ffff, 0.5).strokeCircle(25, 25, 22).generateTexture('shield_aura', 50, 50);
     g.clear().fillStyle(0xff0088).fillTriangle(15, 10, 5, 20, 25, 20).fillCircle(10, 10, 6).fillCircle(20, 10, 6);
     g.generateTexture('heart', 30, 30);
+
+    // НОВЫЙ "РАЗМЫТЫЙ" ПИКСЕЛЬ (Streak для скорости)
+    g.clear();
+    // Рисуем длинную полоску (например, 2x32 пикселя)
+    g.fillStyle(0xffffff, 1).fillRect(0, 0, 2, 32);
+    // Добавляем легкое свечение по бокам (прозрачность 0.3)
+    g.fillStyle(0xffffff, 0.3).fillRect(-1, 2, 4, 28);
+
+    g.generateTexture('fast_streak', 4, 32);
+    g.destroy(); // Очищаем графический объект
 }
 
 function create() {
@@ -397,17 +411,35 @@ function create() {
     isGlitchMode = false;
     this.physics.world.timeScale = 1;
 
-    // Создаем простую звездную пыль на фоне
-    this.stars = this.add.particles(0, 0, 'pixel', {
-        x: { min: 0, max: 375 },
-        y: -10,
-        speedY: { min: 100, max: 300 },
-        scale: { start: 0.3, end: 0 },
-        alpha: { start: 0.8, end: 0 },
-        lifespan: 3000,
-        frequency: 40,
-        tint: 0xffffff
-    }).setDepth(0);
+    // 1. Создаем 3 слоя параллакса
+    this.starsSlow = this.add.particles(0, 0, 'pixel', {
+        x: { min: 0, max: 375 }, y: -10,
+        speedY: { min: 20, max: 50 }, // Очень медленные
+        scale: 0.2, alpha: 0.3, lifespan: 10000, frequency: 100, tint: 0x5555ff
+    });
+
+    this.starsMed = this.add.particles(0, 0, 'pixel', {
+        x: { min: 0, max: 375 }, y: -10,
+        speedY: { min: 80, max: 150 }, // Средние
+        scale: 0.4, alpha: 0.6, lifespan: 5000, frequency: 200, tint: 0x00ffff
+    });
+
+    this.starsFast = this.add.particles(0, 0, 'fast_streak', {
+        x: { min: -50, max: 425 },
+        y: -50,
+        speedY: { min: 600, max: 1200 },
+
+        // ЭФФЕКТ СКОРОСТИ: Растягиваем частицу по вертикали в зависимости от скорости
+        scaleY: { start: 1, end: 1.5, ease: 'Quad.easeIn' },
+        // Делаем её очень узкой по горизонтали
+        scaleX: { min: 0.1, max: 0.3 },
+
+        alpha: { start: 0.6, end: 0 },
+        lifespan: 1500,
+        frequency: 30,
+        tint: 0xccffff,
+        blendMode: 'ADD'
+    });
 
     if (shouldAutoStart) {
         shouldAutoStart = false;
@@ -571,6 +603,19 @@ function create() {
 
 function update(time, delta) {
     if (!isStarted || isShopOpen || isVictory || isDead || isPaused) return;
+
+    if (player && player.active && !isPaused) {
+        // Рассчитываем разницу в движении для наклона
+        let targetAngle = (player.x - this.input.activePointer.x) * 0.5;
+        // Ограничиваем наклон (не более 15 градусов)
+        targetAngle = Phaser.Math.Clamp(targetAngle, -15, 15);
+
+        // Плавно меняем угол (интерполяция для мягкости)
+        player.angle = Phaser.Math.Linear(player.angle, -targetAngle, 0.1);
+
+        // Эффект перспективы: чуть-чуть сужаем корабль при наклоне
+        player.scaleX = 1 - (Math.abs(player.angle) * 0.01);
+    }
 
     // 1. Очистка и Магнит (Исправлен вложенный цикл)
     bullets.children.each(b => { if (b && (b.y > 750 || b.y < -100)) b.destroy(); });
@@ -887,6 +932,11 @@ function triggerDeath(scene) {
         saveProgress();
         scene.scene.restart();
     });
+
+    // Кнопка дуэли
+    btn(520, TRANSLATIONS[lang].share_duel, '#004488', () => {
+        shareDuel();
+    });
 }
 
 function processRevive(scene) {
@@ -975,7 +1025,7 @@ function startBossFight(scene) {
                 let color = isPhase3 ? "#ffffff" : (isPhase2 ? "#ff0000" : "#ff00ff");
 
                 glitchText.setText(msg).setFill(color);
-                scene.time.delayedCall(1500, () => {
+                scene.time.delayedCall(3000, () => {
                     if (isPhase3 && !isVictory) {
                         glitchText.setText(TRANSLATIONS[lang].system_halt).setFill("#ffffff").setBackgroundColor("#ff0000");
                     } else {
@@ -1018,7 +1068,7 @@ function startBossFight(scene) {
         scene.teleportEvent = scene.time.addEvent({
             delay: 1500,
             callback: () => {
-                if (isBossFight && !isVictory && !isDead) {
+                if (isBossFight && !isVictory && !isDead && !isPaused) {
                     // Создаем ловушку на старом месте
                     let trap = obstacles.create(boss.x, boss.y, 'pixel').setTint(0xff0000).setScale(4);
                     trap.setData('isTrap', true);
@@ -1027,9 +1077,9 @@ function startBossFight(scene) {
                     let ghost = scene.add.sprite(boss.x, boss.y, 'boss').setTint(0x00ff00).setAlpha(0.6);
                     scene.tweens.add({ targets: ghost, scale: 2, alpha: 0, duration: 400, onComplete: () => ghost.destroy() });
 
-                    boss.x = Phaser.Math.Between(60, 315);
-                    boss.y = Phaser.Math.Between(80, 200);
-                    scene.cameras.main.flash(100, 0, 255, 0, 0.2);
+                    boss.x = Phaser.Math.Between(50, 325);
+                    boss.y = Phaser.Math.Between(100, 250);
+                    scene.cameras.main.flash(150, 0, 255, 0, 0.3);
                 }
             },
             loop: true
@@ -1620,13 +1670,22 @@ function spawnObstacle() {
     if (!isStarted || isBossFight || isShopOpen || isPaused) return;
 
     let x = Phaser.Math.Between(50, 320);
-    let obstacle = obstacles.create(x, -50, 'wall');
+    let obstacle = obstacles.create(x, -20, 'wall'); // Появляется чуть выше
 
-    // Сделаем дронов-охотников РЕАЛЬНО заметными
+    // ПСЕВДО-3D: Начинаем с маленького размера
+    obstacle.setScale(0.2).setAlpha(0);
+
+    // Анимация "вылета" на игрока
+    this.tweens.add({
+        targets: obstacle,
+        scale: 1,
+        alpha: 1,
+        duration: 400, // Быстро увеличивается при появлении
+        ease: 'Quad.easeOut'
+    });
+
     if (level >= 3 && Math.random() > 0.65) {
-        obstacle.setData('isDrone', true);
-        obstacle.setTint(0xffaa00); // ЯРКО-ЗОЛОТИСТЫЙ ОРАНЖЕВЫЙ
-        obstacle.setScale(1.1);      // Сделали крупнее обычных стен
+        obstacle.setData('isDrone', true).setTint(0xffaa00);
         obstacle.setVelocityY(320 + (level * 8));
     } else {
         obstacle.setTint(0xff0000);
@@ -1634,8 +1693,16 @@ function spawnObstacle() {
     }
 }
 
-function togglePause() { isPaused = !isPaused; if (isPaused) this.physics.pause(); else this.physics.resume(); }
-
+function togglePause() {
+    isPaused = !isPaused;
+    if (isPaused) {
+        this.physics.pause();
+        this.time.paused = true;
+    } else {
+        this.physics.resume();
+        this.time.paused = false;
+    }
+}
 function generatePlayerTexture(scene) {
     let g = scene.make.graphics({ x: 0, y: 0, add: false });
     const skin = SKIN_DATA[currentSkin] || SKIN_DATA.classic;
@@ -2599,4 +2666,15 @@ async function syncUserData() {
             console.log("Облако подтянуто для ID: " + tgUser.id);
         }
     } catch (e) { console.error("Sync error:", e); }
+}
+
+function shareDuel() {
+    const text = encodeURIComponent(TRANSLATIONS[lang].share_duel_text.replace("%lvl%", level));
+    const url = `https://t.me/share/url?url=${encodeURIComponent(SHARE_LINK)}&text=${text}`;
+
+    if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.openTelegramLink(url);
+    } else {
+        window.open(url, '_blank');
+    }
 }
