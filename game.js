@@ -2716,17 +2716,18 @@ function shareDuel() {
 
 function showProfile(scene, mainMenu) {
     const overlay = scene.add.container(0, 0).setDepth(4000);
-    const bg = scene.add.graphics().fillStyle(0x000000, 0.98).fillRect(0, 0, 375, 667);
+    // Делаем фон чуть прозрачнее, чтобы не было "урезанного верха"
+    const bg = scene.add.graphics().fillStyle(0x000000, 0.96).fillRect(0, 0, 375, 667);
     overlay.add(bg);
 
     const fontUI = 'Arial, sans-serif';
 
     // 1. Заголовок и Корабль
-    overlay.add(scene.add.text(187, 50, lang === 'ru' ? "ДОСЬЕ ПИЛОТА" : "PILOT DOSSIER", { fontSize: '24px', fill: '#00ffff', fontWeight: 'bold' }).setOrigin(0.5));
+    overlay.add(scene.add.text(187, 60, lang === 'ru' ? "ДОСЬЕ ПИЛОТА" : "PILOT DOSSIER", { fontSize: '24px', fill: '#00ffff', fontWeight: 'bold' }).setOrigin(0.5));
     const preview = scene.add.sprite(187, 130, player.texture.key).setScale(3.5);
     overlay.add(preview);
 
-    // 2. СТАТУС (Локализованный)
+    // 2. СТАТУС
     let statusText = "";
     if (level > 40) statusText = lang === 'ru' ? "МАСТЕР ГЛИТЧА" : "GLITCH MASTER";
     else if (level > 20) statusText = lang === 'ru' ? "ЭЛИТНЫЙ ПИЛОТ" : "ELITE PILOT";
@@ -2736,7 +2737,7 @@ function showProfile(scene, mainMenu) {
     overlay.add(scene.add.text(187, 200, statusText, { fontSize: '20px', fill: statusColor, fontWeight: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5));
 
     // 3. БЛОК СТАТИСТИКИ (Верхняя рамка)
-    const statsBox = scene.add.rectangle(187, 310, 340, 150, 0x111111).setStrokeStyle(1, 0x00ffff, 0.3);
+    const statsBox = scene.add.rectangle(187, 310, 340, 160, 0x111111).setStrokeStyle(1, 0x00ffff, 0.3);
     overlay.add(statsBox);
 
     const sStyle = { fontSize: '13px', fill: '#aaa', fontFamily: fontUI };
@@ -2749,7 +2750,7 @@ function showProfile(scene, mainMenu) {
     ];
 
     statsData.forEach((t, i) => {
-        overlay.add(scene.add.text(45, 245 + (i * 22), t, sStyle));
+        overlay.add(scene.add.text(45, 250 + (i * 25), t, sStyle));
     });
 
     // 4. БЛОК ДОСТИЖЕНИЙ (Нижняя рамка)
@@ -2764,23 +2765,22 @@ function showProfile(scene, mainMenu) {
     achList.forEach((ach, i) => {
         const isDone = achievements[ach.key];
         const color = isDone ? '#ffff00' : '#333333';
-        const textColor = isDone ? '#fff' : '#444';
+        const textColor = isDone ? '#fff' : '#999';
 
-        // Рисуем иконку ачивки (квадратик)
-        let box = scene.add.rectangle(60, 460 + (i * 45), 30, 30, isDone ? 0xaa8800 : 0x222222).setStrokeStyle(2, isDone ? 0xffff00 : 0x444444);
-        let title = scene.add.text(100, 452 + (i * 45), lang === 'ru' ? ach.ru : ach.en, { fontSize: '14px', fill: color, fontWeight: 'bold' });
-        let desc = scene.add.text(100, 468 + (i * 45), ach.desc, { fontSize: '10px', fill: textColor });
+        let box = scene.add.rectangle(60, 460 + (i * 55), 30, 30, isDone ? 0xaa8800 : 0x222222).setStrokeStyle(2, isDone ? 0xffff00 : 0x444444);
+        let title = scene.add.text(100, 452 + (i * 55), lang === 'ru' ? ach.ru : ach.en, { fontSize: '14px', fill: color, fontWeight: 'bold' });
+        let desc = scene.add.text(100, 468 + (i * 55), ach.desc, { fontSize: '10px', fill: textColor });
 
         overlay.add([box, title, desc]);
         if (isDone) {
-             // Добавляем эффект сияния для выполненных
+             // Эффект сияния для выполненных
              scene.tweens.add({ targets: box, alpha: 0.5, duration: 800, yoyo: true, repeat: -1 });
         }
     });
 
     // 5. Кнопка НАЗАД
-    const back = scene.add.text(187, 610, TRANSLATIONS[lang].back, {
-        fontSize: '18px', fill: '#fff', backgroundColor: '#330033', padding: 12, fontWeight: 'bold'
+    const back = scene.add.text(187, 630, TRANSLATIONS[lang].back, {
+        fontSize: '18px', fill: '#fff', backgroundColor: '#330033', padding: { x: 20, y: 12 }, fontWeight: 'bold'
     }).setOrigin(0.5).setInteractive().on('pointerdown', () => {
         overlay.destroy();
         mainMenu.setVisible(true);
