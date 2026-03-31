@@ -39,6 +39,8 @@ class ScoreData(BaseModel):
     shape: str
     coins: Optional[int] = 0
     upgrades: Optional[dict] = {}
+    total_dist: Optional[int] = 0
+    bosses_killed: Optional[int] = 0
 
 # --- API ЭНДПОИНТЫ ---
 

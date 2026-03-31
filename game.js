@@ -29,6 +29,12 @@ let overdrive = 0, isVictory = false, isShopOpen = false, isDead = false, isBoss
 
 let player, boss, obstacles, bullets, playerBullets, scoreText, levelText, bestText, bestDistText, distanceText, pHealthLabel, bHealthLabel, glitchText, bossShields;
 let overdriveBar, roadBar, shieldAura, trailEmitter, bossTrail;
+let totalDistance = 0, bossesKilled = 0;
+let achievements = {
+    flawless: false,
+    rich: false,
+    marathon: false
+};
 let items, itemsTimer;
 let minions, minionBullets;
 let yOffset = -50;
@@ -301,6 +307,9 @@ const saveProgress = () => {
         currentShape: currentShape,
         currentSkin: currentSkin,
         isDeadInSave: isDead,
+        totalDistance,
+        bossesKilled,
+        achievements,
         lastRunState
     }));
 };
@@ -321,6 +330,9 @@ const loadProgress = () => {
         bestLevel = p.bestLevel || 1;
         bestDistance = p.bestDistance || 0;
         coins = p.coins || 0;
+        totalDistance = p.totalDistance || 0;
+        bossesKilled = p.bossesKilled || 0;
+        achievements = p.achievements || { flawless: false, rich: false, marathon: false };
         maxPlayerHealth = p.maxPlayerHealth || 100;
         isShieldActive = p.isShieldActive || false;
         currentShape = p.currentShape || 'classic';
@@ -656,8 +668,10 @@ function update(time, delta) {
 
     // 3. Дистанция и Босс
     if (!isBossFight) {
-        // Скорость растет от уровня и прокачки
-        distance += delta * (0.08 + level * 0.01 + upgradeLevels.speed * 0.03) * currentStats.spd;
+        let deltaDist = delta * (0.08 + level * 0.01 + upgradeLevels.speed * 0.03) * currentStats.spd;
+        distance += deltaDist;
+        totalDistance += deltaDist;
+
         let currentDist = Math.floor(distance);
 
         if (currentDist > bestDistance) {
@@ -675,6 +689,10 @@ function update(time, delta) {
         distanceText.setY(105).setText(`${currentDist}m\n${label}\n${TRANSLATIONS[lang].distance_to}: ${toBoss}m`);
 
         if (distance >= runGoal) startBossFight(this);
+        if (currentDist >= 5000 && !achievements.marathon) {
+            achievements.marathon = true;
+            saveProgress();
+        }
     } else {
         // Логика Босса (движение и вращение щитов)
         let t = time * 0.001;
@@ -1227,14 +1245,12 @@ function triggerVictory(scene) {
     if (scene.ovrText) { scene.ovrText.destroy(); scene.ovrText = null; }
 
     // 4. ЛОГИКА СОХРАНЕНИЯ
-    //coins += coinsThisRun;
-    //coinsThisRun = 0;
     player.setVisible(false);
     if (trailEmitter) trailEmitter.stop();
 
     level++;
+    bossesKilled++;
     if (Math.floor(distance) > bestDistance) bestDistance = Math.floor(distance);
-    //submitScore(Math.floor(distance), level);
 
     saveProgress();
 
@@ -1258,9 +1274,11 @@ function triggerVictory(scene) {
     boss.setVisible(false);
     if (bossTrail) bossTrail.setVisible(false);
 
+    if (playerHealth >= maxPlayerHealth && !achievements.flawless) {
+        achievements.flawless = true;
+    }
+
     scene.time.delayedCall(3000, () => {
-        //vText.destroy();
-        //showShop(scene);
         showRewardUI(scene, vText);
     });
 }
@@ -1285,7 +1303,13 @@ function showRewardUI(scene, titleText) {
         fontSize: '16px', fill: '#aaa', padding: 10
     }).setOrigin(0.5).setInteractive();
 
-    container.add([info, doubleBtn, collectBtn]);
+    const duelBtn = scene.add.text(187, 560, ` ⚔️ ${TRANSLATIONS[lang].share_duel} `, {
+        fontSize: '14px', fill: '#00ffff', padding: 10
+    }).setOrigin(0.5).setInteractive();
+
+    duelBtn.on('pointerdown', () => shareDuel());
+
+    container.add([info, doubleBtn, collectBtn, duelBtn]);
 
     // ЛОГИКА УДВОЕНИЯ
     doubleBtn.on('pointerdown', () => {
@@ -1316,6 +1340,10 @@ function showRewardUI(scene, titleText) {
         saveProgress();
 
         submitScore();
+
+        if (coins >= 5000 && !achievements.rich) {
+            achievements.rich = true;
+        }
 
         container.destroy();
         if (titleText) titleText.destroy();
@@ -2001,14 +2029,14 @@ function showMenu(scene) {
     const menu = scene.add.container(0, 0).setDepth(3000);
     const bg = scene.add.graphics().fillStyle(0x000000, 1).fillRect(0, 0, 375, 667);
 
-    const fontUI = 'Arial, sans-serif'; // Наш новый стандарт
+    const fontUI = 'Arial, sans-serif';
 
     const title = scene.add.text(187, 80, TRANSLATIONS[lang].menu_title, {
         fontSize: '42px', fill: '#00ffff', align: 'center', fontWeight: 'bold',
         stroke: '#ff00ff', strokeThickness: 4, fontFamily: fontUI
     }).setOrigin(0.5);
 
-    // Кнопка смены языка: теперь без перезапуска сцены
+    // Кнопка смены языка
     const langBtn = scene.add.text(320, 30, lang.toUpperCase(), {
         fontSize: '14px', fill: '#ffff00', backgroundColor: '#222', padding: 8, fontFamily: fontUI
     }).setOrigin(0.5).setInteractive();
@@ -2016,8 +2044,8 @@ function showMenu(scene) {
     langBtn.on('pointerdown', () => {
         lang = (lang === 'ru') ? 'en' : 'ru';
         saveProgress();
-        menu.destroy(); // Удаляем старое меню
-        showMenu(scene); // Рисуем новое на том же месте
+        menu.destroy();
+        showMenu(scene);
     });
 
     const btnStyle = { fontSize: '18px', fill: '#fff', backgroundColor: '#222', padding: 10, fontFamily: fontUI, fontWeight: 'bold' };
@@ -2025,9 +2053,16 @@ function showMenu(scene) {
     const startBtn = scene.add.text(187, 210, TRANSLATIONS[lang].start, btnStyle).setOrigin(0.5).setInteractive();
     const hangarBtn = scene.add.text(187, 275, TRANSLATIONS[lang].hangar, btnStyle).setOrigin(0.5).setInteractive();
     const shopBtn = scene.add.text(187, 340, TRANSLATIONS[lang].shop, btnStyle).setOrigin(0.5).setInteractive();
+    const profileBtn = scene.add.text(187, 145, `[ ${lang === 'ru' ? 'ПРОФИЛЬ' : 'PROFILE'} ]`, {
+        fontSize: '16px', fill: '#00ffff', fontWeight: 'bold'
+    }).setOrigin(0.5).setInteractive();
+
+    profileBtn.on('pointerdown', () => {
+        menu.setVisible(false);
+        showProfile(scene, menu);
+    });
     const setBtn = scene.add.text(187, 405, TRANSLATIONS[lang].settings, btnStyle).setOrigin(0.5).setInteractive();
 
-    // Исправленный текст звука
     let audioState = isSoundOn ? TRANSLATIONS[lang].v_on : TRANSLATIONS[lang].v_off;
     const soundBtn = scene.add.text(187, 470, `>> ${TRANSLATIONS[lang].audio}: ${audioState}`, btnStyle).setOrigin(0.5).setInteractive();
 
@@ -2065,7 +2100,7 @@ function showMenu(scene) {
     setBtn.on('pointerdown', () => { menu.setVisible(false); showSettings(scene, menu); });
     rulesBtn.on('pointerdown', () => { menu.setVisible(false); showRules(scene, menu); });
 
-    menu.add([bg, title, langBtn, startBtn, hangarBtn, shopBtn, setBtn, soundBtn, rulesBtn, topBtn]);
+    menu.add([bg, title, langBtn, startBtn, hangarBtn, shopBtn, profileBtn, setBtn, soundBtn, rulesBtn, topBtn]);
 }
 
 function showRules(scene, mainMenu) {
@@ -2677,4 +2712,78 @@ function shareDuel() {
     } else {
         window.open(url, '_blank');
     }
+}
+
+function showProfile(scene, mainMenu) {
+    const overlay = scene.add.container(0, 0).setDepth(4000);
+    const bg = scene.add.graphics().fillStyle(0x000000, 0.98).fillRect(0, 0, 375, 667);
+    overlay.add(bg);
+
+    const fontUI = 'Arial, sans-serif';
+
+    // 1. Заголовок и Корабль
+    overlay.add(scene.add.text(187, 50, lang === 'ru' ? "ДОСЬЕ ПИЛОТА" : "PILOT DOSSIER", { fontSize: '24px', fill: '#00ffff', fontWeight: 'bold' }).setOrigin(0.5));
+    const preview = scene.add.sprite(187, 130, player.texture.key).setScale(3.5);
+    overlay.add(preview);
+
+    // 2. СТАТУС (Локализованный)
+    let statusText = "";
+    if (level > 40) statusText = lang === 'ru' ? "МАСТЕР ГЛИТЧА" : "GLITCH MASTER";
+    else if (level > 20) statusText = lang === 'ru' ? "ЭЛИТНЫЙ ПИЛОТ" : "ELITE PILOT";
+    else statusText = lang === 'ru' ? "НОВИЧОК" : "ROOKIE";
+
+    let statusColor = level > 40 ? "#ff00ff" : "#00ffff";
+    overlay.add(scene.add.text(187, 200, statusText, { fontSize: '20px', fill: statusColor, fontWeight: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5));
+
+    // 3. БЛОК СТАТИСТИКИ (Верхняя рамка)
+    const statsBox = scene.add.rectangle(187, 310, 340, 150, 0x111111).setStrokeStyle(1, 0x00ffff, 0.3);
+    overlay.add(statsBox);
+
+    const sStyle = { fontSize: '13px', fill: '#aaa', fontFamily: fontUI };
+    const statsData = [
+        `${lang === 'ru' ? 'ТЕКУЩИЙ СЕКТОР' : 'SECTOR'}: ${level}`,
+        `${lang === 'ru' ? 'РЕКОРД ДИСТАНЦИИ' : 'MAX DIST'}: ${bestDistance}m`,
+        `${lang === 'ru' ? 'ВСЕГО ПРОЙДЕНО' : 'TOTAL FLOWN'}: ${Math.floor(totalDistance)}m`,
+        `${lang === 'ru' ? 'УДАЛЕНО ЯДЕР' : 'CORES DELETED'}: ${bossesKilled}`,
+        `${lang === 'ru' ? 'КРЕДИТЫ' : 'CREDITS'}: ${coins}`
+    ];
+
+    statsData.forEach((t, i) => {
+        overlay.add(scene.add.text(45, 245 + (i * 22), t, sStyle));
+    });
+
+    // 4. БЛОК ДОСТИЖЕНИЙ (Нижняя рамка)
+    overlay.add(scene.add.text(187, 410, lang === 'ru' ? "--- ДОСТИЖЕНИЯ ---" : "--- ACHIEVEMENTS ---", { fontSize: '14px', fill: '#ff00ff' }).setOrigin(0.5));
+
+    const achList = [
+        { key: 'flawless', ru: "БЕЗУПРЕЧНЫЙ", en: "FLAWLESS", desc: lang === 'ru' ? "Босс без урона" : "Boss: 0 damage" },
+        { key: 'rich', ru: "МАГНАТ", en: "TYCOON", desc: lang === 'ru' ? "Накопил 5000$" : "5000 credits" },
+        { key: 'marathon', ru: "МАРАФОНЕЦ", en: "MARATHON", desc: lang === 'ru' ? "5000м за вылет" : "5000m run" }
+    ];
+
+    achList.forEach((ach, i) => {
+        const isDone = achievements[ach.key];
+        const color = isDone ? '#ffff00' : '#333333';
+        const textColor = isDone ? '#fff' : '#444';
+
+        // Рисуем иконку ачивки (квадратик)
+        let box = scene.add.rectangle(60, 460 + (i * 45), 30, 30, isDone ? 0xaa8800 : 0x222222).setStrokeStyle(2, isDone ? 0xffff00 : 0x444444);
+        let title = scene.add.text(100, 452 + (i * 45), lang === 'ru' ? ach.ru : ach.en, { fontSize: '14px', fill: color, fontWeight: 'bold' });
+        let desc = scene.add.text(100, 468 + (i * 45), ach.desc, { fontSize: '10px', fill: textColor });
+
+        overlay.add([box, title, desc]);
+        if (isDone) {
+             // Добавляем эффект сияния для выполненных
+             scene.tweens.add({ targets: box, alpha: 0.5, duration: 800, yoyo: true, repeat: -1 });
+        }
+    });
+
+    // 5. Кнопка НАЗАД
+    const back = scene.add.text(187, 610, TRANSLATIONS[lang].back, {
+        fontSize: '18px', fill: '#fff', backgroundColor: '#330033', padding: 12, fontWeight: 'bold'
+    }).setOrigin(0.5).setInteractive().on('pointerdown', () => {
+        overlay.destroy();
+        mainMenu.setVisible(true);
+    });
+    overlay.add(back);
 }
