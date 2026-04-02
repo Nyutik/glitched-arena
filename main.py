@@ -26,6 +26,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -41,6 +42,7 @@ class ScoreData(BaseModel):
     upgrades: Optional[dict] = {}
     total_dist: Optional[int] = 0
     bosses_killed: Optional[int] = 0
+    ship_name: Optional[str] = "RAZOR-01"
 
 # --- API ЭНДПОИНТЫ ---
 
@@ -76,6 +78,7 @@ async def submit_score(data: ScoreData):
             "shape": data.shape,
             "coins": data.coins,
             "upgrades": data.upgrades,
+            "ship_name": data.ship_name,
             "score_date": current_date
         }
         # Теперь конфликт проверяем по telegram_id!
