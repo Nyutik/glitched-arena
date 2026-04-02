@@ -1448,10 +1448,10 @@ function showShop(scene, mainMenu) {
 
     // КНОПКИ ПЕРЕКЛЮЧЕНИЯ КАТЕГОРИЙ
     const upBtn = scene.add.rectangle(100, 85, 150, 35, currentShopTab === 'upgrades' ? 0x00ffff : 0x222222).setInteractive();
-    const upText = scene.add.text(100, 85, lang === 'ru' ? "ПРОКАЧКА" : "UPGRADES", { fontSize: '14px', fill: currentShopTab === 'upgrades' ? '#000' : '#fff', fontWeight: 'bold' }).setOrigin(0.5);
+    const upText = scene.add.text(100, 85, lang === 'ru' ? "ПРОКАЧКА" : "UPGRADES", { fontSize: '14px', fontFamily: fontUI, fill: currentShopTab === 'upgrades' ? '#000' : '#fff', fontWeight: 'bold' }).setOrigin(0.5);
 
     const fxBtn = scene.add.rectangle(275, 85, 150, 35, currentShopTab === 'fx' ? 0xff00ff : 0x222222).setInteractive();
-    const fxText = scene.add.text(275, 85, lang === 'ru' ? "КРАСОТА" : "FX / SKINS", { fontSize: '14px', fill: currentShopTab === 'fx' ? '#000' : '#fff', fontWeight: 'bold' }).setOrigin(0.5);
+    const fxText = scene.add.text(275, 85, lang === 'ru' ? "КРАСОТА" : "FX / SKINS", { fontSize: '14px', fontFamily: fontUI, fill: currentShopTab === 'fx' ? '#000' : '#fff', fontWeight: 'bold' }).setOrigin(0.5);
 
     overlay.add([upBtn, upText, fxBtn, fxText]);
 
@@ -1478,22 +1478,22 @@ function showShop(scene, mainMenu) {
 
         const panel = scene.add.rectangle(187, 333, 280, 180, 0x222222).setStrokeStyle(2, 0x00ffff);
         const txt = scene.add.text(187, 280, `${lang === 'ru' ? 'КУПИТЬ' : 'BUY'}\n${title}?`, {
-            fontSize: '18px', fill: '#fff', align: 'center', fontWeight: 'bold'
+            fontSize: '18px', fontFamily: fontUI, fill: '#fff', align: 'center', fontWeight: 'bold'
         }).setOrigin(0.5);
 
         const price = scene.add.text(187, 325, `${cost} ${isStars ? '⭐' : '💰'}`, {
-            fontSize: '22px', fill: isStars ? '#ffaa00' : '#ffff00', fontWeight: 'bold'
+            fontSize: '22px', fontFamily: fontUI, fill: isStars ? '#ffaa00' : '#ffff00', fontWeight: 'bold'
         }).setOrigin(0.5);
 
         const yesBtn = scene.add.text(120, 385, `[ ${lang === 'ru' ? 'ДА' : 'YES'} ]`, {
-            fontSize: '20px', fill: '#00ff00', backgroundColor: '#003300', padding: 10
+            fontSize: '20px', fontFamily: fontUI, fill: '#00ff00', backgroundColor: '#003300', padding: 10
         }).setOrigin(0.5).setInteractive().on('pointerdown', () => {
             confirmOverlay.destroy();
             onConfirm();
         });
 
         const noBtn = scene.add.text(254, 385, `[ ${lang === 'ru' ? 'НЕТ' : 'NO'} ]`, {
-            fontSize: '20px', fill: '#ff0000', backgroundColor: '#330000', padding: 10
+            fontSize: '20px', fontFamily: fontUI, fill: '#ff0000', backgroundColor: '#330000', padding: 10
         }).setOrigin(0.5).setInteractive().on('pointerdown', () => confirmOverlay.destroy());
 
         confirmOverlay.add([cBg, panel, txt, price, yesBtn, noBtn]);
@@ -1621,6 +1621,12 @@ function showShop(scene, mainMenu) {
         scrollY = Phaser.Math.Clamp(scrollY - dy * 0.8, -maxScroll, 0);
         scrollContainer.y = scrollAreaTop + scrollY;
     });
+    scene.input.on('pointermove', (p) => {
+        if (p.isDown && p.y > 110 && p.y < 560) {
+            scrollY = Phaser.Math.Clamp(scrollY + (p.y - p.prevPosition.y), -maxScroll, 0);
+            scrollContainer.y = scrollAreaTop + scrollY;
+        }
+    });
 
     // === НИЖНЯЯ ПАНЕЛЬ (КНОПКИ В РЯД) ===
     const footerY = 625;
@@ -1636,7 +1642,7 @@ function showShop(scene, mainMenu) {
     const invColor = upgradeLevels.shareClaimed ? 0x222222 : 0x004400;
     const invBg = scene.add.rectangle(275, footerY, btnWidth, 45, invColor).setInteractive().setStrokeStyle(1, 0x00ff88, 0.5);
     const invTxt = scene.add.text(275, footerY, upgradeLevels.shareClaimed ? "✓" : `👥 ${lang === 'ru' ? '+500' : '+500'}`, {
-        fontSize: '14px', fill: upgradeLevels.shareClaimed ? '#777' : '#00ff88', fontWeight: 'bold'
+        fontSize: '14px', fontFamily: fontUI, fill: upgradeLevels.shareClaimed ? '#777' : '#00ff88', fontWeight: 'bold'
     }).setOrigin(0.5);
 
     overlay.add([backBg, backTxt, invBg, invTxt]);
@@ -1672,7 +1678,7 @@ function showShop(scene, mainMenu) {
     if (isVictory) {
         const nextBg = scene.add.rectangle(187, 520, 330, 50, 0x003333).setInteractive().setStrokeStyle(2, 0x00ffff);
         const nextTxt = scene.add.text(187, 520, `${TRANSLATIONS[lang].deploy_btn} ${level}`, {
-            fontSize: '18px', fill: '#00ffff', fontWeight: 'bold'
+            fontSize: '18px', fill: '#00ffff', fontWeight: 'bold', fontFamily: fontUI
         }).setOrigin(0.5);
 
         // Эффект пульсации для привлечения внимания
@@ -2260,7 +2266,7 @@ function showRules(scene, mainMenu) {
     });
 
     // --- СЕКЦИЯ 2: ТРЕВОГИ ---
-    const stagesTitle = scene.add.text(187, 355, TRANSLATIONS[lang].rules_alerts, {
+    const stagesTitle = scene.add.text(187, 345, TRANSLATIONS[lang].rules_alerts, {
         fontSize: '15px', fill: '#ff00ff', fontWeight: 'bold'
     }).setOrigin(0.5);
 
@@ -2863,7 +2869,7 @@ function showProfile(scene, mainMenu) {
     const fontUI = 'Arial, sans-serif';
 
     overlay.add(scene.add.text(187, 60, lang === 'ru' ? "ДОСЬЕ ПИЛОТА" : "PILOT DOSSIER", {
-        fontSize: '24px', fill: '#00ffff', fontWeight: 'bold'
+        fontSize: '24px', fontFamily: fontUI, fill: '#00ffff', fontWeight: 'bold'
     }).setOrigin(0.5));
 
     const scrollWindowHeight = 350;
@@ -2902,13 +2908,13 @@ function showProfile(scene, mainMenu) {
 
     statsData.forEach((t, i) => {
         scrollContainer.add(scene.add.text(50, currentY + 12 + (i * 24), t, {
-            fontSize: '13px', fill: '#aaa'
+            fontSize: '13px', fontFamily: fontUI, fill: '#aaa'
         }));
     });
     currentY += 165;
 
     const achHeader = scene.add.text(187, currentY, lang === 'ru' ? "--- ДОСТИЖЕНИЯ ---" : "--- ACHIEVEMENTS ---", {
-        fontSize: '14px', fill: '#ff00ff'
+        fontSize: '14px', fontFamily: fontUI, fill: '#ff00ff'
     }).setOrigin(0.5);
     scrollContainer.add(achHeader);
     currentY += 35;
@@ -2924,10 +2930,10 @@ function showProfile(scene, mainMenu) {
         let box = scene.add.rectangle(60, currentY + 16, 32, 32, isDone ? 0xaa8800 : 0x222222)
             .setStrokeStyle(2, isDone ? 0xffff00 : 0x444444);
         let t1 = scene.add.text(100, currentY + 6, lang === 'ru' ? ach.ru : ach.en, {
-            fontSize: '14px', fill: isDone ? '#ffff00' : '#666', fontWeight: 'bold'
+            fontSize: '14px', fontFamily: fontUI, fill: isDone ? '#ffff00' : '#666', fontWeight: 'bold'
         });
         let t2 = scene.add.text(100, currentY + 24, ach.desc, {
-            fontSize: '10px', fill: isDone ? '#fff' : '#999'
+            fontSize: '10px', fontFamily: fontUI, fill: isDone ? '#fff' : '#999'
         });
         scrollContainer.add([box, t1, t2]);
         currentY += 55;
@@ -2935,11 +2941,10 @@ function showProfile(scene, mainMenu) {
 
     const maxScroll = Math.max(0, currentY - scrollWindowHeight + 40);
     let scrollY = 0;
+    const updateScroll = () => { scrollY = Phaser.Math.Clamp(scrollY, -maxScroll, 0); scrollContainer.y = 170 + scrollY; };
 
-    const applyScroll = () => {
-        scrollY = Phaser.Math.Clamp(scrollY, -maxScroll, 0);
-        scrollContainer.y = 170 + scrollY;
-    };
+    scene.input.on('wheel', (p, obj, dx, dy) => { scrollY -= dy; updateScroll(); });
+    scene.input.on('pointermove', (p) => { if (p.isDown) { scrollY += (p.y - p.prevPosition.y); updateScroll(); } });
 
     scene.input.on('wheel', (pointer, gameObjects, deltaX, deltaY) => {
         scrollY -= deltaY * 0.8;
@@ -2947,20 +2952,20 @@ function showProfile(scene, mainMenu) {
     });
 
     // === ИМЯ / ПОЗЫВНОЙ ВНЕ СКРОЛЛА ===
-    const nameBox = scene.add.rectangle(187, 120, 240, 55, 0x00ffff, 0.1)
+    const nameBox = scene.add.rectangle(187, 130, 240, 65, 0x00ffff, 0.1)
         .setStrokeStyle(1, 0x00ffff, 0.5)
         .setInteractive({ useHandCursor: true });
 
     const callsignLabel = scene.add.text(187, 105, TRANSLATIONS[lang].callsign_label, {
-        fontSize: '10px', fill: '#00ffff', alpha: 0.7
+        fontSize: '10px', fontFamily: fontUI, fill: '#00ffff', alpha: 0.7
     }).setOrigin(0.5);
 
     const callsignText = scene.add.text(187, 125, shipName, {
-        fontSize: '20px', fill: '#ffff00', fontWeight: 'bold'
+        fontSize: '20px', fontFamily: fontUI, fill: '#ffff00', fontWeight: 'bold'
     }).setOrigin(0.5);
 
     const editHint = scene.add.text(187, 145, TRANSLATIONS[lang].tap_edit, {
-        fontSize: '9px', fill: '#00ffff'
+        fontSize: '9px', fontFamily: fontUI, fill: '#00ffff'
     }).setOrigin(0.5);
 
     nameBox.on('pointerdown', () => {
@@ -2982,7 +2987,7 @@ function showProfile(scene, mainMenu) {
 
     const backBtn = scene.add.rectangle(187, 620, 170, 45, 0x330033).setInteractive().setStrokeStyle(1, 0xff00ff, 0.5);
     const backLabel = scene.add.text(187, 620, TRANSLATIONS[lang].back, {
-        fontSize: '15px', fill: '#ff00ff', fontWeight: 'bold'
+        fontSize: '15px', fontFamily: fontUI, fill: '#ff00ff', fontWeight: 'bold'
     }).setOrigin(0.5);
 
     backBtn.on('pointerdown', () => {
