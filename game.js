@@ -875,16 +875,14 @@ function update(time, delta) {
 
 
 function handleDamage(scene, dmg) {
-    if (isDead || isVictory) return;
+    if (isDead || isVictory || !isStarted) return;
 
-    combo = 0; // СБРОС КОМБО ПРИ УДАРЕ
+    combo = 0;
 
-    // ОПРЕДЕЛЯЕМ СТИЛЬ: если HP < 20, цифры будут ГИГАНТСКИМИ и ярко-малиновыми
     let isCrit = playerHealth < 20;
     let dColor = isCrit ? '#ff0055' : '#ff0000';
     let dSize = isCrit ? '26px' : '18px';
 
-    // ВЫЗЫВАЕМ КРАСНЫЕ ЦИФРЫ УРОНА ПО ИГРОКУ
     showDamageText(scene, player.x, player.y, dmg, dColor, dSize);
 
     if (isShieldActive) {
@@ -894,13 +892,10 @@ function handleDamage(scene, dmg) {
         return;
     }
 
-    // --- ГЕРОИЧЕСКИЙ БОНУС ---
-    // Если урон смертельный, но босс почти мертв или уже взорвался
     if (playerHealth - dmg <= 0 && (bossHealth <= 0 || isVictory)) {
         playerHealth = 1;
         glitchText.setText(TRANSLATIONS[lang].heroic_survival).setFill("#ffff00");
 
-        // ЭФФЕКТ АДРЕНАЛИНА: Вспышка желтым и замедление времени на секунду
         this.cameras.main.flash(500, 255, 255, 0, 0.8);
         this.physics.world.timeScale = 2;
         this.time.delayedCall(1000, () => {
@@ -1301,7 +1296,8 @@ function triggerVictory(scene) {
     // 3. ПОЛНАЯ ЗАЧИСТКА ГРАФИКИ
     if (scene.overheadGfx) {
         scene.overheadGfx.clear();
-        scene.overheadGfx.destroy(); // Удаляем объект жизни совсем
+        scene.overheadGfx.destroy();
+        scene.overheadGfx = null;
     }
     if (overdriveBar) { overdriveBar.clear(); overdriveBar.setVisible(false); }
     if (roadBar) { roadBar.clear(); roadBar.setVisible(false); }
@@ -1365,66 +1361,57 @@ function showRewardUI(scene, titleText) {
     const bg = scene.add.graphics().fillStyle(0x000000, 0.9).fillRect(0, 0, 375, 667);
     container.add(bg);
 
-    // Берем точное значение, которое игрок накопил за этот сектор
     const earnedAmount = coinsThisRun;
+    const info = scene.add.text(187, 330,
+        `${lang === 'ru' ? 'ДОБЫТО' : 'COLLECTED'}: ${earnedAmount} 💰`,
+        { fontSize: '24px', fill: '#ffff00', fontWeight: 'bold', fontFamily: 'Arial' }
+    ).setOrigin(0.5);
 
-    const info = scene.add.text(187, 330, `${lang === 'ru' ? 'ДОБЫТО' : 'COLLECTED'}: ${earnedAmount} 💰`, {
-        fontSize: '24px', fill: '#ffff00', fontWeight: 'bold', fontFamily: 'Arial'
-    }).setOrigin(0.5);
+    const doubleBtn = scene.add.text(187, 420,
+        ` x2 ${lang === 'ru' ? 'ЗА РЕКЛАМУ' : 'WITH AD'} `,
+        { fontSize: '20px', fill: '#fff', backgroundColor: '#004400', padding: 15, fontWeight: 'bold' }
+    ).setOrigin(0.5).setInteractive();
 
-    const doubleBtn = scene.add.text(187, 420, ` x2 ${lang === 'ru' ? 'ЗА РЕКЛАМУ' : 'WITH AD'} `, {
-        fontSize: '20px', fill: '#fff', backgroundColor: '#004400', padding: 15, fontWeight: 'bold'
-    }).setOrigin(0.5).setInteractive();
+    const collectBtn = scene.add.text(187, 500,
+        ` ${lang === 'ru' ? 'ПРОСТО ЗАБРАТЬ' : 'JUST COLLECT'} `,
+        { fontSize: '16px', fill: '#aaa', padding: 10 }
+    ).setOrigin(0.5).setInteractive();
 
-    const collectBtn = scene.add.text(187, 500, ` ${lang === 'ru' ? 'ПРОСТО ЗАБРАТЬ' : 'JUST COLLECT'} `, {
-        fontSize: '16px', fill: '#aaa', padding: 10
-    }).setOrigin(0.5).setInteractive();
-
-    const duelBtn = scene.add.text(187, 560, ` ⚔️ ${TRANSLATIONS[lang].share_duel} `, {
-        fontSize: '14px', fill: '#00ffff', padding: 10
-    }).setOrigin(0.5).setInteractive();
-
-    duelBtn.on('pointerdown', () => shareDuel());
+    const duelBtn = scene.add.text(187, 560,
+        ` ⚔️ ${TRANSLATIONS[lang].share_duel} `,
+        { fontSize: '14px', fill: '#00ffff', padding: 10 }
+    ).setOrigin(0.5).setInteractive();
 
     container.add([info, doubleBtn, collectBtn, duelBtn]);
 
-    // ЛОГИКА УДВОЕНИЯ
+    duelBtn.on('pointerdown', () => shareDuel());
+
     doubleBtn.on('pointerdown', () => {
         const ads = window.adController;
-        if (!ads) {
-            finalizeCollection(earnedAmount * 2);
-            return;
-        }
-
+        if (!ads) { finalizeCollection(earnedAmount * 2); return; }
         ads.show().then(result => {
-            if (result && result.done) {
-                finalizeCollection(earnedAmount * 2);
-            } else {
-                alert(lang === 'ru' ? "Нужно досмотреть до конца!" : "Watch till the end!");
-            }
-        }).catch(() => {
-            finalizeCollection(earnedAmount * 2);
-        });
+            if (result && result.done) finalizeCollection(earnedAmount * 2);
+            else alert(lang === 'ru' ? "Нужно досмотреть до конца!" : "Watch till the end!");
+        }).catch(() => finalizeCollection(earnedAmount * 2));
     });
 
     collectBtn.on('pointerdown', () => finalizeCollection(earnedAmount));
 
     function finalizeCollection(finalSum) {
-        // Только ТЕПЕРЬ прибавляем деньги к общему счету
         coins += finalSum;
         coinsThisRun = 0;
-
         saveProgress();
-
         submitScore();
+        if (coins >= 5000 && !achievements.rich) achievements.rich = true;
 
-        if (coins >= 5000 && !achievements.rich) {
-            achievements.rich = true;
-        }
+        isVictory = false;
+        isShopOpen = false;
+        isDead = false;
+        isBossFight = false;
 
         container.destroy();
         if (titleText) titleText.destroy();
-        showShop(scene);
+        showShop(scene, null);
     }
 }
 
@@ -1455,8 +1442,16 @@ function showShop(scene, mainMenu) {
 
     overlay.add([upBtn, upText, fxBtn, fxText]);
 
-    upBtn.on('pointerdown', () => { currentShopTab = 'upgrades'; overlay.destroy(); showShop(scene, mainMenu); });
-    fxBtn.on('pointerdown', () => { currentShopTab = 'fx'; overlay.destroy(); showShop(scene, mainMenu); });
+    upBtn.on('pointerdown', () => {
+        currentShopTab = 'upgrades';
+        overlay.destroy();
+        showShop(scene, mainMenu);
+    });
+    fxBtn.on('pointerdown', () => {
+        currentShopTab = 'fx';
+        overlay.destroy();
+        showShop(scene, mainMenu);
+    });
 
     // --- ЗОНА ПРОКРУТКИ ---
     const scrollAreaTop = 110;
@@ -1650,9 +1645,23 @@ function showShop(scene, mainMenu) {
     // Логика кнопок
     backBg.on('pointerdown', () => {
         saveProgress();
-        cleanupAndClose();
-    });
 
+        // СБРОС СОСТОЯНИЙ
+        isVictory = false;
+        isStarted = false;
+        isDead = false;
+        isBossFight = false;
+
+        scene.input.off('wheel');
+        overlay.destroy();
+
+        if (mainMenu) {
+            mainMenu.setVisible(true);
+            if (mainMenu.titleRef) startTitleGlitch(scene, mainMenu.titleRef);
+        } else {
+            showMenu(scene);
+        }
+    });
     invBg.on('pointerdown', () => {
         const shareText = encodeURIComponent(TRANSLATIONS[lang].share_invite.replace("%lvl%", level).replace("%dist%", bestDistance));
         const fullLink = `https://t.me/share/url?url=${encodeURIComponent(SHARE_LINK)}&text=${shareText}`;
@@ -1669,9 +1678,18 @@ function showShop(scene, mainMenu) {
     // Функция очистки
     const cleanupAndClose = () => {
         scene.input.off('wheel');
+
         overlay.destroy();
         isShopOpen = false;
-        if (mainMenu) mainMenu.setVisible(true);
+        isVictory = false;
+        isBossFight = false;
+        isDead = false;
+        isStarted = false;
+
+        if (mainMenu) {
+            mainMenu.setVisible(true);
+            if (mainMenu.titleRef) startTitleGlitch(scene, mainMenu.titleRef);
+        }
     };
 
 
@@ -2125,6 +2143,15 @@ function minionExplode(scene, x, y) {
 
 function showMenu(scene) {
     isStarted = false;
+    isVictory = false;
+    isDead = false;
+    isBossFight = false;
+    isPaused = false;
+    isShopOpen = false;
+
+    scene.physics.resume();
+    scene.time.paused = false;
+    if (scene.physics && scene.physics.world) scene.physics.world.timeScale = 1;
     const menu = scene.add.container(0, 0).setDepth(3000);
     const bg = scene.add.graphics().fillStyle(0x000000, 1).fillRect(0, 0, 375, 667);
 
@@ -2196,12 +2223,24 @@ function showMenu(scene) {
         fontSize: '16px', fill: '#ffff00', backgroundColor: '#333300', padding: 10, fontFamily: fontUI, fontWeight: 'bold'
     }).setOrigin(0.5).setInteractive();
 
-    // Назначаем действия с очисткой меню
     startBtn.on('pointerdown', () => {
         if (lastRunState.pendingDeath) { closeMenu(); triggerDeath(scene); return; }
         closeMenu();
+
         isStarted = true;
-        // Запуск музыки и таймеров игры...
+        isVictory = false;
+        isBossFight = false;
+        distance = 0;
+        overdrive = 0;
+        playerHealth = maxPlayerHealth;
+
+        if (!scene.overheadGfx || !scene.overheadGfx.active) {
+            scene.overheadGfx = scene.add.graphics().setDepth(11);
+        }
+
+        player.setVisible(true);
+        player.setPosition(187, 600);
+
         if (isSoundOn) scene.sound.play('bgm', {loop:true, volume:0.15});
         scene.obstacleTimer = scene.time.addEvent({ delay: Math.max(300, 1150 - level * 50), callback: spawnObstacle, callbackScope: scene, loop: true });
         scene.shootEvent = scene.time.addEvent({ delay: 150 - (upgradeLevels.fire * 20), callback: playerShoot, callbackScope: scene, loop: true });
@@ -3062,4 +3101,22 @@ function startTitleGlitch(scene, title) {
         callbackScope: scene,
         loop: true
     });
+}
+
+function resetRunState(scene) {
+    isVictory = false;
+    isDead = false;
+    isShopOpen = false;
+    isBossFight = false;
+    isPaused = false;
+    shouldAutoStart = false;
+
+    if (scene.physics && scene.physics.world) {
+        scene.physics.resume();
+        scene.physics.world.timeScale = 1;
+    }
+
+    if (scene.time) {
+        scene.time.paused = false;
+    }
 }
