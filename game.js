@@ -2644,28 +2644,21 @@ async function showLeaderboard(scene, mainMenu) {
 
     const fontUI = 'Arial, sans-serif';
 
-    // 1. ЗАГОЛОВОК И КНОПКА (Фиксированы)
-    const title = scene.add.text(187, 45, TRANSLATIONS[lang].top, {
+    // 1. ЗАГОЛОВОК И КНОПКА
+    overlay.add(scene.add.text(187, 45, TRANSLATIONS[lang].top, {
         fontSize: '24px', fill: '#ffff00', fontWeight: 'bold', fontFamily: fontUI
-    }).setOrigin(0.5);
-    overlay.add(title);
+    }).setOrigin(0.5));
 
     const backBtn = scene.add.rectangle(187, 615, 200, 45, 0x330033).setInteractive().setStrokeStyle(1, 0xff00ff, 0.5);
-    const backLabel = scene.add.text(187, 615, TRANSLATIONS[lang].back, { fontSize: '15px', fill: '#ff00ff', fontWeight: 'bold' }).setOrigin(0.5);
+    const backLabel = scene.add.text(187, 615, TRANSLATIONS[lang].back, { fontSize: '15px', fontFamily: fontUI, fill: '#ff00ff', fontWeight: 'bold' }).setOrigin(0.5);
 
     backBtn.on('pointerdown', () => {
-        scene.input.off('pointermove');
-        scene.input.off('wheel');
-        overlay.destroy();
-        mainMenu.setVisible(true);
+        scene.input.off('pointermove'); scene.input.off('wheel');
+        overlay.destroy(); mainMenu.setVisible(true);
         if (typeof startTitleGlitch === 'function') startTitleGlitch(scene, mainMenu.titleRef);
     });
     overlay.add([backBtn, backLabel]);
 
-    const loadingText = scene.add.text(187, 300, TRANSLATIONS[lang].db_connecting, { fontSize: '14px', fill: '#00ffff' }).setOrigin(0.5);
-    overlay.add(loadingText);
-
-    // 2. КОНТЕЙНЕР СПИСКА И МАСКА
     const listContainer = scene.add.container(0, 0);
     overlay.add(listContainer);
 
@@ -2675,119 +2668,89 @@ async function showLeaderboard(scene, mainMenu) {
     try {
         const response = await fetch(`${botUrl}/get_leaderboard`);
         const data = await response.json();
-
-        // СОРТИРОВКА: УРОВЕНЬ, ЗАТЕМ ДИСТАНЦИЯ
         data.sort((a, b) => b.level - a.level || b.score - a.score);
-
-        loadingText.destroy();
-
-        if (!data || data.length === 0) {
-            overlay.add(scene.add.text(187, 300, TRANSLATIONS[lang].db_empty, { fontSize: '16px', fill: '#aaa' }).setOrigin(0.5));
-            return;
-        }
 
         const myId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || "YOU";
         const myFirstName = window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name || "YOU";
 
+        // РИСУЕМ СТРОКИ
         data.forEach((entry, i) => {
-            const y = 120 + (i * 45);
-            let color = '#ffffff';
-            let medal = (i === 0) ? '🥇 ' : (i === 1) ? '🥈 ' : (i === 2) ? '🥉 ' : `#${i+1} `;
+            const y = 125 + (i * 45);
+            const centerY = y + 8;
 
-            if (i === 0) color = '#FFD700';
-            else if (i === 1) color = '#C0C0C0';
-            else if (i === 2) color = '#CD7F32';
+            let color = '#ffffff';
+            let medal = (i === 0) ? '🥇' : (i === 1) ? '🥈' : (i === 2) ? '🥉' : `#${i+1}`;
+            if (i === 0) color = '#FFD700'; else if (i === 1) color = '#C0C0C0'; else if (i === 2) color = '#CD7F32';
 
             const isMe = (entry.telegram_id === myId);
             if (isMe) {
-                const highlight = scene.add.rectangle(187, y + 10, 340, 35, 0x00ffff, 0.2).setOrigin(0.5, 0.3);
-                listContainer.add(highlight);
+                listContainer.add(scene.add.rectangle(187, centerY, 350, 38, 0x00ffff, 0.15).setOrigin(0.5));
                 if (i >= 3) color = '#00ffff';
             }
 
-            // --- РИСУЕМ МИНИ-КОРАБЛЬ ---
+            // --- 1. РАНГ ---
+            const rankTxt = scene.add.text(15, y, medal, { fontSize: '13px', fontFamily: fontUI, fill: color, fontWeight: 'bold' });
+
+            // --- 2. КОРАБЛЬ (Идеальное центрирование) ---
             const skinInfo = SKIN_DATA[entry.skin] || SKIN_DATA.classic;
             let shipIcon;
             if (entry.shape === 'striker') {
-                shipIcon = scene.add.triangle(60, y + 10, 0, 14, 7, 0, 14, 14, skinInfo.body);
+                shipIcon = scene.add.triangle(55, centerY, 0, 12, 6, 0, 12, 12, skinInfo.body).setOrigin(0.5);
             } else {
-                shipIcon = scene.add.rectangle(60, y + 10, 10, 10, skinInfo.body);
+                shipIcon = scene.add.rectangle(55, centerY, 10, 10, skinInfo.body).setOrigin(0.5);
             }
             if (entry.skin === 'ghost') shipIcon.setAlpha(0.5);
 
-            // --- ТЕКСТ ИМЕНИ ---
+            // --- 3. ИМЯ ---
             let isCustom = (entry.ship_name && entry.ship_name !== "RAZOR-01" && entry.ship_name !== "");
-            let displayName = (isCustom ? entry.ship_name : entry.username || "UNKNOWN").toUpperCase();
-            displayName = [...displayName].slice(0, 12).join('');
+            let displayName = (isCustom ? `•${entry.ship_name}` : entry.username || "PILOT").toUpperCase().substring(0, 10);
+            const nameTxt = scene.add.text(75, y, displayName, { fontSize: '13px', fontFamily: fontUI, fill: isCustom ? '#ffff00' : color, fontWeight: isCustom ? 'bold' : 'normal' });
 
-            const nameTxt = scene.add.text(75, y, isCustom ? `•${displayName}` : displayName, {
-                fontSize: '13px', fill: isCustom ? '#ffff00' : color, fontWeight: isCustom ? 'bold' : 'normal'
-            });
+            // --- 4. ДАТА (Сдвинута влево) ---
+            let dateStr = entry.score_date ? new Date(entry.score_date).toLocaleDateString('ru-RU', {day:'2-digit', month:'2-digit', year:'2-digit'}) : '--.--.--';
+            const dateTxt = scene.add.text(170, y + 2, dateStr, { fontSize: '9px', fontFamily: fontUI, fill: color, alpha: 0.5 });
 
-            // --- ДАТА
-            let dateStr = '--.--.--';
-            if (entry.score_date) {
-                const d = new Date(entry.score_date);
-                dateStr = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getFullYear()).slice(-2)}`;
-            }
-            const dateTxt = scene.add.text(185, y + 3, dateStr, { fontSize: '10px', fill: color, alpha: 0.6 });
+            // --- 5. СЕКТОР И СЧЕТ ---
+            const sectorTxt = scene.add.text(285, y, `S:${entry.level || 0}`, { fontSize: '11px', fontFamily: fontUI, fill: color }).setOrigin(1, 0);
+            const scoreTxt = scene.add.text(360, y, `${entry.score || 0}m`, { fontSize: '12px', fontFamily: fontUI, fill: color, fontWeight: 'bold' }).setOrigin(1, 0);
 
-            // --- СЕКТОР И ДИСТАНЦИЯ ---
-            const sectorTxt = scene.add.text(265, y, `S:${entry.level}`, { fontSize: '12px', fill: color }).setOrigin(1, 0);
-            const scoreTxt = scene.add.text(355, y, `${entry.score}m`, { fontSize: '13px', fill: color, fontWeight: 'bold' }).setOrigin(1, 0);
-
-            listContainer.add([shipIcon, rankTxt = scene.add.text(20, y, medal, {fontSize:'13px', fill:color}), nameTxt, dateTxt, sectorTxt, scoreTxt]);
+            listContainer.add([rankTxt, shipIcon, nameTxt, dateTxt, sectorTxt, scoreTxt]);
         });
 
-        // --- ЛОГИКА "Я ВНЕ ТОП-50" ---
-        const amIInTop = data.some(entry => entry.telegram_id === myId);
+        // --- ЛОГИКА "Я ВНЕ ТОП-50" (Исправляем undefined) ---
+        const amIInTop = data.some(e => e.telegram_id === myId);
         if (!amIInTop) {
             const myRes = await fetch(`${botUrl}/get_user_personal/${myId}`);
             const myP = await myRes.json();
-            if (myP && !myP.error) {
-                const yDots = 120 + (data.length * 45);
-                listContainer.add(scene.add.text(187, yDots, ". . .", { fontSize: '20px', fill: '#555' }).setOrigin(0.5));
 
-                const yMe = yDots + 45;
-                const highlight = scene.add.rectangle(187, yMe + 10, 340, 35, 0x00ffff, 0.3).setOrigin(0.5, 0.3);
-                const rankTxt = scene.add.text(20, yMe, `#${myP.rank}`, { fontSize: '13px', fill: '#00ffff', fontWeight: 'bold' });
-                const nameTxt = scene.add.text(65, yMe, myFirstName.toUpperCase(), { fontSize: '13px', fill: '#00ffff' });
-                const sectorTxt = scene.add.text(265, yMe, `S:${myP.level}`, { fontSize: '12px', fill: '#00ffff' }).setOrigin(1, 0);
-                const scoreTxt = scene.add.text(355, yMe, `${myP.score}m`, { fontSize: '13px', fill: '#00ffff', fontWeight: 'bold' }).setOrigin(1, 0);
-                listContainer.add([highlight, rankTxt, nameTxt, sectorTxt, scoreTxt]);
-            }
+            const yDots = 125 + (data.length * 45);
+            listContainer.add(scene.add.text(187, yDots, ". . .", { fontSize: '20px', fontFamily: fontUI, fill: '#555' }).setOrigin(0.5));
+
+            const yMe = yDots + 40;
+            const centerY = yMe + 8;
+
+            // Если сервер не прислал ранг или уровень, ставим дефолт, чтобы не было undefined
+            const myRank = myP.rank || '?';
+            const myLvl = myP.level || level;
+            const myScore = myP.score || Math.floor(bestDistance);
+
+            listContainer.add(scene.add.rectangle(187, centerY, 350, 38, 0x00ffff, 0.2).setOrigin(0.5));
+            const rTxt = scene.add.text(15, yMe, `#${myRank}`, { fontSize: '13px', fontFamily: fontUI, fill: '#00ffff', fontWeight: 'bold' });
+            const nTxt = scene.add.text(75, yMe, myFirstName.toUpperCase().substring(0,12), { fontSize: '13px', fontFamily: fontUI, fill: '#00ffff' });
+            const sTxt = scene.add.text(285, yMe, `S:${myLvl}`, { fontSize: '11px', fontFamily: fontUI, fill: '#00ffff' }).setOrigin(1, 0);
+            const scTxt = scene.add.text(360, yMe, `${myScore}m`, { fontSize: '12px', fontFamily: fontUI, fill: '#00ffff', fontWeight: 'bold' }).setOrigin(1, 0);
+
+            listContainer.add([rTxt, nTxt, sTxt, scTxt]);
         }
 
-        // --- ПОДСКАЗКА "ЛИСТАЙ ВНИЗ" ---
-        if (data.length > 10) {
-            const scrollHint = scene.add.text(187, 535, lang === 'ru' ? "▼ ЛИСТАЙ ВНИЗ ▼" : "▼ SCROLL DOWN ▼", {
-                fontSize: '12px', fill: '#ffff00', fontWeight: 'bold'
-            }).setOrigin(0.5).setDepth(4001);
-            scene.tweens.add({ targets: scrollHint, alpha: 0.3, duration: 800, yoyo: true, repeat: -1 });
-
-            // Скрываем при скролле
-            scene.input.on('pointermove', () => {
-                if (scene.input.activePointer.isDown && scrollHint.active) scrollHint.destroy();
-            });
-        }
-
-        // --- ЛОГИКА СКРОЛЛА (ПК + МОБИЛКИ) ---
-        const listHeight = (data.length + (amIInTop ? 0 : 2)) * 45;
-        const maxY = Math.max(0, listHeight - 400);
-
-        scene.input.on('wheel', (p, obj, dx, dy) => {
-            listContainer.y = Phaser.Math.Clamp(listContainer.y - dy, -maxY, 0);
-        });
-
-        scene.input.on('pointermove', (p) => {
-            if (p.isDown) {
-                listContainer.y = Phaser.Math.Clamp(listContainer.y + (p.y - p.prevPosition.y), -maxY, 0);
-            }
-        });
+        // СКРОЛЛ
+        const listHeight = (data.length + 3) * 45;
+        const maxY = Math.max(0, listHeight - 420);
+        scene.input.on('wheel', (p, o, dx, dy) => { listContainer.y = Phaser.Math.Clamp(listContainer.y - dy, -maxY, 0); });
+        scene.input.on('pointermove', (p) => { if (p.isDown) listContainer.y = Phaser.Math.Clamp(listContainer.y + (p.y - p.prevPosition.y), -maxY, 0); });
 
     } catch (e) {
         console.error(e);
-        loadingText.setText(TRANSLATIONS[lang].db_error);
     }
 }
 
