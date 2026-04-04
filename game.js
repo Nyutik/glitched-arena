@@ -1434,11 +1434,17 @@ function showShop(scene, mainMenu) {
     overlay.add([creds, stats]);
 
     // КНОПКИ ПЕРЕКЛЮЧЕНИЯ КАТЕГОРИЙ
-    const upBtn = scene.add.rectangle(100, 85, 150, 35, currentShopTab === 'upgrades' ? 0x00ffff : 0x222222).setInteractive();
-    const upText = scene.add.text(100, 85, lang === 'ru' ? "ПРОКАЧКА" : "UPGRADES", { fontSize: '14px', fontFamily: fontUI, fill: currentShopTab === 'upgrades' ? '#000' : '#fff', fontWeight: 'bold' }).setOrigin(0.5);
+    const upBtn = scene.add.rectangle(100, 85, 165, 35, currentShopTab === 'upgrades' ? 0x00ffff : 0x222222)
+        .setInteractive().setStrokeStyle(1, 0x00ffff, 0.5).setDepth(4010);
+    const upText = scene.add.text(100, 85, lang === 'ru' ? "ПРОКАЧКА" : "UPGRADES", {
+        fontSize: '14px', fontFamily: fontUI, fill: currentShopTab === 'upgrades' ? '#000' : '#fff', fontWeight: 'bold'
+    }).setOrigin(0.5).setDepth(4011);
 
-    const fxBtn = scene.add.rectangle(275, 85, 150, 35, currentShopTab === 'fx' ? 0xff00ff : 0x222222).setInteractive();
-    const fxText = scene.add.text(275, 85, lang === 'ru' ? "КРАСОТА" : "FX / SKINS", { fontSize: '14px', fontFamily: fontUI, fill: currentShopTab === 'fx' ? '#000' : '#fff', fontWeight: 'bold' }).setOrigin(0.5);
+    const fxBtn = scene.add.rectangle(275, 85, 165, 35, currentShopTab === 'fx' ? 0xff00ff : 0x222222)
+        .setInteractive().setStrokeStyle(1, 0xff00ff, 0.5).setDepth(4010);
+    const fxText = scene.add.text(275, 85, lang === 'ru' ? "КРАСОТА" : "FX / SKINS", {
+        fontSize: '14px', fontFamily: fontUI, fill: currentShopTab === 'fx' ? '#000' : '#fff', fontWeight: 'bold'
+    }).setOrigin(0.5).setDepth(4011);
 
     overlay.add([upBtn, upText, fxBtn, fxText]);
 
@@ -1458,11 +1464,14 @@ function showShop(scene, mainMenu) {
     const scrollAreaBottom = isVictory ? 510 : 560;
     const scrollHeight = scrollAreaBottom - scrollAreaTop;
 
-    const scrollContainer = scene.add.container(0, scrollAreaTop).setDepth(4001);
-    overlay.add(scrollContainer);
+    const scrollWindow = scene.add.container(0, scrollAreaTop).setDepth(4001);
+    overlay.add(scrollWindow);
+
+    const contentContainer = scene.add.container(0, 0);
+    scrollWindow.add(contentContainer);
 
     const mask = scene.make.graphics().fillRect(10, scrollAreaTop, 355, scrollHeight).createGeometryMask();
-    scrollContainer.setMask(mask);
+    scrollWindow.setMask(mask);
 
     let scrollY = 0, maxScroll = 0;
 
@@ -1578,7 +1587,7 @@ function showShop(scene, mainMenu) {
             });
         });
 
-        scrollContainer.add([btnBg, btnText, descText]);
+        contentContainer.add([btnBg, btnText, descText]);
     };
 
     // === СПИСОК КНОПОК ===
@@ -1614,12 +1623,14 @@ function showShop(scene, mainMenu) {
     // Обновленный обработчик колесика
     scene.input.on('wheel', (p, obj, dx, dy) => {
         scrollY = Phaser.Math.Clamp(scrollY - dy * 0.8, -maxScroll, 0);
-        scrollContainer.y = scrollAreaTop + scrollY;
+        contentContainer.y = scrollY;
     });
+
+    // Обновленный обработчик свайпа
     scene.input.on('pointermove', (p) => {
         if (p.isDown && p.y > 110 && p.y < 560) {
             scrollY = Phaser.Math.Clamp(scrollY + (p.y - p.prevPosition.y), -maxScroll, 0);
-            scrollContainer.y = scrollAreaTop + scrollY;
+            contentContainer.y = scrollY;
         }
     });
 
@@ -2183,7 +2194,7 @@ function showMenu(scene) {
 
     // 2. КНОПКА ПРОФИЛЬ И КОРАБЛИК
     const profileBtn = scene.add.text(187, 145, TRANSLATIONS[lang].profile, {
-        fontSize: '16px', fill: '#00ffff', fontWeight: 'bold'
+        fontSize: '16px', fontFamily: fontUI, fill: '#00ffff', fontWeight: 'bold'
     }).setOrigin(0.5).setInteractive();
 
     const miniShip = scene.add.sprite(110, 145, player.texture.key).setScale(0.8).setAlpha(0.8);
@@ -2334,7 +2345,7 @@ function showRules(scene, mainMenu) {
 
     // КНОПКА НАЗАД
 
-    const backBtn = scene.add.rectangle(187, 575, 170, 45, 0x330033).setInteractive().setStrokeStyle(1, 0xff00ff, 0.5);
+    const backBtn = scene.add.rectangle(187, 575, 200, 45, 0x330033).setInteractive().setStrokeStyle(1, 0xff00ff, 0.5);
     const backLabel = scene.add.text(187, 575, TRANSLATIONS[lang].back, {
         fontSize: '15px', fill: '#ff00ff', fontWeight: 'bold'
     }).setOrigin(0.5);
@@ -2410,7 +2421,7 @@ function showSettings(scene, mainMenu) {
 
     overlay.add([up, down]);
 
-    const backBtn = scene.add.rectangle(187, 610, 170, 45, 0x330033).setInteractive().setStrokeStyle(1, 0xff00ff, 0.5);
+    const backBtn = scene.add.rectangle(187, 610, 200, 45, 0x330033).setInteractive().setStrokeStyle(1, 0xff00ff, 0.5);
     const backLabel = scene.add.text(187, 610, TRANSLATIONS[lang].apply, {
         fontSize: '15px', fill: '#ff00ff', fontWeight: 'bold'
     }).setOrigin(0.5);
@@ -2524,7 +2535,7 @@ function showHangar(scene, mainMenu) {
     overlay.add([intelBox, intelTitle, bossName, bossDesc, bossTip]);
 
     // Кнопка BACK
-    const backBtn = scene.add.rectangle(187, 610, 170, 45, 0x330033).setInteractive().setStrokeStyle(1, 0xff00ff, 0.5);
+    const backBtn = scene.add.rectangle(187, 610, 200, 45, 0x330033).setInteractive().setStrokeStyle(1, 0xff00ff, 0.5);
     const backLabel = scene.add.text(187, 610, TRANSLATIONS[lang].back, {
         fontSize: '15px', fill: '#ff00ff', fontWeight: 'bold'
     }).setOrigin(0.5);
@@ -2633,45 +2644,39 @@ async function showLeaderboard(scene, mainMenu) {
 
     const fontUI = 'Arial, sans-serif';
 
-    // Кнопка BACK (Фиксирована внизу, вне контейнера списка)
-    const backBtn = scene.add.rectangle(187, 615, 170, 45, 0x330033).setInteractive().setStrokeStyle(1, 0xff00ff, 0.5);
-    const backLabel = scene.add.text(187, 615, TRANSLATIONS[lang].back, {
-        fontSize: '15px', fill: '#ff00ff', fontWeight: 'bold'
-    }).setOrigin(0.5);
-
-    backBtn.on('pointerdown', () => {
-        scene.input.off('wheel');
-        overlay.destroy();
-        mainMenu.setVisible(true);
-        startTitleGlitch(scene, mainMenu.titleRef);
-    });
-    overlay.add([backBtn, backLabel]);
-
+    // 1. ЗАГОЛОВОК И КНОПКА (Фиксированы)
     const title = scene.add.text(187, 45, TRANSLATIONS[lang].top, {
         fontSize: '24px', fill: '#ffff00', fontWeight: 'bold', fontFamily: fontUI
     }).setOrigin(0.5);
     overlay.add(title);
 
-    const loadingText = scene.add.text(187, 300, TRANSLATIONS[lang].db_connecting, {
-        fontSize: '14px', fill: '#00ffff', fontFamily: fontUI
-    }).setOrigin(0.5);
+    const backBtn = scene.add.rectangle(187, 615, 200, 45, 0x330033).setInteractive().setStrokeStyle(1, 0xff00ff, 0.5);
+    const backLabel = scene.add.text(187, 615, TRANSLATIONS[lang].back, { fontSize: '15px', fill: '#ff00ff', fontWeight: 'bold' }).setOrigin(0.5);
+
+    backBtn.on('pointerdown', () => {
+        scene.input.off('pointermove');
+        scene.input.off('wheel');
+        overlay.destroy();
+        mainMenu.setVisible(true);
+        if (typeof startTitleGlitch === 'function') startTitleGlitch(scene, mainMenu.titleRef);
+    });
+    overlay.add([backBtn, backLabel]);
+
+    const loadingText = scene.add.text(187, 300, TRANSLATIONS[lang].db_connecting, { fontSize: '14px', fill: '#00ffff' }).setOrigin(0.5);
     overlay.add(loadingText);
 
-    // Контейнер для списка (который будем скроллить)
+    // 2. КОНТЕЙНЕР СПИСКА И МАСКА
     const listContainer = scene.add.container(0, 0);
     overlay.add(listContainer);
 
-    // Маска (окно), через которое видно список (от 100px до 550px по высоте)
     const maskShape = scene.make.graphics().fillRect(0, 100, 375, 450);
-    const mask = maskShape.createGeometryMask();
-    listContainer.setMask(mask);
+    listContainer.setMask(maskShape.createGeometryMask());
 
     try {
-        // Берем ТОП-50
         const response = await fetch(`${botUrl}/get_leaderboard`);
         const data = await response.json();
 
-        // --- НОВАЯ СОРТИРОВКА: УРОВЕНЬ (ГЛАВНЫЙ), ПОТОМ ДИСТАНЦИЯ ---
+        // СОРТИРОВКА: УРОВЕНЬ, ЗАТЕМ ДИСТАНЦИЯ
         data.sort((a, b) => b.level - a.level || b.score - a.score);
 
         loadingText.destroy();
@@ -2681,29 +2686,26 @@ async function showLeaderboard(scene, mainMenu) {
             return;
         }
 
-        // Определяем ник текущего игрока для подсветки
         const myId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || "YOU";
-        let userInTop = false;
+        const myFirstName = window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name || "YOU";
 
         data.forEach((entry, i) => {
             const y = 120 + (i * 45);
             let color = '#ffffff';
             let medal = (i === 0) ? '🥇 ' : (i === 1) ? '🥈 ' : (i === 2) ? '🥉 ' : `#${i+1} `;
 
-            // Цвета для топ-3
             if (i === 0) color = '#FFD700';
             else if (i === 1) color = '#C0C0C0';
             else if (i === 2) color = '#CD7F32';
 
             const isMe = (entry.telegram_id === myId);
             if (isMe) {
-                userInTop = true;
                 const highlight = scene.add.rectangle(187, y + 10, 340, 35, 0x00ffff, 0.2).setOrigin(0.5, 0.3);
                 listContainer.add(highlight);
                 if (i >= 3) color = '#00ffff';
             }
 
-            // --- РИСУЕМ МИНИ-КОРАБЛЬ ВМЕСТО ТОЧКИ ---
+            // --- РИСУЕМ МИНИ-КОРАБЛЬ ---
             const skinInfo = SKIN_DATA[entry.skin] || SKIN_DATA.classic;
             let shipIcon;
             if (entry.shape === 'striker') {
@@ -2713,99 +2715,73 @@ async function showLeaderboard(scene, mainMenu) {
             }
             if (entry.skin === 'ghost') shipIcon.setAlpha(0.5);
 
-            const rankTxt = scene.add.text(20, y, medal, { fontSize: '13px', fill: color, fontWeight: 'bold', fontFamily: fontUI });
+            // --- ТЕКСТ ИМЕНИ ---
+            let isCustom = (entry.ship_name && entry.ship_name !== "RAZOR-01" && entry.ship_name !== "");
+            let displayName = (isCustom ? entry.ship_name : entry.username || "UNKNOWN").toUpperCase();
+            displayName = [...displayName].slice(0, 12).join('');
 
-            let isCustomName = (entry.ship_name && entry.ship_name !== "RAZOR-01" && entry.ship_name !== "");
-            let displayName = isCustomName ? entry.ship_name : entry.username;
-
-            displayName = [...displayName].slice(0, 12).join('').toUpperCase();
-
-            // Если имя кастомное, добавим пометку пилота [P]
-            let finalLabel = isCustom ? `•${displayName}` : displayName;
-
-            const nameTxt = scene.add.text(75, y, finalLabel, {
-                fontSize: '13px',
-                fill: isCustom ? '#ffff00' : color,
-                fontFamily: fontUI,
-                fontWeight: isCustomName ? 'bold' : 'normal'
+            const nameTxt = scene.add.text(75, y, isCustom ? `•${displayName}` : displayName, {
+                fontSize: '13px', fill: isCustom ? '#ffff00' : color, fontWeight: isCustom ? 'bold' : 'normal'
             });
 
-            // --- НОВЫЙ БЛОК: ФОРМАТИРОВАНИЕ И ОТРИСОВКА ДАТЫ ---
+            // --- ДАТА
             let dateStr = '--.--.--';
             if (entry.score_date) {
                 const d = new Date(entry.score_date);
-                const day = String(d.getDate()).padStart(2, '0');
-                const month = String(d.getMonth() + 1).padStart(2, '0');
-                const year = String(d.getFullYear()).slice(-2);
-                dateStr = `${day}.${month}.${year}`;
+                dateStr = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getFullYear()).slice(-2)}`;
             }
+            const dateTxt = scene.add.text(185, y + 3, dateStr, { fontSize: '10px', fill: color, alpha: 0.6 });
 
-            // Сдвигаем координаты для идеального баланса
-            const dateTxt = scene.add.text(185, y + 3, dateStr, {
-                fontSize: '10px', fill: color, fontFamily: fontUI, alpha: 0.6
-            }).setOrigin(0, 0);
-            listContainer.add(dateTxt);
+            // --- СЕКТОР И ДИСТАНЦИЯ ---
+            const sectorTxt = scene.add.text(265, y, `S:${entry.level}`, { fontSize: '12px', fill: color }).setOrigin(1, 0);
+            const scoreTxt = scene.add.text(355, y, `${entry.score}m`, { fontSize: '13px', fill: color, fontWeight: 'bold' }).setOrigin(1, 0);
 
-            // Сдвигаем Сектор и Счет немного правее, чтобы освободить место
-            const sectorTxt = scene.add.text(265, y, `S:${entry.level}`, { fontSize: '12px', fill: color, fontFamily: fontUI }).setOrigin(1, 0);
-            const scoreTxt = scene.add.text(355, y, `${entry.score}m`, { fontSize: '13px', fill: color, fontWeight: 'bold', fontFamily: fontUI }).setOrigin(1, 0);
-
-            listContainer.add([shipIcon, rankTxt, nameTxt, dateTxt, sectorTxt, scoreTxt]);
+            listContainer.add([shipIcon, rankTxt = scene.add.text(20, y, medal, {fontSize:'13px', fill:color}), nameTxt, dateTxt, sectorTxt, scoreTxt]);
         });
 
+        // --- ЛОГИКА "Я ВНЕ ТОП-50" ---
         const amIInTop = data.some(entry => entry.telegram_id === myId);
-
         if (!amIInTop) {
-            // Если меня нет в Топ-50, запрашиваем мое личное место
             const myRes = await fetch(`${botUrl}/get_user_personal/${myId}`);
-            const myPersonal = await myRes.json();
+            const myP = await myRes.json();
+            if (myP && !myP.error) {
+                const yDots = 120 + (data.length * 45);
+                listContainer.add(scene.add.text(187, yDots, ". . .", { fontSize: '20px', fill: '#555' }).setOrigin(0.5));
 
-            if (myPersonal && !myPersonal.error) {
-                // Рисуем разделитель (троеточие)
-                const dots = scene.add.text(187, 120 + (data.length * 45), ". . .", {
-                    fontSize: '20px', fill: '#555'
-                }).setOrigin(0.5);
-                listContainer.add(dots);
-
-                // Рисуем карточку игрока (например, на 105 месте)
-                const y = 120 + ((data.length + 1) * 45);
-
-                const highlight = scene.add.rectangle(187, y + 10, 340, 35, 0x00ffff, 0.3).setOrigin(0.5, 0.3);
-                const rankTxt = scene.add.text(20, y, `#${myPersonal.rank}`, { fontSize: '13px', fill: '#00ffff', fontWeight: 'bold' });
-                const nameTxt = scene.add.text(65, y, myName.toUpperCase(), { fontSize: '13px', fill: '#00ffff' });
-                const sectorTxt = scene.add.text(265, y, `S:${myPersonal.level}`, { fontSize: '12px', fill: '#00ffff' }).setOrigin(1, 0);
-                const scoreTxt = scene.add.text(355, y, `${myPersonal.score}m`, { fontSize: '13px', fill: '#00ffff', fontWeight: 'bold' }).setOrigin(1, 0);
-
+                const yMe = yDots + 45;
+                const highlight = scene.add.rectangle(187, yMe + 10, 340, 35, 0x00ffff, 0.3).setOrigin(0.5, 0.3);
+                const rankTxt = scene.add.text(20, yMe, `#${myP.rank}`, { fontSize: '13px', fill: '#00ffff', fontWeight: 'bold' });
+                const nameTxt = scene.add.text(65, yMe, myFirstName.toUpperCase(), { fontSize: '13px', fill: '#00ffff' });
+                const sectorTxt = scene.add.text(265, yMe, `S:${myP.level}`, { fontSize: '12px', fill: '#00ffff' }).setOrigin(1, 0);
+                const scoreTxt = scene.add.text(355, yMe, `${myP.score}m`, { fontSize: '13px', fill: '#00ffff', fontWeight: 'bold' }).setOrigin(1, 0);
                 listContainer.add([highlight, rankTxt, nameTxt, sectorTxt, scoreTxt]);
             }
         }
 
-        // Подсказка "Листай вниз"
+        // --- ПОДСКАЗКА "ЛИСТАЙ ВНИЗ" ---
         if (data.length > 10) {
             const scrollHint = scene.add.text(187, 535, lang === 'ru' ? "▼ ЛИСТАЙ ВНИЗ ▼" : "▼ SCROLL DOWN ▼", {
-                fontSize: '12px', fontFamily: fontUI, fill: '#ffff00', fontWeight: 'bold'
+                fontSize: '12px', fill: '#ffff00', fontWeight: 'bold'
             }).setOrigin(0.5).setDepth(4001);
-
-            // Анимация мигания
             scene.tweens.add({ targets: scrollHint, alpha: 0.3, duration: 800, yoyo: true, repeat: -1 });
 
-            // Скрываем подсказку, как только игрок начал скроллить
+            // Скрываем при скролле
             scene.input.on('pointermove', () => {
-                if (scene.input.activePointer.isDown && scrollHint.active) {
-                    scene.tweens.add({ targets: scrollHint, alpha: 0, duration: 300, onComplete: () => scrollHint.destroy() });
-                }
+                if (scene.input.activePointer.isDown && scrollHint.active) scrollHint.destroy();
             });
         }
 
-        // ЛОГИКА СКРОЛЛА
-        const listHeight = data.length * 45;
-        const minY = 0;
+        // --- ЛОГИКА СКРОЛЛА (ПК + МОБИЛКИ) ---
+        const listHeight = (data.length + (amIInTop ? 0 : 2)) * 45;
         const maxY = Math.max(0, listHeight - 400);
 
-        scene.input.on('pointermove', (pointer) => {
-            if (pointer.isDown && !isShopOpen) {
-                let dragY = pointer.y - pointer.prevPosition.y;
-                listContainer.y = Phaser.Math.Clamp(listContainer.y + dragY, -maxY, minY);
+        scene.input.on('wheel', (p, obj, dx, dy) => {
+            listContainer.y = Phaser.Math.Clamp(listContainer.y - dy, -maxY, 0);
+        });
+
+        scene.input.on('pointermove', (p) => {
+            if (p.isDown) {
+                listContainer.y = Phaser.Math.Clamp(listContainer.y + (p.y - p.prevPosition.y), -maxY, 0);
             }
         });
 
