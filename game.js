@@ -344,7 +344,6 @@ window.addEventListener('load', () => {
 
 // --- СИСТЕМА СОХРАНЕНИЯ (ЕДИНЫЙ КЛЮЧ) ---
 const saveProgress = () => {
-    if (isVictory && (level - 1) > bestLevel) bestLevel = level - 1;
     let currentDist = Math.floor(distance);
     if (currentDist > bestDistance) bestDistance = currentDist;
 
@@ -364,6 +363,7 @@ const saveProgress = () => {
         totalDistance,
         bossesKilled,
         achievements,
+        currentExplosionColor,
         lastRunState
     }));
 };
@@ -394,6 +394,7 @@ const loadProgress = () => {
         yOffset = p.yOffset !== undefined ? p.yOffset : -50;
         isDead = p.isDeadInSave || false;
         lastRunState = p.lastRunState || { isDead: false, pendingDeath: false };
+        currentExplosionColor = p.currentExplosionColor || 0xff0000;
 
         upgradeLevels = { ...upgradeLevels, ...p.upgradeLevels };
 
@@ -423,6 +424,29 @@ const config = {
     scene: { preload, create, update }
 };
 const game = new Phaser.Game(config);
+
+function getCompletedLevel() {
+    return isVictory ? Math.max(1, level - 1) : Math.max(1, level);
+}
+
+function getTelegramUser() {
+    return window.Telegram?.WebApp?.initDataUnsafe?.user || null;
+}
+
+function updateHudTexts() {
+    if (scoreText) {
+        scoreText.setText(`${TRANSLATIONS[lang].credits}: ${coins + coinsThisRun}`);
+    }
+    if (levelText) {
+        levelText.setText(`${TRANSLATIONS[lang].sector}: ${level}`);
+    }
+    if (bestText) {
+        bestText.setText(`${TRANSLATIONS[lang].best}: ${bestLevel}`);
+    }
+    if (bestDistText) {
+        bestDistText.setText(`${TRANSLATIONS[lang].max_dist}: ${bestDistance}m`);
+    }
+}
 
 function preload() {
     this.load.audio('sfx_ultra', ASSETS.SFX_ULTRA);
@@ -462,61 +486,148 @@ function preload() {
     g.destroy();
 }
 
-function create() {
-    // Сообщаем Телеграму, что мы хотим расшириться
+const SKINDATA = {
+  classic: {
+    body: 0x00ffff,
+    eyes: 0xffffff,
+    trail: 0x00ffff,
+    bullet: 0x00ffff,
+    alpha: 1
+  },
+  phantom: {
+    body: 0x9900ff,
+    eyes: 0x00ffff,
+    trail: 0x9900ff,
+    bullet: 0x9900ff,
+    alpha: 1
+  },
+  gold: {
+    body: 0xffff00,
+    eyes: 0x000000,
+    trail: 0xffaa00,
+    bullet: 0xffff00,
+    alpha: 1
+  },
+  neon: {
+    body: 0xff0055,
+    eyes: 0xffffff,
+    trail: 0xff0055,
+    bullet: 0xff0055,
+    alpha: 1
+  },
+  ghost: {
+    body: 0x00ffff,
+    eyes: 0xff00ff,
+    trail: 0xffffff,
+    bullet: 0xffffff,
+    alpha: 0.5
+  }
+};
+
+function playSound(scene, key, config = {}) {
+  if (!scene || !scene.sound || !scene.cache.audio.exists(key)) {
+    return false;
+  }
+  scene.sound.play(key, config);
+  return true;
+}
+
+function ensureBgm(scene) {
+    if (!scene || !scene.sound) return;
+
+    const bgm = scene.sound.get('bgm');
+
+    if (!isSoundOn) {
+        if (bgm) {
+            bgm.stop();
+        }
+        return;
+    }
+
+    if (!bgm) {
+        scene.sound.play('bgm', { loop: true, volume: 0.15 });
+        return;
+    }
+
+    if (bgm.isPaused) {
+        bgm.resume();
+        return;
+    }
+
+    if (!bgm.isPlaying) {
+        bgm.play({ loop: true, volume: 0.15 });
+    }
+}
+
+async function create() {
     if (window.Telegram?.WebApp) {
         window.Telegram.WebApp.expand();
         window.Telegram.WebApp.ready();
     }
-    if (window.adController) adController = window.adController;
+
+    if (window.adController) {
+        adController = window.adController;
+    }
+
     currentStats = getShipStats();
-    // ВЫЗЫВАЕМ СИНХРОНИЗАЦИЮ
-    syncUserData.call(this);
+
     isPhase3 = false;
     isVictory = false;
     isShopOpen = false;
     isDead = false;
     isBossFight = false;
-    distance = 0; overdrive = 0; isPhase2 = false; isStarted = false; isPaused = false;
+    isStarted = false;
+    isPaused = false;
+    isPhase2 = false;
+    distance = 0;
+    overdrive = 0;
+    coinsThisRun = 0;
     playerHealth = maxPlayerHealth;
-    let healthMult = level > 30 ? (30 * 0.45 + (level - 30) * 0.22) : (level * 0.45);
-    bossHealth = 400 * (1 + healthMult);
     isMagnetActive = false;
     isGlitchMode = false;
-    this.physics.world.timeScale = 1;
 
-    // ГЕНЕРАЦИЯ ИГРОКА
-    const pTex = generatePlayerTexture(this);
-    if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
-        const userId = Telegram.WebApp.initDataUnsafe.user.id;
+    if (this.physics?.world) {
+        this.physics.world.timeScale = 1;
     }
-    // Игрок всегда внизу (600px)
-    player = this.physics.add.sprite(187, 600, pTex).setDepth(10).setCollideWorldBounds(true);
-    shieldAura = this.add.sprite(player.x, player.y, 'shield_aura').setDepth(11).setVisible(false);
 
-    // 1. Создаем 3 слоя параллакса
+    const pTex = generatePlayerTexture(this);
+
+    player = this.physics.add.sprite(187, 600, pTex)
+        .setDepth(10)
+        .setCollideWorldBounds(true);
+
+    shieldAura = this.add.sprite(player.x, player.y, 'shieldaura')
+        .setDepth(11)
+        .setVisible(false);
+
     this.starsSlow = this.add.particles(0, 0, 'pixel', {
-        x: { min: 0, max: 375 }, y: -10,
-        speedY: { min: 20, max: 50 }, // Очень медленные
-        scale: 0.2, alpha: 0.3, lifespan: 10000, frequency: 100, tint: 0x5555ff
+        x: { min: 0, max: 375 },
+        y: -10,
+        speedY: { min: 20, max: 50 },
+        scale: 0.2,
+        alpha: 0.3,
+        lifespan: 10000,
+        frequency: 100,
+        tint: 0x5555ff
     });
 
     this.starsMed = this.add.particles(0, 0, 'pixel', {
-        x: { min: 0, max: 375 }, y: -10,
-        speedY: { min: 80, max: 150 }, // Средние
-        scale: 0.4, alpha: 0.6, lifespan: 5000, frequency: 200, tint: 0x00ffff
+        x: { min: 0, max: 375 },
+        y: -10,
+        speedY: { min: 80, max: 150 },
+        scale: 0.4,
+        alpha: 0.6,
+        lifespan: 5000,
+        frequency: 200,
+        tint: 0x00ffff
     });
 
-    this.starsFast = this.add.particles(0, 0, 'fast_streak', {
+    this.starsFast = this.add.particles(0, 0, 'faststreak', {
         x: { min: -50, max: 425 },
         y: -50,
         speedY: { min: 600, max: 1200 },
-
-        // ЭФФЕКТ СКОРОСТИ: Растягиваем частицу по вертикали в зависимости от скорости
         scaleY: { start: 1, end: 1.5, ease: 'Quad.easeIn' },
-        // Делаем её очень узкой по горизонтали
         scaleX: { min: 0.1, max: 0.3 },
-
         alpha: { start: 0.6, end: 0 },
         lifespan: 1500,
         frequency: 30,
@@ -524,57 +635,48 @@ function create() {
         blendMode: 'ADD'
     });
 
-    if (shouldAutoStart) {
-        shouldAutoStart = false;
-        isStarted = true;
-        // Запускаем системы сразу
-        if (isSoundOn) this.sound.play('bgm', {loop:true, volume:0.15});
-        this.obstacleTimer = this.time.addEvent({ delay: Math.max(300, 1150 - level * 50), callback: spawnObstacle, callbackScope: this, loop: true });
-        this.shootEvent = this.time.addEvent({ delay: 150 - (upgradeLevels.fire * 20), callback: playerShoot, callbackScope: this, loop: true });
-        itemsTimer = this.time.addEvent({ delay: 1000, callback: spawnItem, callbackScope: this, loop: true });
-    } else {
-        showMenu(this);
-    }
-
     this.add.grid(187, 333, 800, 1200, 40, 40, 0x00ffff, 0.03);
+
     obstacles = this.physics.add.group();
     bullets = this.physics.add.group();
     playerBullets = this.physics.add.group();
     bossShields = this.physics.add.group();
-
-    // Группа для предметов, которые можно подобрать
     items = this.physics.add.group();
-
     minions = this.physics.add.group();
     minionBullets = this.physics.add.group();
 
-    // Таймер появления предметов (монетки и бонусы летят чаще стен)
-    this.itemTimer = this.time.addEvent({
-        delay: 800,
-        callback: spawnItem,
-        callbackScope: this,
-        loop: true
-    });
-
-
     this.isFirstMove = false;
 
-    this.input.on('pointermove', (p) => {
-        if (isStarted && !isShopOpen && !isDead && !isPaused) {
-            // Двигаем корабль только если игрок уже начал вести пальцем/мышью
-            if (!this.isFirstMove) {
-                // Если курсор слишком далеко от низа при старте, игнорируем резкий скачок
-                if (Math.abs(p.y - 600) < 100) this.isFirstMove = true;
-                else return;
+    this.input.on('pointerdown', p => {
+        if (!isStarted || isShopOpen || isDead || isPaused || !player?.active) return;
+
+        const startZoneTop = 500;
+        if (!this.isFirstMove) {
+            if (p.y >= startZoneTop) {
+                this.isFirstMove = true;
+                player.x = Phaser.Math.Clamp(p.x, 20, 355);
+                player.y = Phaser.Math.Clamp(p.y + yOffset, 80, 620);
+                if (shieldAura) shieldAura.setPosition(player.x, player.y);
             }
-            player.x = p.x;
-            player.y = p.y + yOffset;
-            shieldAura.setPosition(player.x, player.y);
+            return;
+        }
+
+        if (overdrive >= 100 && !isVictory) {
+            useOverdrive.call(this);
         }
     });
 
-    // НАСТОЯЩИЙ ШЛЕЙФ
-    const skin = SKIN_DATA[currentSkin] || SKIN_DATA.classic;
+    this.input.on('pointermove', p => {
+        if (!isStarted || isShopOpen || isDead || isPaused || !player?.active) return;
+        if (!this.isFirstMove) return;
+
+        player.x = Phaser.Math.Clamp(p.x, 20, 355);
+        player.y = Phaser.Math.Clamp(p.y + yOffset, 80, 620);
+
+        if (shieldAura) shieldAura.setPosition(player.x, player.y);
+    });
+
+    const skin = SKINDATA[currentSkin] || SKINDATA.classic;
 
     trailEmitter = this.add.particles(0, 0, 'pixel', {
         speed: 60,
@@ -587,12 +689,11 @@ function create() {
     });
 
     boss = this.physics.add.sprite(187, -200, 'boss')
-    .setDepth(5)
-    .setImmovable(true)
-    .setVisible(false)
-    .clearTint();
+        .setDepth(5)
+        .setImmovable(true)
+        .setVisible(false)
+        .clearTint();
 
-    // ШЛЕЙФ ДЛЯ БОССА
     bossTrail = this.add.particles(0, 0, 'pixel', {
         speed: 40,
         scale: { start: 0.9, end: 0 },
@@ -603,65 +704,116 @@ function create() {
         follow: boss
     });
     bossTrail.setParticleTint(0xff00ff);
+    bossTrail.setVisible(false);
 
-    // --- HUD v5.5: АВТО-ДИЗАЙН ---
-    // Строка 1: Основная инфа
-    scoreText = this.add.text(10, 15, `${TRANSLATIONS[lang].credits}: ${coins}`, { fontFamily: 'Courier New', fontSize: '14px', fill: '#ffff00' }).setDepth(100);
-    levelText = this.add.text(365, 15, `${TRANSLATIONS[lang].sector}: ${level}`, { fontFamily: 'Courier New', fontSize: '14px', fill: '#ff00ff' }).setOrigin(1, 0).setDepth(100);
-    // Строка 2: Рекорды и Пауза
-    bestText = this.add.text(10, 35, `${TRANSLATIONS[lang].best}: ${bestLevel}`, { fontFamily: 'Courier New', fontSize: '10px', fill: '#00ff00' }).setDepth(100);
-    bestDistText = this.add.text(187, 35, `${TRANSLATIONS[lang].max_dist}: ${bestDistance}m`, { fontFamily: 'Courier New', fontSize: '12px', fill: '#ffff00', fontWeight: 'bold' }).setOrigin(0.5, 0).setDepth(100);
+    const fontUI = 'Arial, sans-serif';
 
-    // Кнопка паузы с неоновой подложкой
+    scoreText = this.add.text(10, 15, `${TRANSLATIONS[lang].credits}: ${coins}`, {
+        fontFamily: fontUI,
+        fontSize: '14px',
+        fill: '#ffff00'
+    }).setDepth(100);
+
+    levelText = this.add.text(365, 15, `${TRANSLATIONS[lang].sector}: ${level}`, {
+        fontFamily: fontUI,
+        fontSize: '14px',
+        fill: '#ff00ff'
+    }).setOrigin(1, 0).setDepth(100);
+
+    bestText = this.add.text(10, 35, `${TRANSLATIONS[lang].best}: ${bestLevel}`, {
+        fontFamily: fontUI,
+        fontSize: '10px',
+        fill: '#00ff00'
+    }).setDepth(100);
+
+    bestDistText = this.add.text(187, 35, `${TRANSLATIONS[lang].max_dist}: ${bestDistance}m`, {
+        fontFamily: fontUI,
+        fontSize: '12px',
+        fill: '#ffff00',
+        fontWeight: 'bold'
+    }).setOrigin(0.5, 0).setDepth(100);
+
     let pauseBg = this.add.rectangle(335, 42, 60, 20, 0xff00ff, 0.2).setDepth(99).setInteractive();
-    pauseBtn = this.add.text(335, 42, TRANSLATIONS[lang].pause_text, { fontSize: '11px', fontFamily: 'Courier New', fill: '#fff' }).setOrigin(0.5).setDepth(100).setInteractive();
+    let pauseBtn = this.add.text(335, 42, TRANSLATIONS[lang].pause_text, {
+        fontSize: '11px',
+        fontFamily: fontUI,
+        fill: '#fff'
+    }).setOrigin(0.5).setDepth(100).setInteractive();
 
     const doPause = () => togglePause.call(this);
     pauseBtn.on('pointerdown', doPause);
     pauseBg.on('pointerdown', doPause);
 
-    // Строка 3: Здоровье
-    pHealthLabel = this.add.text(10, 65, 'YOU: 100/100', { fontFamily: 'Arial', fontSize: '12px', fill: '#00ffff' }).setDepth(100);
-    bHealthLabel = this.add.text(365, 65, '', { fontFamily: 'Arial', fontSize: '12px', fill: '#ff00ff' }).setOrigin(1, 0).setDepth(100);
+    pHealthLabel = this.add.text(10, 65, 'YOU 100/100', {
+        fontFamily: fontUI,
+        fontSize: '12px',
+        fill: '#00ffff'
+    }).setDepth(100);
 
-    // Строка 4: Прогресс уровня и Элиты
-    distanceText = this.add.text(187, 105, '', { fontFamily: 'Arial', fontSize: '14px', fill: '#00ffff', align: 'center' }).setOrigin(0.5, 0).setDepth(100);
+    bHealthLabel = this.add.text(365, 65, '', {
+        fontFamily: fontUI,
+        fontSize: '12px',
+        fill: '#ff00ff'
+    }).setOrigin(1, 0).setDepth(100);
+
+    distanceText = this.add.text(187, 105, '', {
+        fontFamily: fontUI,
+        fontSize: '14px',
+        fill: '#00ffff',
+        align: 'center'
+    }).setOrigin(0.5, 0).setDepth(100);
+
     glitchText = this.add.text(187, 300, '', {
-        fontFamily: 'Arial',
+        fontFamily: fontUI,
         fontSize: '22px',
         stroke: '#000',
         strokeThickness: 6,
         align: 'center',
         wordWrap: { width: 340 }
     }).setOrigin(0.5).setDepth(100);
-    // Графика полосок
+
     overdriveBar = this.add.graphics().setDepth(100);
     roadBar = this.add.graphics().setDepth(100);
     this.overheadGfx = this.add.graphics().setDepth(11);
 
+    this.physics.add.overlap(player, obstacles, (p, o) => {
+        o.destroy();
+        handleDamage(this, 35);
+    });
 
-    this.physics.add.overlap(player, obstacles, (p, o) => { o.destroy(); handleDamage(this, 35); });
-    this.physics.add.overlap(player, bullets, (p, b) => { b.destroy(); handleDamage(this, 15); });
+    this.physics.add.overlap(player, bullets, (p, b) => {
+        b.destroy();
+        handleDamage(this, 15);
+    });
+
     this.physics.add.overlap(boss, playerBullets, hitBoss, null, this);
     this.physics.add.overlap(player, items, collectItem, null, this);
+
     this.physics.add.overlap(minions, playerBullets, (minion, bullet) => {
         let mx = minion.x;
         let my = minion.y;
-
         minion.destroy();
         bullet.destroy();
-
         coinsThisRun += 5;
-        scoreText.setText(`${TRANSLATIONS[lang].credits}: ${coins + coinsThisRun}`);
-
+        updateHudTexts();
         minionExplode(this, mx, my);
     });
 
-    // Урон от миньонов и их пуль
-    this.physics.add.overlap(player, minionBullets, (p, b) => { b.destroy(); handleDamage(this, 10); });
-    this.physics.add.overlap(player, minions, (p, m) => { m.destroy(); handleDamage(this, 20); });
+    this.physics.add.overlap(player, minionBullets, (p, b) => {
+        b.destroy();
+        handleDamage(this, 10);
+    });
 
-    this.physics.add.overlap(bossShields, playerBullets, (s, b) => { b.destroy(); s.setAlpha(1); this.time.delayedCall(100, () => s.setAlpha(0.4)); });
+    this.physics.add.overlap(player, minions, (p, m) => {
+        m.destroy();
+        handleDamage(this, 20);
+    });
+
+    this.physics.add.overlap(bossShields, playerBullets, (s, b) => {
+        b.destroy();
+        s.setAlpha(1);
+        this.time.delayedCall(100, () => s.setAlpha(0.4));
+    });
 
     this.input.on('pointerdown', () => {
         if (isStarted && overdrive >= 100 && !isPaused && !isDead && !isVictory) {
@@ -669,16 +821,141 @@ function create() {
         }
     });
 
-    this.comboSound = this.sound.add('sfx_combo', { volume: 0.3 });
-
     comboPopText = this.add.text(0, 0, '', {
-        fontFamily: 'Arial', fontSize: '18px', fill: '#00ff00', fontWeight: 'bold', stroke: '#000', strokeThickness: 3
+        fontFamily: fontUI,
+        fontSize: '18px',
+        fill: '#00ff00',
+        fontWeight: 'bold',
+        stroke: '#000',
+        strokeThickness: 3
     }).setOrigin(0.5).setDepth(100).setAlpha(0);
+
+    await syncUserData.call(this);
+    updateHudTexts();
 
     if (!localStorage.getItem('GLITCHED_ARENA_INTRO_DONE')) {
         showGaryIntro(this);
     }
 
+    if (shouldAutoStart) {
+        startRun(this);
+    } else {
+        showMenu(this);
+    }
+}
+
+function startRun(scene) {
+    shouldAutoStart = false;
+    isStarted = true;
+    isVictory = false;
+    isDead = false;
+    isBossFight = false;
+    isPaused = false;
+    isShopOpen = false;
+    isPhase2 = false;
+    isPhase3 = false;
+
+    distance = 0;
+    overdrive = 0;
+    coinsThisRun = 0;
+    playerHealth = maxPlayerHealth;
+    bossHealth = 400 * (1 + (level >= 30 ? (30 * 0.45 + (level - 30) * 0.22) : level * 0.45));
+    isMagnetActive = false;
+    isGlitchMode = false;
+    scene.isFirstMove = false;
+
+    if (scene.physics?.world) {
+        scene.physics.resume();
+        scene.physics.world.timeScale = 1;
+    }
+    if (scene.time) {
+        scene.time.paused = false;
+    }
+
+    scene.obstacleTimer?.remove();
+    scene.shootEvent?.remove();
+    scene.itemTimer?.remove();
+    scene.bossShootEvent?.remove();
+    scene.turretShootEvent?.remove();
+    scene.minionTimer?.remove();
+    scene.phraseTimer?.remove();
+    scene.teleportEvent?.remove();
+
+    obstacles?.clear(true, true);
+    bullets?.clear(true, true);
+    playerBullets?.clear(true, true);
+    items?.clear(true, true);
+    minions?.clear(true, true);
+    minionBullets?.clear(true, true);
+    bossShields?.clear(true, true);
+
+    if (bossTurretL) { bossTurretL.destroy(); bossTurretL = null; }
+    if (bossTurretR) { bossTurretR.destroy(); bossTurretR = null; }
+    if (bossTurretLTrail) { bossTurretLTrail.destroy(); bossTurretLTrail = null; }
+    if (bossTurretRTrail) { bossTurretRTrail.destroy(); bossTurretRTrail = null; }
+
+    if (player) {
+        player.setVisible(true);
+        player.setActive(true);
+        player.setPosition(187, 600);
+        player.clearTint();
+        player.angle = 0;
+        player.scaleX = 1;
+    }
+
+    if (shieldAura) {
+        shieldAura.setVisible(isShieldActive);
+        shieldAura.setPosition(player.x, player.y);
+    }
+
+    if (boss) {
+        boss.setVisible(false);
+        boss.setPosition(187, -200);
+        boss.clearTint();
+    }
+
+    if (bossTrail) {
+        bossTrail.setVisible(false);
+    }
+
+    if (trailEmitter) {
+        trailEmitter.start();
+    }
+
+    if (glitchText) {
+        glitchText.setText('').setBackgroundColor(null).setAlpha(1).setVisible(true);
+    }
+
+    if (distanceText) distanceText.setVisible(true);
+    if (pHealthLabel) pHealthLabel.setVisible(true);
+    if (bHealthLabel) bHealthLabel.setVisible(true);
+    if (overdriveBar) overdriveBar.setVisible(true);
+    if (roadBar) roadBar.setVisible(true);
+
+    updateHudTexts();
+
+    ensureBgm(scene);
+
+    scene.obstacleTimer = scene.time.addEvent({
+        delay: Math.max(300, 1150 - level * 50),
+        callback: spawnObstacle,
+        callbackScope: scene,
+        loop: true
+    });
+
+    scene.shootEvent = scene.time.addEvent({
+        delay: 150 - (upgradeLevels.fire * 20),
+        callback: playerShoot,
+        callbackScope: scene,
+        loop: true
+    });
+
+    scene.itemTimer = scene.time.addEvent({
+        delay: 800,
+        callback: spawnItem,
+        callbackScope: scene,
+        loop: true
+    });
 }
 
 function update(time, delta) {
@@ -696,6 +973,8 @@ function update(time, delta) {
         // Эффект перспективы: чуть-чуть сужаем корабль при наклоне
         player.scaleX = 1 - (Math.abs(player.angle) * 0.01);
     }
+
+    const fontUI = 'Arial, sans-serif';
 
     // 1. Очистка и Магнит (Исправлен вложенный цикл)
     bullets.children.each(b => { if (b && (b.y > 750 || b.y < -100)) b.destroy(); });
@@ -800,7 +1079,7 @@ function update(time, delta) {
         overdriveBar.setX(Math.sin(time * 0.1) * 3);
         if (!this.ovrText) {
             this.ovrText = this.add.text(player.x, player.y - 65, TRANSLATIONS[lang].tap_ultra, {
-                fontFamily: 'Courier New', fontSize: '20px', fill: '#ffff00', fontWeight: 'bold', stroke: '#000', strokeThickness: 5
+                fontFamily: fontUI, fontSize: '20px', fill: '#ffff00', fontWeight: 'bold', stroke: '#000', strokeThickness: 5
             }).setOrigin(0.5).setDepth(100);
             this.tweens.add({ targets: this.ovrText, alpha: 0.3, duration: 300, yoyo: true, repeat: -1 });
         }
@@ -1036,10 +1315,6 @@ function processRevive(scene) {
     playerHealth = maxPlayerHealth;
     saveProgress();
     shouldAutoStart = true;
-
-    // Если есть босс — останавливаем его музыку перед рестартом
-    scene.sound.stopAll();
-
     scene.scene.restart();
 }
 
@@ -1247,7 +1522,7 @@ function useOverdrive() {
     if (overdrive < 100 || isVictory || !isBossFight) return;
 
     overdrive = 0;
-    this.sound.play('sfx_ultra', { volume: 0.8 });
+    playSound(this, 'sfx_ultra', { volume: 0.8 });
     this.cameras.main.shake(1000, 0.02);
 
     const skin = SKIN_DATA[currentSkin] || SKIN_DATA.classic;
@@ -1275,85 +1550,170 @@ function useOverdrive() {
     });
 }
 
+function getBossExplosionColor() {
+    if (currentExplosionColor === 0x00ffff && upgradeLevels.fx_blue) return 0x00ffff;
+    if (currentExplosionColor === 0xff00ff && upgradeLevels.fx_pink) return 0xff00ff;
+    return isPhase2 ? 0xff0000 : 0xff00ff;
+}
+
 function triggerVictory(scene) {
     if (isDead || isVictory) return;
     isVictory = true;
+    isBossFight = false;
+    isPhase3 = false;
 
-    // 1. ОСТАНОВКА ВСЕХ СИСТЕМ
-    if (scene.shootEvent) scene.shootEvent.remove();
-    if (scene.bossShootEvent) scene.bossShootEvent.remove();
-    if (scene.turretShootEvent) scene.turretShootEvent.remove();
-    if (scene.minionTimer) scene.minionTimer.remove();
-    if (scene.phraseTimer) scene.phraseTimer.remove();
-    if (scene.teleportEvent) scene.teleportEvent.remove();
-    if (scene.itemTimer) scene.itemTimer.remove();
-    if (itemsTimer) itemsTimer.remove();
+    // 1. ОСТАНОВКА МИРА
+    scene.physics.world.timeScale = 0.05; // Почти полная остановка
+    [scene.shootEvent, scene.bossShootEvent, scene.turretShootEvent, scene.minionTimer, scene.phraseTimer,
+     scene.teleportEvent, scene.itemTimer, itemsTimer].forEach(t => t?.remove());
+    [bullets, playerBullets, minionBullets, minions, obstacles, bossShields].forEach(g => g?.clear(true, true));
 
-    // 2. МГНОВЕННОЕ УДАЛЕНИЕ ВСЕХ ПУЛЬ И ВРАГОВ
-    [bullets, playerBullets, minionBullets, minions, obstacles, bossShields].forEach(g => {
-        if (g) g.clear(true, true);
-    });
-
-    // 3. ПОЛНАЯ ЗАЧИСТКА ГРАФИКИ
+    // **ФИКС ПОЛОСКИ НАВСЕГДА**
     if (scene.overheadGfx) {
-        scene.overheadGfx.clear();
-        scene.overheadGfx.destroy();
+        scene.overheadGfx.clear().fillStyle(0x000000, 0).fillRect(0, 0, 400, 700).destroy();
         scene.overheadGfx = null;
     }
-    if (overdriveBar) { overdriveBar.clear(); overdriveBar.setVisible(false); }
-    if (roadBar) { roadBar.clear(); roadBar.setVisible(false); }
+    [overdriveBar, roadBar].forEach(b => b?.clear().setVisible(false));
+    [pHealthLabel, bHealthLabel, distanceText].forEach(t => t?.setAlpha(0));
 
-    // Прячем текстовые метки (HP, Дистанция)
-    [pHealthLabel, bHealthLabel, distanceText, glitchText].forEach(t => {
-        if (t) { t.setVisible(false); t.setAlpha(0); }
-    });
+    const explodeCol = currentExplosionColor || 0xff0000;
+    const hexColor = '#' + explodeCol.toString(16).padStart(6, '0');
 
-    // --- УДАЛЯЕМ ПОМОЩНИКОВ БОССА ---
-    if (bossTurretL) { bossTurretL.destroy(); bossTurretL = null; }
-    if (bossTurretR) { bossTurretR.destroy(); bossTurretR = null; }
-    if (bossTurretLTrail) { bossTurretLTrail.destroy(); bossTurretLTrail = null; }
-    if (bossTurretRTrail) { bossTurretRTrail.destroy(); bossTurretRTrail = null; }
-
-    boss.setVisible(false);
-
-    if (scene.ovrText) { scene.ovrText.destroy(); scene.ovrText = null; }
-
-    // 4. ЛОГИКА СОХРАНЕНИЯ
+    // ПРЯЧЕМ КОРАБЛЬ И ТРЕЙЛ
     player.setVisible(false);
     if (trailEmitter) trailEmitter.stop();
 
+    // --- ЛОГИКА УРОВНЕЙ ---
+    const justFinished = level;
+    if (justFinished > bestLevel) bestLevel = justFinished;
+
     level++;
     bossesKilled++;
+
     if (Math.floor(distance) > bestDistance) bestDistance = Math.floor(distance);
 
     saveProgress();
+    submitScore();
 
-    // 5. КРАСИВЫЙ ФИНАЛ
+    // 2. ФАЗА ПОДГОТОВКИ: СЖАТИЕ (IMPLOSION)
+    scene.cameras.main.shake(1000, 0.01);
+    scene.tweens.add({
+        targets: boss,
+        scale: 0.1,
+        alpha: 0,
+        duration: 800,
+        ease: 'Expo.in',
+        onComplete: () => {
+            // 3. ФАЗА ВЗРЫВА: СВЕРХНОВАЯ
+            scene.physics.world.timeScale = 1; // Возвращаем время
+            scene.cameras.main.flash(800, 255, 255, 255); // Ослепительная вспышка
+            scene.cameras.main.shake(2000, 0.05);
+
+            // А) ЛУЧИ ЭНЕРГИИ (God Rays)
+            for (let i = 0; i < 12; i++) {
+                let ray = scene.add.rectangle(boss.x, boss.y, 2, 800, explodeCol).setOrigin(0.5, 0).setAlpha(0.8).setDepth(6000);
+                ray.angle = i * 30;
+                scene.tweens.add({
+                    targets: ray,
+                    width: 40,
+                    alpha: 0,
+                    duration: 1500,
+                    ease: 'Cubic.easeOut',
+                    onComplete: () => ray.destroy()
+                });
+                // Вращение лучей
+                scene.tweens.add({ targets: ray, angle: '+=90', duration: 1500 });
+            }
+
+            // Б) УДАРНЫЕ ВОЛНЫ (Хроматическая аберрация)
+            for (let i = 0; i < 4; i++) {
+                let wave = scene.add.circle(boss.x, boss.y, 10, explodeCol, 0.4).setDepth(5500).setStrokeStyle(4, 0xffffff);
+                scene.tweens.add({
+                    targets: wave,
+                    radius: 800,
+                    alpha: 0,
+                    duration: 1200 + (i * 200),
+                    onComplete: () => wave.destroy()
+                });
+            }
+
+            // В) МАССИВНЫЕ ОСКОЛКИ С ТРЕЙЛАМИ
+            for (let i = 0; i < 60; i++) {
+                let chunk = scene.add.rectangle(boss.x, boss.y, 12, 12, i % 2 === 0 ? explodeCol : 0xffffff).setDepth(5000);
+                scene.physics.add.existing(chunk);
+                let angle = Math.random() * Math.PI * 2;
+                let speed = Math.random() * 1200 + 400;
+                chunk.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+                chunk.body.setAngularVelocity(1000);
+
+                // Трейл для каждого осколка
+                scene.time.addEvent({
+                    delay: 50,
+                    repeat: 10,
+                    callback: () => {
+                        if (!chunk.active) return;
+                        let t = scene.add.rectangle(chunk.x, chunk.y, 6, 6, explodeCol).setAlpha(0.4);
+                        scene.tweens.add({ targets: t, alpha: 0, scale: 0, duration: 400, onComplete: () => t.destroy() });
+                    }
+                });
+
+                scene.tweens.add({ targets: chunk, scale: 0, alpha: 0, duration: 2000 });
+            }
+
+            // Г) ЭФФЕКТ ГЛИТЧА НА ВЕСЬ ЭКРАН
+            let glitchOverlay = scene.add.rectangle(187, 333, 375, 667, explodeCol, 0.2).setDepth(9000).setAlpha(0);
+            scene.tweens.add({
+                targets: glitchOverlay,
+                alpha: { from: 0.5, to: 0 },
+                duration: 100,
+                repeat: 10,
+                onUpdate: () => {
+                    glitchOverlay.setX(187 + Phaser.Math.Between(-10, 10));
+                },
+                onComplete: () => glitchOverlay.destroy()
+            });
+        }
+    });
+
+    // 4. ТЕКСТ ПОБЕДЫ (Глитчующий)
     let vText = scene.add.text(187, 333, TRANSLATIONS[lang].core_destroyed, {
-        fontFamily: 'Arial', fontSize: '28px', fill: '#00ff00', fontWeight: 'bold',
-        stroke: '#000', strokeThickness: 6, align: 'center'
-    }).setOrigin(0.5).setDepth(5000);
+        fontFamily: 'Courier New',
+        fontSize: '32px',
+        fill: '#fff',
+        fontWeight: 'bold',
+        stroke: hexColor,
+        strokeThickness: 10,
+        align: 'center',
+        wordWrap: { width: 340 }
+    }).setOrigin(0.5).setDepth(10000).setAlpha(0);
 
-    scene.cameras.main.flash(1000, 255, 255, 255);
-    scene.cameras.main.shake(1500, 0.05);
+    scene.time.delayedCall(1000, () => {
+        vText.setAlpha(1);
+        scene.tweens.add({
+            targets: vText,
+            scale: 1.2,
+            duration: 100,
+            yoyo: true,
+            repeat: -1
+        });
+        // Постоянный глитч текста
+        scene.time.addEvent({
+            delay: 50,
+            callback: () => { if(vText.active) vText.setX(187 + Phaser.Math.Between(-5, 5)); },
+            loop: true
+        });
+    });
 
-    // Фейерверк из босса
-    for(let i = 0; i < 80; i++) {
-        let p = scene.add.rectangle(boss.x, boss.y, 6, 6, isPhase2 ? 0xff0000 : 0xff00ff);
-        scene.physics.add.existing(p);
-        p.body.setVelocity(Phaser.Math.Between(-500, 500), Phaser.Math.Between(-500, 500));
-        scene.time.delayedCall(2000, () => p.destroy());
-    }
+    // 5. ЛОГИКА
+    bossesKilled++;
+    if (Math.floor(distance) > bestDistance) bestDistance = Math.floor(distance);
+    saveProgress();
+    if (playerHealth >= maxPlayerHealth && !achievements.flawless) achievements.flawless = true;
 
-    boss.setVisible(false);
-    if (bossTrail) bossTrail.setVisible(false);
-
-    if (playerHealth >= maxPlayerHealth && !achievements.flawless) {
-        achievements.flawless = true;
-    }
-
-    scene.time.delayedCall(3000, () => {
-        showRewardUI(scene, vText);
+    // Переход к наградам
+    scene.time.delayedCall(4000, () => {
+        vText.destroy();
+        showRewardUI(scene, null);
     });
 }
 
@@ -1388,12 +1748,7 @@ function showRewardUI(scene, titleText) {
     duelBtn.on('pointerdown', () => shareDuel());
 
     doubleBtn.on('pointerdown', () => {
-        const ads = window.adController;
-        if (!ads) { finalizeCollection(earnedAmount * 2); return; }
-        ads.show().then(result => {
-            if (result && result.done) finalizeCollection(earnedAmount * 2);
-            else alert(lang === 'ru' ? "Нужно досмотреть до конца!" : "Watch till the end!");
-        }).catch(() => finalizeCollection(earnedAmount * 2));
+        showAdSafe(() => finalizeCollection(earnedAmount * 2));
     });
 
     collectBtn.on('pointerdown', () => finalizeCollection(earnedAmount));
@@ -1405,7 +1760,7 @@ function showRewardUI(scene, titleText) {
         submitScore();
         if (coins >= 5000 && !achievements.rich) achievements.rich = true;
 
-        isVictory = false;
+        //isVictory = false;
         isShopOpen = false;
         isDead = false;
         isBossFight = false;
@@ -1506,88 +1861,84 @@ function showShop(scene, mainMenu) {
 
     // === ФУНКЦИЯ КНОПКИ ===
     const createBtn = (y, nameKey, descKey, cost, type, action) => {
+        const isCustom = ['skin_striker', 'skin_gold', 'skin_ghost', 'fx_blue', 'fx_pink'].includes(type);
         const maxLvl = (type === 'health') ? 20 : 1;
         let curLvl = (type === 'shield') ? (isShieldActive ? 1 : 0) : (upgradeLevels[type] || 0);
-        let isMaxed = curLvl >= maxLvl;
 
+        // Надето ли прямо сейчас?
+        let isEquipped = (type === 'skin_striker' && currentShape === 'striker') ||
+                         (type === 'skin_gold' && currentSkin === 'gold') ||
+                         (type === 'skin_ghost' && currentSkin === 'ghost') ||
+                         (type === 'fx_blue' && currentExplosionColor === 0x00ffff) ||
+                         (type === 'fx_pink' && currentExplosionColor === 0xff00ff);
+
+        let isOwned = (upgradeLevels[type] > 0);
+        let isMaxed = (!isCustom && curLvl >= maxLvl);
         const isStarItem = ['skin_gold', 'skin_ghost', 'omega', 'buy_coins', 'fx_blue', 'fx_pink'].includes(type);
         const isLocked = (type === 'omega' && level < 40 && !upgradeLevels.omega);
 
-        let isCurrentEquipped = (type === 'skin_striker' && currentShape === 'striker') ||
-                                (type === 'skin_gold' && currentSkin === 'gold') ||
-                                (type === 'skin_ghost' && currentSkin === 'ghost');
-
-        let btnColor = isCurrentEquipped ? 0x006666
-            : (isLocked ? 0x1a1a1a
-            : (isStarItem ? 0x443300
-            : (isMaxed ? 0x004400 : 0x222222)));
-
+        // ЦВЕТ КНОПКИ
+        let btnColor = isEquipped ? 0x006666 : (isOwned && isCustom ? 0x004400 : (isLocked ? 0x1a1a1a : (isStarItem ? 0x443300 : (isMaxed ? 0x002200 : 0x222222))));
         const btnBg = scene.add.rectangle(187, y, 330, 48, btnColor).setInteractive();
 
         if (isLocked) btnBg.setStrokeStyle(2, 0xff0000, 0.8);
+        else if (isEquipped) btnBg.setStrokeStyle(2, 0x00ffff, 1);
+        else if (isOwned && isCustom) btnBg.setStrokeStyle(2, 0x00ff00, 1);
         else if (isStarItem && !isMaxed) btnBg.setStrokeStyle(2, 0xffaa00, 1);
-        else if (isCurrentEquipped) btnBg.setStrokeStyle(2, 0x00ffff, 1);
 
+        // ТЕКСТ
         const namet = TRANSLATIONS[lang][nameKey];
-        let levelInfo = (maxLvl > 1) ? ` [${curLvl}/${maxLvl}]` : "";
-        let priceTag = isMaxed ? `[${TRANSLATIONS[lang].maxed || 'MAX'}]` : `- ${cost} ${isStarItem ? '⭐' : '💰'}`;
-        if (isLocked) priceTag = `[${TRANSLATIONS[lang].sector} 40+]`;
+        let priceTag = "";
+        if (isLocked) priceTag = `[SEC 40+]`;
+        else if (isEquipped) priceTag = `[${lang === 'ru' ? 'АКТИВНО' : 'EQUIPPED'}]`;
+        else if (isCustom && isOwned) priceTag = `[${lang === 'ru' ? 'ВЫБРАТЬ' : 'SELECT'}]`;
+        else if (isMaxed) priceTag = `[${TRANSLATIONS[lang].maxed}]`;
+        else priceTag = `- ${cost} ${isStarItem ? '⭐' : '💰'}`;
 
-        const btnText = scene.add.text(187, y - 10, `${namet}${levelInfo} ${priceTag}`, {
-            fontSize: '13px', fill: isLocked ? '#777' : '#fff', fontWeight: 'bold', fontFamily: fontUI
-        }).setOrigin(0.5);
-
-        const descText = scene.add.text(187, y + 10, TRANSLATIONS[lang][descKey], {
-            fontSize: '10px', fill: isLocked ? '#444' : '#aaa', fontFamily: fontUI,
-            wordWrap: { width: 310 }, align: 'center'
-        }).setOrigin(0.5);
+        const btnText = scene.add.text(187, y - 10, `${namet}${!isCustom && maxLvl > 1 ? ` [${curLvl}/${maxLvl}]` : ""} ${priceTag}`, { fontSize: '13px', fontFamily: fontUI, fill: isLocked ? '#777' : '#fff', fontWeight: 'bold' }).setOrigin(0.5);
+        const descText = scene.add.text(187, y + 10, TRANSLATIONS[lang][descKey], { fontSize: '10px', fontFamily: fontUI, fill: isLocked ? '#444' : '#aaa', align: 'center', wordWrap: { width: 310 } }).setOrigin(0.5);
 
         btnBg.on('pointerdown', () => {
             if (isLocked) { scene.cameras.main.shake(100, 0.01); return; }
+
             if (isMaxed) return;
 
-            // Вызываем подтверждение вместо мгновенной покупки
+            // НОВАЯ ЛОГИКА: СНЯТИЕ АКТИВНОГО ЭФФЕКТА
+            if (isEquipped) {
+                if (type === 'fx_blue' || type === 'fx_pink') {
+                    currentExplosionColor = 0xff0000; // Возврат к красному
+                }
+                saveProgress();
+                overlay.destroy();
+                showShop(scene, mainMenu);
+                return;
+            }
+
+            // Если уже куплено, но не надето — ВЫБРАТЬ
+            if (isCustom && isOwned) {
+                if (action) action();
+                saveProgress();
+                overlay.destroy();
+                showShop(scene, mainMenu);
+                return;
+            }
+
             showConfirm(namet, cost, isStarItem, () => {
                 if (isStarItem) {
-                    if (cost === 0) {
-                        upgradeLevels[type] = 1;
-                        saveProgress();
-                        overlay.destroy();
-                        showShop(scene, mainMenu);
-                        return;
-                    }
+                    if (cost === 0) { upgradeLevels[type] = 1; saveProgress(); overlay.destroy(); showShop(scene, mainMenu); return; }
                     const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
-                    fetch(`${botUrl}/get_invoice?item_type=${type}&user_id=${user?.id}&username=${user?.first_name}`)
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.url) {
-                            window.Telegram.WebApp.openInvoice(data.url, (status) => {
-                                if (status === 'paid') {
-                                    if (type === 'buy_coins') coins += 5000;
-                                    else upgradeLevels[type] = 1;
-                                    saveProgress();
-                                    overlay.destroy();
-                                    showShop(scene, mainMenu);
-                                }
-                            });
-                        }
+                    fetch(`${botUrl}/get_invoice?item_type=${type}&user_id=${user?.id}&username=${user?.first_name}`).then(r => r.json()).then(data => {
+                        if (data.url) { window.Telegram.WebApp.openInvoice(data.url, (status) => { if (status === 'paid') { if (type === 'buy_coins') coins += 5000; else upgradeLevels[type] = 1; if (action) action(); saveProgress(); overlay.destroy(); showShop(scene, mainMenu); } }); }
                     });
-                } else {
-                    if (coins >= cost) {
-                        coins -= cost;
-                        if (type === 'shield') { isShieldActive = true; upgradeLevels.shield = 1; }
-                        else { upgradeLevels[type] = (upgradeLevels[type] || 0) + 1; }
-                        if (action) action();
-                        saveProgress();
-                        overlay.destroy();
-                        showShop(scene, mainMenu);
-                    } else {
-                        scene.cameras.main.shake(200, 0.01);
-                    }
-                }
+                } else if (coins >= cost) {
+                    coins -= cost;
+                    if (type === 'shield') { isShieldActive = true; upgradeLevels.shield = 1; }
+                    else { upgradeLevels[type] = (upgradeLevels[type] || 0) + 1; }
+                    if (action) action();
+                    saveProgress(); overlay.destroy(); showShop(scene, mainMenu);
+                } else scene.cameras.main.shake(200, 0.01);
             });
         });
-
         contentContainer.add([btnBg, btnText, descText]);
     };
 
@@ -1600,18 +1951,15 @@ function showShop(scene, mainMenu) {
         createBtn(sY+step*3,   "up_hull",      "desc_hull",     500,  'health', () => { maxPlayerHealth += 25; playerHealth = maxPlayerHealth; });
         createBtn(sY+step*4,   "up_shield",    "desc_shield",   150,  'shield');
         createBtn(sY+step*5,   "skin_striker", "desc_striker",  1500, 'skin_striker', () => { currentShape = 'striker'; refreshPlayerAppearance(scene); });
-        createBtn(sY+step*6,   "skin_gold",    "desc_gold",     300,  'skin_gold',    () => { currentSkin = 'gold';    refreshPlayerAppearance(scene); });
-        createBtn(sY+step*7,   "skin_ghost",   "desc_ghost",    300,  'skin_ghost',   () => { currentSkin = 'ghost';   refreshPlayerAppearance(scene); });
-        createBtn(sY+step*8,   "up_omega",     "desc_omega",    100,  'omega',        () => { upgradeLevels.omega = 1; });
-        createBtn(sY+step*9,   "up_coins",     "desc_coins",    50,   'buy_coins');
+        createBtn(sY+step*6,   "up_omega",     "desc_omega",    100,  'omega',        () => { upgradeLevels.omega = 1; });
+        createBtn(sY+step*7,   "up_coins",     "desc_coins",    50,   'buy_coins');
         maxScroll = step * 7;
     } else {
-        createBtn(sY, "skin_striker", "desc_striker", 1500, 'skin_striker', () => { currentShape = 'striker'; refreshPlayerAppearance(scene); });
-        createBtn(sY+step, "skin_gold", "desc_gold", 300, 'skin_gold', () => { currentSkin = 'gold'; refreshPlayerAppearance(scene); });
-        createBtn(sY+step*2, "skin_ghost", "desc_ghost", 300, 'skin_ghost', () => { currentSkin = 'ghost'; refreshPlayerAppearance(scene); });
-        createBtn(sY+step*3, "fx_blue_exp", "desc_blue_exp", 200, 'fx_blue', () => { currentExplosionColor = 0x00ffff; });
-        createBtn(sY+step*4, "fx_pink_exp", "desc_pink_exp", 200, 'fx_pink', () => { currentExplosionColor = 0xff00ff; });
-        maxScroll = step * 5;
+        createBtn(sY, "skin_gold", "desc_gold", 300, 'skin_gold', () => { currentSkin = 'gold'; refreshPlayerAppearance(scene); });
+        createBtn(sY+step, "skin_ghost", "desc_ghost", 300, 'skin_ghost', () => { currentSkin = 'ghost'; refreshPlayerAppearance(scene); });
+        createBtn(sY+step*2, "fx_blue_exp", "desc_blue_exp", 290, 'fx_blue', () => { currentExplosionColor = 0x00ffff; });
+        createBtn(sY+step*3, "fx_pink_exp", "desc_pink_exp", 200, 'fx_pink', () => { currentExplosionColor = 0xff00ff; });
+        maxScroll = step * 4;
     }
 
     // Считаем высоту контента
@@ -1706,20 +2054,18 @@ function showShop(scene, mainMenu) {
 
 
     if (isVictory) {
-        const nextBg = scene.add.rectangle(187, 520, 330, 50, 0x003333).setInteractive().setStrokeStyle(2, 0x00ffff);
-        const nextTxt = scene.add.text(187, 520, `${TRANSLATIONS[lang].deploy_btn} ${level}`, {
-            fontSize: '18px', fill: '#00ffff', fontWeight: 'bold', fontFamily: fontUI
-        }).setOrigin(0.5);
-
-        // Эффект пульсации для привлечения внимания
+        const nextBg = scene.add.rectangle(187, 525, 330, 50, 0x003333).setInteractive().setStrokeStyle(2, 0x00ffff).setDepth(4005);
+        const nextTxt = scene.add.text(187, 525, `${TRANSLATIONS[lang].deploy_btn} ${level}`, { fontSize: '18px', fill: '#00ffff', fontWeight: 'bold' }).setOrigin(0.5).setDepth(4006);
         scene.tweens.add({ targets: nextBg, alpha: 0.7, duration: 600, yoyo: true, repeat: -1 });
 
         nextBg.on('pointerdown', () => {
-            scene.input.off('wheel');
-            overlay.destroy();
-            isShopOpen = false;
             isVictory = false;
             shouldAutoStart = true;
+            saveProgress();
+
+            scene.input.off('wheel');
+            scene.input.off('pointermove');
+            overlay.destroy();
             scene.scene.restart();
         });
         overlay.add([nextBg, nextTxt]);
@@ -1915,19 +2261,19 @@ function spawnItem() {
     let type = 'coin';
 
     // Сначала проверяем самые РЕДКИЕ бонусы
-    if (rand > 0.98) {
-        type = 'nuke';    // 2% шанс (станет в 2 раза реже, чем сейчас)
-    } else if (rand > 0.95) {
-        type = 'magnet';  // 3% шанс
-    } else if (rand > 0.90) {
-        type = 'slowmo';  // 5% шанс
+    if (rand > 0.92) {
+        type = 'nuke';    // 8% шанс (станет в 2 раза реже, чем сейчас)
+    } else if (rand > 0.84) {
+        type = 'magnet';  // 8% шанс
+    } else if (rand > 0.74) {
+        type = 'slowmo';  // 10% шанс
     } else {
         // выбираем между Монетой и Сердцем
         // На 1 уровне шанс сердца 1%, на 30 уровне — 40%
         let baseHeartChance = level >= 30 ? 0.40 : (level >= 25 ? 0.25 : 0.01);
 
         // Если здоровья мало, система "помогает" выжить
-        let actualHeartChance = (playerHealth < 20) ? 0.45 : baseHeartChance;
+        let actualHeartChance = (playerHealth < 40) ? 0.45 : baseHeartChance;
 
         if (Math.random() < actualHeartChance) {
             type = 'heart';
@@ -1967,73 +2313,48 @@ function spawnItem() {
 function collectItem(p, item) {
     let type = item.getData('type');
     item.destroy();
+    const fontUI = 'Arial, sans-serif';
 
     if (type === 'magnet') {
         isMagnetActive = true;
-        // Перевод: МАГНИТНЫЙ ЗАХВАТ
-        glitchText.setText(TRANSLATIONS[lang].magnet_on).setFill("#ff00ff");
-        this.time.delayedCall(8000, () => { isMagnetActive = false; glitchText.setText(""); });
+        glitchText.setText(TRANSLATIONS[lang].magnet_on).setFill('#ff00ff');
+        this.time.delayedCall(8000, () => { isMagnetActive = false; glitchText.setText(''); });
     }
 
-    if (type === 'heart') {
+    else if (type === 'heart') {
         playerHealth = Math.min(maxPlayerHealth, playerHealth + 25);
-
-        // Всплывающий текст теперь использует локализацию ОЗ/HP
-        let txt = this.add.text(player.x, player.y, `+25 ${TRANSLATIONS[lang].hp_label}`, {
-            fontFamily: 'Courier New', fontSize: '18px', fill: '#00ff00', fontWeight: 'bold', stroke: '#000', strokeThickness: 3
+        let txt = this.add.text(player.x, player.y, '+25 ' + TRANSLATIONS[lang].hp_label, {
+            fontFamily: fontUI, fontSize: '18px', fill: '#00ff00', fontWeight: 'bold', stroke: '#000', strokeThickness: 3
         }).setDepth(100);
-
-        this.tweens.add({
-            targets: txt,
-            y: player.y - 100,
-            alpha: 0,
-            duration: 800,
-            onComplete: () => txt.destroy()
-        });
-
-        // Используем новую строку из словаря (добавь её в TRANSLATIONS, если нет)
-        glitchText.setText(lang === 'ru' ? "КОРПУС ВОССТАНОВЛЕН" : "INTEGRITY_RESTORED").setFill("#ff0088");
-        this.time.delayedCall(1000, () => glitchText.setText(""));
+        this.tweens.add({ targets: txt, y: player.y - 100, alpha: 0, duration: 800, onComplete: () => txt.destroy() });
+        glitchText.setText(lang === 'ru' ? 'КОРПУС ВОССТАНОВЛЕН' : 'INTEGRITY RESTORED').setFill('#ff0088');
+        this.time.delayedCall(1000, () => glitchText.setText(''));
         this.cameras.main.flash(300, 255, 0, 136, 0.4);
         if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
     }
 
-    if (type === 'nuke') {
-        this.sound.play('sfx_nuke', { volume: 0.5, stopOnTerminate: true });
+    else if (type === 'nuke') {
+        // ИСПРАВЛЕН КЛЮЧ: sfx_nuke
+        playSound(this, 'sfx_nuke', { volume: 0.5, stopOnTerminate: true });
         this.time.delayedCall(2000, () => { this.sound.stopByKey('sfx_nuke'); });
 
-        if (window.Telegram?.WebApp?.HapticFeedback) {
-            Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-        }
-
         let wave = this.add.circle(player.x, player.y, 20, 0xff00ff, 0.7).setDepth(2000);
-        this.tweens.add({ targets: wave, radius: 800, alpha: 0, duration: 600, ease: 'Expo.out', onComplete: () => wave.destroy() });
-
-        this.cameras.main.flash(400, 255, 0, 255, 0.4);
-        this.cameras.main.shake(500, 0.03);
-
-        obstacles.children.each(obs => {
-            if (obs.active) {
-                for (let i = 0; i < 6; i++) {
-                    let frag = this.add.rectangle(obs.x, obs.y, 6, 6, 0xff0000).setDepth(5);
-                    this.physics.add.existing(frag);
-                    frag.body.setVelocity(Phaser.Math.Between(-500, 500), Phaser.Math.Between(-500, 500));
-                    this.time.delayedCall(400, () => frag.destroy());
-                }
-            }
-        });
+        this.tweens.add({ targets: wave, radius: 900, alpha: 0, duration: 900, ease: 'Expo.out', onComplete: () => wave.destroy() });
+        this.cameras.main.flash(450, 255, 0, 255, 0.35);
+        this.cameras.main.shake(700, 0.03);
 
         obstacles.clear(true, true);
+        glitchText.setText(TRANSLATIONS[lang].purified).setFill('#ff00ff').setAlpha(1);
+        this.time.delayedCall(1500, () => glitchText.setText(''));
+    }
 
-        // Перевод: СИСТЕМА ОЧИЩЕНА
-        glitchText.setText(TRANSLATIONS[lang].purified).setFill("#ff00ff").setAlpha(1);
-        this.time.delayedCall(1500, () => glitchText.setAlpha(0));
-
-    } else if (type === 'coin') {
-        coinsThisRun += (isGlitchMode ? 30 : 10);
+    else if (type === 'coin') {
+        coinsThisRun += isGlitchMode ? 30 : 10;
         scoreText.setText(`${TRANSLATIONS[lang].credits}: ${coins + coinsThisRun}`);
-    } else if (type === 'slowmo') {
-        // Перевод: ВРЕМЯ ЗАМЕДЛЕНО
+        updateHudTexts();
+    }
+
+    else if (type === 'slowmo') {
         glitchText.setText(TRANSLATIONS[lang].time_warp).setFill("#00ff00");
         this.physics.world.timeScale = 2;
         this.time.delayedCall(3000, () => {
@@ -2045,7 +2366,7 @@ function collectItem(p, item) {
 
 function showComboEffect(scene) {
     combo++;
-    if (scene.comboSound) scene.comboSound.play();
+    if (scene.comboSound) playSound(scene, 'sfx_combo', { volume: 0.3 });
 
     comboPopText.setPosition(player.x, player.y - 60);
     // Используем перевод слова COMBO
@@ -2154,6 +2475,7 @@ function minionExplode(scene, x, y) {
 }
 
 function showMenu(scene) {
+    ensureBgm(scene);
     isStarted = false;
     isVictory = false;
     isDead = false;
@@ -2236,27 +2558,14 @@ function showMenu(scene) {
     }).setOrigin(0.5).setInteractive();
 
     startBtn.on('pointerdown', () => {
-        if (lastRunState.pendingDeath) { closeMenu(); triggerDeath(scene); return; }
-        closeMenu();
-
-        isStarted = true;
-        isVictory = false;
-        isBossFight = false;
-        distance = 0;
-        overdrive = 0;
-        playerHealth = maxPlayerHealth;
-
-        if (!scene.overheadGfx || !scene.overheadGfx.active) {
-            scene.overheadGfx = scene.add.graphics().setDepth(11);
+        if (lastRunState.pendingDeath) {
+            closeMenu();
+            triggerDeath(scene);
+            return;
         }
 
-        player.setVisible(true);
-        player.setPosition(187, 600);
-
-        if (isSoundOn) scene.sound.play('bgm', {loop:true, volume:0.15});
-        scene.obstacleTimer = scene.time.addEvent({ delay: Math.max(300, 1150 - level * 50), callback: spawnObstacle, callbackScope: scene, loop: true });
-        scene.shootEvent = scene.time.addEvent({ delay: 150 - (upgradeLevels.fire * 20), callback: playerShoot, callbackScope: scene, loop: true });
-        itemsTimer = scene.time.addEvent({ delay: 1000, callback: spawnItem, callbackScope: scene, loop: true });
+        closeMenu();
+        startRun(scene);
     });
 
     soundBtn.on('pointerdown', () => {
@@ -2608,33 +2917,37 @@ function getBossIntel() {
 }
 
 async function submitScore() {
-    const tg = window.Telegram?.WebApp;
-    const tgUser = tg?.initDataUnsafe?.user;
-    if (!tgUser) {
-        console.warn("Синхронизация пропущена: данные пользователя Telegram не найдены.");
+    const tgUser = getTelegramUser();
+    if (!tgUser?.id) {
+        console.warn('No Telegram user, skip submitScore');
         return;
     }
 
     try {
+        const payload = {
+            telegram_id: tgUser.id,
+            username: tgUser.first_name || 'PILOT',
+            score: bestDistance,
+            level: getCompletedLevel(),
+            skin: currentSkin,
+            shape: currentShape,
+            coins: coins,
+            upgrades: upgradeLevels,
+            total_dist: Math.floor(totalDistance),
+            bosses_killed: bossesKilled,
+            ship_name: shipName || 'RAZOR-01'
+        };
+
         const response = await fetch(`${botUrl}/submit_score`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                telegram_id: tgUser.id,
-                username: tgUser.first_name,
-                score: bestDistance,
-                level: level,
-                skin: currentSkin,
-                shape: currentShape,
-                coins: coins,
-                upgrades: upgradeLevels
-            })
+            body: JSON.stringify(payload)
         });
+
         const res = await response.json();
-        console.log("Данные в Бд отправлены:", res);
-        //console.log("✅ Облачный сейв обновлен: S" + level + " | " + bestDistance + "m");
+        console.log('submitScore result:', res);
     } catch (e) {
-        console.error("Ошибка синхронизации:", e);
+        console.error('submitScore error:', e);
     }
 }
 
@@ -2645,113 +2958,234 @@ async function showLeaderboard(scene, mainMenu) {
 
     const fontUI = 'Arial, sans-serif';
 
-    // 1. ЗАГОЛОВОК И КНОПКА
-    overlay.add(scene.add.text(187, 45, TRANSLATIONS[lang].top, {
-        fontSize: '24px', fill: '#ffff00', fontWeight: 'bold', fontFamily: fontUI
-    }).setOrigin(0.5));
+    const title = scene.add.text(187, 45, TRANSLATIONS[lang].top, {
+        fontSize: '24px',
+        fill: '#ffff00',
+        fontWeight: 'bold',
+        fontFamily: fontUI
+    }).setOrigin(0.5);
+    overlay.add(title);
 
-    const backBtn = scene.add.rectangle(187, 615, 200, 45, 0x330033).setInteractive().setStrokeStyle(1, 0xff00ff, 0.5);
-    const backLabel = scene.add.text(187, 615, TRANSLATIONS[lang].back, { fontSize: '15px', fontFamily: fontUI, fill: '#ff00ff', fontWeight: 'bold' }).setOrigin(0.5);
+    const backBtn = scene.add.rectangle(187, 615, 200, 45, 0x330033)
+        .setInteractive()
+        .setStrokeStyle(1, 0xff00ff, 0.5);
+
+    const backLabel = scene.add.text(187, 615, TRANSLATIONS[lang].back, {
+        fontSize: '15px',
+        fontFamily: fontUI,
+        fill: '#ff00ff',
+        fontWeight: 'bold'
+    }).setOrigin(0.5);
+
+    overlay.add(backBtn);
+    overlay.add(backLabel);
 
     backBtn.on('pointerdown', () => {
-        scene.input.off('pointermove'); scene.input.off('wheel');
-        overlay.destroy(); mainMenu.setVisible(true);
-        if (typeof startTitleGlitch === 'function') startTitleGlitch(scene, mainMenu.titleRef);
+        scene.input.off('pointermove');
+        scene.input.off('wheel');
+        overlay.destroy();
+        mainMenu.setVisible(true);
+        if (typeof startTitleGlitch === 'function') {
+            startTitleGlitch(scene, mainMenu.titleRef);
+        }
     });
-    overlay.add([backBtn, backLabel]);
+
+    const loadingText = scene.add.text(187, 320, TRANSLATIONS[lang].dbconnecting, {
+        fontSize: '16px',
+        fill: '#00ffff',
+        fontWeight: 'bold',
+        fontFamily: fontUI,
+        align: 'center'
+    }).setOrigin(0.5);
+    overlay.add(loadingText);
 
     const listContainer = scene.add.container(0, 0);
     overlay.add(listContainer);
 
-    const maskShape = scene.make.graphics().fillRect(0, 100, 375, 450);
+    const maskShape = scene.make.graphics({ add: false });
+    maskShape.fillRect(0, 100, 375, 450);
     listContainer.setMask(maskShape.createGeometryMask());
 
     try {
         const response = await fetch(`${botUrl}/get_leaderboard`);
         const data = await response.json();
-        data.sort((a, b) => b.level - a.level || b.score - a.score);
 
-        const myId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || "GUEST_PILOT";
-        const myFirstName = window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name || (lang === 'ru' ? "ПИЛОТ" : "PILOT");
+        loadingText.destroy();
 
-        // РИСУЕМ СТРОКИ
+        if (!Array.isArray(data) || data.length === 0) {
+            const emptyText = scene.add.text(187, 320, TRANSLATIONS[lang].dbempty, {
+                fontSize: '16px',
+                fill: '#888888',
+                fontFamily: fontUI
+            }).setOrigin(0.5);
+            overlay.add(emptyText);
+            return;
+        }
+
+        data.sort((a, b) => (b.level - a.level) || (b.score - a.score));
+
+        const myId = getTelegramUser()?.id || 'GUEST';
+        const myFirstName = getTelegramUser()?.first_name || (lang === 'ru' ? 'ПИЛОТ' : 'PILOT');
+
         data.forEach((entry, i) => {
-            const y = 125 + (i * 45);
+            const y = 125 + i * 45;
             const centerY = y + 8;
 
             let color = '#ffffff';
-            let medal = (i === 0) ? '🥇' : (i === 1) ? '🥈' : (i === 2) ? '🥉' : `#${i+1}`;
-            if (i === 0) color = '#FFD700'; else if (i === 1) color = '#C0C0C0'; else if (i === 2) color = '#CD7F32';
+            let medal = `${i + 1}`;
 
-            const isMe = (entry.telegram_id === myId);
+            if (i === 0) { color = '#FFD700'; medal = '🥇'; }
+            else if (i === 1) { color = '#C0C0C0'; medal = '🥈'; }
+            else if (i === 2) { color = '#CD7F32'; medal = '🥉'; }
+
+            const isMe = entry.telegram_id == myId;
             if (isMe) {
-                listContainer.add(scene.add.rectangle(187, centerY, 350, 38, 0x00ffff, 0.15).setOrigin(0.5));
+                listContainer.add(
+                    scene.add.rectangle(187, centerY, 350, 38, 0x00ffff, 0.15).setOrigin(0.5)
+                );
                 if (i >= 3) color = '#00ffff';
             }
 
-            // --- 1. РАНГ ---
-            const rankTxt = scene.add.text(15, y, medal, { fontSize: '13px', fontFamily: fontUI, fill: color, fontWeight: 'bold' });
+            const rankTxt = scene.add.text(15, y, medal, {
+                fontSize: '13px',
+                fontFamily: fontUI,
+                fill: color,
+                fontWeight: 'bold'
+            });
 
-            // --- 2. КОРАБЛЬ (Идеальное центрирование) ---
-            const skinInfo = SKIN_DATA[entry.skin] || SKIN_DATA.classic;
+            const skinInfo = SKINDATA[entry.skin] || SKINDATA.classic;
             let shipIcon;
+
             if (entry.shape === 'striker') {
                 shipIcon = scene.add.triangle(55, centerY, 0, 12, 6, 0, 12, 12, skinInfo.body).setOrigin(0.5);
             } else {
                 shipIcon = scene.add.rectangle(55, centerY, 10, 10, skinInfo.body).setOrigin(0.5);
             }
-            if (entry.skin === 'ghost') shipIcon.setAlpha(0.5);
 
-            // --- 3. ИМЯ ---
-            let isCustom = (entry.ship_name && entry.ship_name !== "RAZOR-01" && entry.ship_name !== "");
-            let displayName = (isCustom ? `•${entry.ship_name}` : entry.username || "PILOT").toUpperCase().substring(0, 10);
-            const nameTxt = scene.add.text(75, y, displayName, { fontSize: '13px', fontFamily: fontUI, fill: isCustom ? '#ffff00' : color, fontWeight: isCustom ? 'bold' : 'normal' });
+            if (entry.skin === 'ghost' && shipIcon.setAlpha) {
+                shipIcon.setAlpha(0.5);
+            }
 
-            // --- 4. ДАТА (Сдвинута влево) ---
-            let dateStr = entry.score_date ? new Date(entry.score_date).toLocaleDateString('ru-RU', {day:'2-digit', month:'2-digit', year:'2-digit'}) : '--.--.--';
-            const dateTxt = scene.add.text(170, y + 2, dateStr, { fontSize: '9px', fontFamily: fontUI, fill: color, alpha: 0.5 });
+            const isCustom = entry.ship_name && entry.ship_name !== 'RAZOR-01';
+            const displayName = (isCustom ? entry.ship_name : (entry.username || 'PILOT'))
+                .toUpperCase()
+                .substring(0, 10);
 
-            // --- 5. СЕКТОР И СЧЕТ ---
-            const sectorTxt = scene.add.text(285, y, `S:${entry.level || 0}`, { fontSize: '11px', fontFamily: fontUI, fill: color }).setOrigin(1, 0);
-            const scoreTxt = scene.add.text(360, y, `${entry.score || 0}m`, { fontSize: '12px', fontFamily: fontUI, fill: color, fontWeight: 'bold' }).setOrigin(1, 0);
+            const nameTxt = scene.add.text(75, y, displayName, {
+                fontSize: '13px',
+                fontFamily: fontUI,
+                fill: isCustom ? '#ffff00' : color,
+                fontWeight: isCustom ? 'bold' : 'normal'
+            });
+
+            const dateStr = entry.score_date
+                ? new Date(entry.score_date).toLocaleDateString('ru-RU', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: '2-digit'
+                })
+                : '--.--.--';
+
+            const dateTxt = scene.add.text(170, y + 2, dateStr, {
+                fontSize: '9px',
+                fontFamily: fontUI,
+                fill: color,
+                alpha: 0.5
+            });
+
+            const sectorTxt = scene.add.text(285, y, `S${entry.level || 0}`, {
+                fontSize: '11px',
+                fontFamily: fontUI,
+                fill: color
+            }).setOrigin(1, 0);
+
+            const scoreTxt = scene.add.text(360, y, `${entry.score || 0}m`, {
+                fontSize: '12px',
+                fontFamily: fontUI,
+                fill: color,
+                fontWeight: 'bold'
+            }).setOrigin(1, 0);
 
             listContainer.add([rankTxt, shipIcon, nameTxt, dateTxt, sectorTxt, scoreTxt]);
         });
 
-        // --- ЛОГИКА "Я ВНЕ ТОП-50" (Исправляем undefined) ---
-        const amIInTop = data.some(e => e.telegram_id === myId);
-        if (!amIInTop) {
+        const amIInTop = data.some(e => e.telegram_id == myId);
+
+        if (!amIInTop && getTelegramUser()?.id) {
             const myRes = await fetch(`${botUrl}/get_user_personal/${myId}`);
             const myP = await myRes.json();
 
-            const yDots = 125 + (data.length * 45);
-            listContainer.add(scene.add.text(187, yDots, ". . .", { fontSize: '20px', fontFamily: fontUI, fill: '#555' }).setOrigin(0.5));
+            if (myP && !myP.error) {
+                const yDots = 125 + data.length * 45;
+                listContainer.add(
+                    scene.add.text(187, yDots, '. . .', {
+                        fontSize: '20px',
+                        fontFamily: fontUI,
+                        fill: '#555'
+                    }).setOrigin(0.5)
+                );
 
-            const yMe = yDots + 40;
-            const centerY = yMe + 8;
+                const yMe = yDots + 40;
+                const centerY = yMe + 8;
 
-            // Если сервер не прислал ранг или уровень, ставим дефолт, чтобы не было undefined
-            const myRank = myP.rank || '?';
-            const myLvl = myP.level || level;
-            const myScore = myP.score || Math.floor(bestDistance);
+                listContainer.add(
+                    scene.add.rectangle(187, centerY, 350, 38, 0x00ffff, 0.2).setOrigin(0.5)
+                );
 
-            listContainer.add(scene.add.rectangle(187, centerY, 350, 38, 0x00ffff, 0.2).setOrigin(0.5));
-            const rTxt = scene.add.text(15, yMe, `#${myRank}`, { fontSize: '13px', fontFamily: fontUI, fill: '#00ffff', fontWeight: 'bold' });
-            const nTxt = scene.add.text(75, yMe, myFirstName.toUpperCase().substring(0,12), { fontSize: '13px', fontFamily: fontUI, fill: '#00ffff' });
-            const sTxt = scene.add.text(285, yMe, `S:${myLvl}`, { fontSize: '11px', fontFamily: fontUI, fill: '#00ffff' }).setOrigin(1, 0);
-            const scTxt = scene.add.text(360, yMe, `${myScore}m`, { fontSize: '12px', fontFamily: fontUI, fill: '#00ffff', fontWeight: 'bold' }).setOrigin(1, 0);
+                const myRank = myP.rank ? `#${myP.rank}` : '-';
+                const myLvl = myP.level ?? level;
+                const myScore = myP.score ?? bestDistance;
 
-            listContainer.add([rTxt, nTxt, sTxt, scTxt]);
+                const rTxt = scene.add.text(15, yMe, myRank, {
+                    fontSize: '13px',
+                    fontFamily: fontUI,
+                    fill: '#00ffff',
+                    fontWeight: 'bold'
+                });
+
+                const nTxt = scene.add.text(75, yMe, myFirstName.toUpperCase().substring(0, 12), {
+                    fontSize: '13px',
+                    fontFamily: fontUI,
+                    fill: '#00ffff'
+                });
+
+                const sTxt = scene.add.text(285, yMe, `S${myLvl}`, {
+                    fontSize: '11px',
+                    fontFamily: fontUI,
+                    fill: '#00ffff'
+                }).setOrigin(1, 0);
+
+                const scTxt = scene.add.text(360, yMe, `${myScore}m`, {
+                    fontSize: '12px',
+                    fontFamily: fontUI,
+                    fill: '#00ffff',
+                    fontWeight: 'bold'
+                }).setOrigin(1, 0);
+
+                listContainer.add([rTxt, nTxt, sTxt, scTxt]);
+            }
         }
 
-        // СКРОЛЛ
-        const listHeight = (data.length + 3) * 45;
+        const listHeight = Math.max(0, (data.length + 3) * 45);
         const maxY = Math.max(0, listHeight - 420);
-        scene.input.on('wheel', (p, o, dx, dy) => { listContainer.y = Phaser.Math.Clamp(listContainer.y - dy, -maxY, 0); });
-        scene.input.on('pointermove', (p) => { if (p.isDown) listContainer.y = Phaser.Math.Clamp(listContainer.y + (p.y - p.prevPosition.y), -maxY, 0); });
+
+        scene.input.on('wheel', (p, o, dx, dy) => {
+            listContainer.y = Phaser.Math.Clamp(listContainer.y - dy, -maxY, 0);
+        });
+
+        scene.input.on('pointermove', (p) => {
+            if (p.isDown) {
+                listContainer.y = Phaser.Math.Clamp(
+                    listContainer.y + p.y - p.prevPosition.y,
+                    -maxY,
+                    0
+                );
+            }
+        });
 
     } catch (e) {
         console.error(e);
+        loadingText.setText(TRANSLATIONS[lang].dberror).setFill('#ff0000');
     }
 }
 
@@ -2778,12 +3212,8 @@ function showDamageText(scene, x, y, damage, color = '#00ff00', size = '16px') {
 }
 
 async function syncUserData() {
-    const tg = window.Telegram?.WebApp;
-    const tgUser = tg?.initDataUnsafe?.user;
-
-    // Если мы не в телеграме (например, просто открыли в браузере), синхронизация по ID невозможна
-    if (!tgUser || !tgUser.id) {
-        console.warn("Синхронизация невозможна: Pilot ID не найден. Используется локальный сейв.");
+    const tgUser = getTelegramUser();
+    if (!tgUser?.id) {
         return;
     }
 
@@ -2791,59 +3221,74 @@ async function syncUserData() {
         const response = await fetch(`${botUrl}/get_user_personal/${tgUser.id}`);
         const cloudData = await response.json();
 
-        if (cloudData && !cloudData.error) {
-            let needsUpdateBase = false;
+        if (!cloudData || cloudData.error) {
+            return;
+        }
 
-            // --- ЛОГИКА ОБЪЕДИНЕНИЯ (Бери лучшее) ---
+        let shouldPushLocalBack = false;
 
-            // 1. УРОВЕНЬ
-            if (cloudData.level > level) {
-                level = cloudData.level;
-                runGoal = 700 + (level - 1) * 100;
-            } else if (level > (cloudData.level || 0)) {
-                needsUpdateBase = true;
-            }
+        if ((cloudData.level || 0) > level) {
+            level = cloudData.level || 1;
+            runGoal = 700 + (level - 1) * 100;
+        } else if (level > (cloudData.level || 0)) {
+            shouldPushLocalBack = true;
+        }
 
-            // 2. ДИСТАНЦИЯ (РЕКОРД)
-            if (cloudData.score > bestDistance) {
-                bestDistance = cloudData.score;
-            } else if (bestDistance > (cloudData.score || 0)) {
-                needsUpdateBase = true;
-            }
+        if ((cloudData.score || 0) > bestDistance) {
+            bestDistance = cloudData.score || 0;
+        } else if (bestDistance > (cloudData.score || 0)) {
+            shouldPushLocalBack = true;
+        }
 
-            // 3. КРЕДИТЫ (Берем максимум, чтобы не терять деньги при переходе)
-            if (cloudData.coins > coins) {
-                coins = cloudData.coins;
-            } else if (coins > (cloudData.coins || 0)) {
-                needsUpdateBase = true;
-            }
+        if ((cloudData.coins || 0) > coins) {
+            coins = cloudData.coins || 0;
+        } else if (coins > (cloudData.coins || 0)) {
+            shouldPushLocalBack = true;
+        }
 
-            // 4. УЛУЧШЕНИЯ (Сравниваем каждый апгрейд)
-            if (cloudData.upgrades) {
-                for (let key in cloudData.upgrades) {
-                    if ((cloudData.upgrades[key] || 0) > (upgradeLevels[key] || 0)) {
-                        upgradeLevels[key] = cloudData.upgrades[key];
-                    } else if ((upgradeLevels[key] || 0) > (cloudData.upgrades[key] || 0)) {
-                        needsUpdateBase = true;
-                    }
-                }
-            }
+        if (cloudData.skin) {
+            currentSkin = cloudData.skin;
+        }
 
-            // Сохраняем результат "слияния" в память телефона
-            saveProgress();
+        if (cloudData.shape) {
+            currentShape = cloudData.shape;
+        }
 
-            // Обновляем текст в интерфейсе, если он уже создан
-            if (scoreText) scoreText.setText(`${TRANSLATIONS[lang].credits}: ${coins}`);
-            if (bestDistText) bestDistText.setText(`${TRANSLATIONS[lang].max_dist}: ${bestDistance}m`);
+        if (cloudData.ship_name) {
+            shipName = cloudData.ship_name;
+        }
 
-            // Если телефон "умнее" базы — отправляем свежие данные в облако
-            if (needsUpdateBase) {
-                console.log("🔼 Телефон впереди базы. Обновляем облако...");
-                submitScore();
+        if (typeof cloudData.total_dist === 'number') {
+            totalDistance = Math.max(totalDistance, cloudData.total_dist);
+        }
+
+        if (typeof cloudData.bosses_killed === 'number') {
+            bossesKilled = Math.max(bossesKilled, cloudData.bosses_killed);
+        }
+
+        if (cloudData.upgrades && typeof cloudData.upgrades === 'object') {
+            for (const key in cloudData.upgrades) {
+                upgradeLevels[key] = Math.max(
+                    upgradeLevels[key] || 0,
+                    cloudData.upgrades[key] || 0
+                );
             }
         }
+
+        maxPlayerHealth = 100 + ((upgradeLevels.health || 0) * 25);
+        currentStats = getShipStats();
+        saveProgress();
+        updateHudTexts();
+
+        if (player) {
+            refreshPlayerAppearance(this);
+        }
+
+        if (shouldPushLocalBack) {
+            await submitScore();
+        }
     } catch (e) {
-        console.error("Ошибка слияния данных:", e);
+        console.error('syncUserData error:', e);
     }
 }
 
@@ -2939,6 +3384,10 @@ function showProfile(scene, mainMenu) {
     const maxScroll = Math.max(0, currentY - scrollWindowHeight + 40);
     let scrollY = 0;
     const updateScroll = () => { scrollY = Phaser.Math.Clamp(scrollY, -maxScroll, 0); scrollContainer.y = 170 + scrollY; };
+    const applyScroll = () => {
+      scrollY = Phaser.Math.Clamp(scrollY, -maxScroll, 0);
+      scrollContainer.y = 170 + scrollY;
+    };
 
     scene.input.on('wheel', (p, obj, dx, dy) => { scrollY -= dy; updateScroll(); });
     scene.input.on('pointermove', (p) => { if (p.isDown) { scrollY += (p.y - p.prevPosition.y); updateScroll(); } });
@@ -3061,20 +3510,23 @@ function startTitleGlitch(scene, title) {
     });
 }
 
-function resetRunState(scene) {
-    isVictory = false;
-    isDead = false;
-    isShopOpen = false;
-    isBossFight = false;
-    isPaused = false;
-    shouldAutoStart = false;
-
-    if (scene.physics && scene.physics.world) {
-        scene.physics.resume();
-        scene.physics.world.timeScale = 1;
+async function showAdSafe(onDone) {
+  try {
+    const tgUser = getTelegramUser();
+    if (!window.adController || !tgUser?.id) {
+      console.log('Adsgram unavailable outside Telegram, skip ad');
+      onDone?.();
+      return;
     }
 
-    if (scene.time) {
-        scene.time.paused = false;
+    const result = await window.adController.show();
+    if (result?.done) {
+      onDone?.();
+    } else {
+      alert(lang === 'ru' ? 'Посмотри рекламу до конца!' : 'Watch till the end!');
     }
+  } catch (e) {
+    console.log('Adsgram failure - silent bypass', e);
+    onDone?.();
+  }
 }

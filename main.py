@@ -70,44 +70,39 @@ async def submit_score(data: ScoreData):
     try:
         current_date = datetime.now().isoformat()
 
-        # 1. Сначала ПРОВЕРЯЕМ, есть ли уже такой пилот в базе
-        existing = supabase.table('leaderboard').select("*").eq("telegram_id", data.telegram_id).execute()
+        existing = supabase.table("leaderboard").select("*").eq("telegram_id", data.telegram_id).execute()
+        old = existing.data[0] if existing.data else {}
+
+        old_upgrades = old.get("upgrades") or {}
+        new_upgrades = data.upgrades or {}
+
+        merged_upgrades = old_upgrades.copy()
+        for key, val in new_upgrades.items():
+            try:
+                merged_upgrades[key] = max(int(val), int(merged_upgrades.get(key, 0)))
+            except:
+                merged_upgrades[key] = val or merged_upgrades.get(key, 0)
 
         payload = {
             "telegram_id": data.telegram_id,
-            "username": data.username,
-            "score": data.score,
-            "level": data.level,
-            "skin": data.skin,
-            "shape": data.shape,
-            "coins": data.coins,
-            "upgrades": data.upgrades,
-            "ship_name": data.ship_name,
+            "username": data.username or old.get("username") or "PILOT",
+            "score": max(data.score, old.get("score", 0)),
+            "level": max(data.level, old.get("level", 0)),
+            "skin": data.skin or old.get("skin") or "classic",
+            "shape": data.shape or old.get("shape") or "classic",
+            "coins": max(data.coins or 0, old.get("coins", 0)),
+            "upgrades": merged_upgrades,
+            "total_dist": max(data.total_dist or 0, old.get("total_dist", 0)),
+            "bosses_killed": max(data.bosses_killed or 0, old.get("bosses_killed", 0)),
+            "ship_name": data.ship_name or old.get("ship_name") or "RAZOR-01",
             "score_date": current_date
         }
 
-        if existing.data:
-            # ПИЛОТ НАЙДЕН! Берем его старые данные
-            old = existing.data[0]
-
-            # 2. ЛОГИКА СЛИЯНИЯ (Бери только лучшее)
-            payload["level"] = max(data.level, old.get("level", 0))
-            payload["score"] = max(data.score, old.get("score", 0))
-            payload["coins"] = max(data.coins, old.get("coins", 0))
-
-            # Улучшения тоже можно мержить, если это словарь
-            if isinstance(data.upgrades, dict) and isinstance(old.get("upgrades"), dict):
-                merged_upgrades = old["upgrades"].copy()
-                for key, val in data.upgrades.items():
-                    merged_upgrades[key] = max(val, merged_upgrades.get(key, 0))
-                payload["upgrades"] = merged_upgrades
-
-        # 3. Теперь сохраняем "умный" payload
-        res = supabase.table('leaderboard').upsert(payload, on_conflict="telegram_id").execute()
-        return {"status": "ok", "merged_level": payload["level"]}
+        res = supabase.table("leaderboard").upsert(payload, on_conflict="telegram_id").execute()
+        return {"status": "ok", "merged_level": payload["level"], "merged_score": payload["score"]}
 
     except Exception as e:
-        print(f"Ошибка умного сохранения: {e}")
+        print(f"Ошибка submit_score: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/get_leaderboard")
@@ -128,27 +123,72 @@ async def checkout(query: PreCheckoutQuery):
     await query.answer(ok=True)
 
 
+def merge_user_upgrades(tg_id: int, patch: dict):
+    res = supabase.table("leaderboard").select("*").eq("telegram_id", tg_id).execute()
+    old = res.data[0] if res.data else {}
+
+    upgrades = old.get("upgrades") or {}
+    for key, val in patch.items():
+        upgrades[key] = max(val, upgrades.get(key, 0))
+
+    payload = {
+        "telegram_id": tg_id,
+        "username": old.get("username", "PILOT"),
+        "score": old.get("score", 0),
+        "level": old.get("level", 1),
+        "skin": old.get("skin", "classic"),
+        "shape": old.get("shape", "classic"),
+        "coins": old.get("coins", 0),
+        "upgrades": upgrades,
+        "total_dist": old.get("total_dist", 0),
+        "bosses_killed": old.get("bosses_killed", 0),
+        "ship_name": old.get("ship_name", "RAZOR-01"),
+        "score_date": old.get("score_date") or datetime.now().isoformat()
+    }
+
+    supabase.table("leaderboard").upsert(payload, on_conflict="telegram_id").execute()
+    return payload
+
 @dp.message(F.successful_payment)
 async def got_payment(message: types.Message):
     payload = message.successful_payment.invoice_payload
     item_type, tg_id = payload.split(":")
-    tg_id = int(tg_id)  # Превращаем строку обратно в число
+    tg_id = int(tg_id)
 
     try:
+        user_res = supabase.table("leaderboard").select("*").eq("telegram_id", tg_id).execute()
+        old = user_res.data[0] if user_res.data else {}
+
         if item_type == "buy_coins":
-            # Ищем по telegram_id
-            res = supabase.table('leaderboard').select('coins').eq('telegram_id', tg_id).execute()
-            current = res.data[0]['coins'] if (res.data and 'coins' in res.data[0]) else 0
-            supabase.table('leaderboard').update({"coins": current + 5000}).eq('telegram_id', tg_id).execute()
+            current = old.get("coins", 0)
+            supabase.table("leaderboard").upsert({
+                "telegram_id": tg_id,
+                "username": old.get("username", message.from_user.first_name or "PILOT"),
+                "score": old.get("score", 0),
+                "level": old.get("level", 1),
+                "skin": old.get("skin", "classic"),
+                "shape": old.get("shape", "classic"),
+                "coins": current + 5000,
+                "upgrades": old.get("upgrades", {}),
+                "total_dist": old.get("total_dist", 0),
+                "bosses_killed": old.get("bosses_killed", 0),
+                "ship_name": old.get("ship_name", "RAZOR-01"),
+                "score_date": old.get("score_date") or datetime.now().isoformat()
+            }, on_conflict="telegram_id").execute()
 
         elif item_type == "omega":
-            supabase.table('leaderboard').update({"omega": 1}).eq('telegram_id', tg_id).execute()
+            merge_user_upgrades(tg_id, {"omega": 1})
 
-        elif "skin_" in item_type:
-            skin_name = item_type.replace("skin_", "")
-            supabase.table('leaderboard').update({"skin": skin_name}).eq('telegram_id', tg_id).execute()
+        elif item_type == "skin_gold":
+            merge_user_upgrades(tg_id, {"skingold": 1})
+            supabase.table("leaderboard").update({"skin": "gold"}).eq("telegram_id", tg_id).execute()
 
-        await message.answer(f"🦾 СИСТЕМА ОБНОВЛЕНА! Апгрейд успешно привязан к вашему ID: {tg_id}")
+        elif item_type == "skin_ghost":
+            merge_user_upgrades(tg_id, {"skinghost": 1})
+            supabase.table("leaderboard").update({"skin": "ghost"}).eq("telegram_id", tg_id).execute()
+
+        await message.answer(f"🦾 Система обновлена! Покупка привязана к ID: {tg_id}")
+
     except Exception as e:
         print(f"Ошибка оплаты: {e}")
 
