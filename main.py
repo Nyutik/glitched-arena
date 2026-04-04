@@ -69,6 +69,10 @@ async def get_invoice(item_type: str, user_id: int, username: str):
 async def submit_score(data: ScoreData):
     try:
         current_date = datetime.now().isoformat()
+
+        # 1. Сначала ПРОВЕРЯЕМ, есть ли уже такой пилот в базе
+        existing = supabase.table('leaderboard').select("*").eq("telegram_id", data.telegram_id).execute()
+
         payload = {
             "telegram_id": data.telegram_id,
             "username": data.username,
@@ -81,11 +85,29 @@ async def submit_score(data: ScoreData):
             "ship_name": data.ship_name,
             "score_date": current_date
         }
-        # Теперь конфликт проверяем по telegram_id!
+
+        if existing.data:
+            # ПИЛОТ НАЙДЕН! Берем его старые данные
+            old = existing.data[0]
+
+            # 2. ЛОГИКА СЛИЯНИЯ (Бери только лучшее)
+            payload["level"] = max(data.level, old.get("level", 0))
+            payload["score"] = max(data.score, old.get("score", 0))
+            payload["coins"] = max(data.coins, old.get("coins", 0))
+
+            # Улучшения тоже можно мержить, если это словарь
+            if isinstance(data.upgrades, dict) and isinstance(old.get("upgrades"), dict):
+                merged_upgrades = old["upgrades"].copy()
+                for key, val in data.upgrades.items():
+                    merged_upgrades[key] = max(val, merged_upgrades.get(key, 0))
+                payload["upgrades"] = merged_upgrades
+
+        # 3. Теперь сохраняем "умный" payload
         res = supabase.table('leaderboard').upsert(payload, on_conflict="telegram_id").execute()
-        return {"status": "ok"}
+        return {"status": "ok", "merged_level": payload["level"]}
+
     except Exception as e:
-        print(f"Ошибка сохранения: {e}")
+        print(f"Ошибка умного сохранения: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/get_leaderboard")

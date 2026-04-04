@@ -174,6 +174,7 @@ const TRANSLATIONS = {
         magnet_on: "MAGNET_LINK_ACTIVE",
         time_warp: "TIME_WARP_ACTIVE",
 
+
         achievementss: "--- ACHIEVEMENTS ---",
         fx_title: "--- VISUAL FX ---",
         up_title: "--- SHIP UPGRADES ---",
@@ -1668,7 +1669,7 @@ function showShop(scene, mainMenu) {
 
         if (mainMenu) {
             mainMenu.setVisible(true);
-            if (mainMenu.titleRef) startTitleGlitch(scene, mainMenu.titleRef);
+            if (typeof startTitleGlitch === 'function') startTitleGlitch(scene, mainMenu.titleRef);
         } else {
             showMenu(scene);
         }
@@ -2670,8 +2671,8 @@ async function showLeaderboard(scene, mainMenu) {
         const data = await response.json();
         data.sort((a, b) => b.level - a.level || b.score - a.score);
 
-        const myId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || "YOU";
-        const myFirstName = window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name || "YOU";
+        const myId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || "GUEST_PILOT";
+        const myFirstName = window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name || (lang === 'ru' ? "ПИЛОТ" : "PILOT");
 
         // РИСУЕМ СТРОКИ
         data.forEach((entry, i) => {
@@ -2777,55 +2778,73 @@ function showDamageText(scene, x, y, damage, color = '#00ff00', size = '16px') {
 }
 
 async function syncUserData() {
-    const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-    if (!tgUser || !tgUser.id) return;
+    const tg = window.Telegram?.WebApp;
+    const tgUser = tg?.initDataUnsafe?.user;
+
+    // Если мы не в телеграме (например, просто открыли в браузере), синхронизация по ID невозможна
+    if (!tgUser || !tgUser.id) {
+        console.warn("Синхронизация невозможна: Pilot ID не найден. Используется локальный сейв.");
+        return;
+    }
 
     try {
         const response = await fetch(`${botUrl}/get_user_personal/${tgUser.id}`);
-        const myData = await response.json();
+        const cloudData = await response.json();
 
-        if (myData && !myData.error) {
-            let needsPush = false;
+        if (cloudData && !cloudData.error) {
+            let needsUpdateBase = false;
 
-            // СИНХРОНИЗАЦИЯ УРОВНЯ
-            if (myData.level > level) {
-                level = myData.level;
-                if (level - 1 > bestLevel) bestLevel = level - 1;
+            // --- ЛОГИКА ОБЪЕДИНЕНИЯ (Бери лучшее) ---
+
+            // 1. УРОВЕНЬ
+            if (cloudData.level > level) {
+                level = cloudData.level;
                 runGoal = 700 + (level - 1) * 100;
-            } else if (level > myData.level) { needsPush = true; }
+            } else if (level > (cloudData.level || 0)) {
+                needsUpdateBase = true;
+            }
 
-            // СИНХРОНИЗАЦИЯ РЕКОРДА (SCORE)
-            if (myData.score > bestDistance) {
-                bestDistance = myData.score;
-            } else if (bestDistance > (myData.score || 0)) { needsPush = true; }
+            // 2. ДИСТАНЦИЯ (РЕКОРД)
+            if (cloudData.score > bestDistance) {
+                bestDistance = cloudData.score;
+            } else if (bestDistance > (cloudData.score || 0)) {
+                needsUpdateBase = true;
+            }
 
-            // СИНХРОНИЗАЦИЯ МОНЕТ
-            if (myData.coins > coins) {
-                coins = myData.coins;
-            } else if (coins > (myData.coins || 0)) { needsPush = true; }
+            // 3. КРЕДИТЫ (Берем максимум, чтобы не терять деньги при переходе)
+            if (cloudData.coins > coins) {
+                coins = cloudData.coins;
+            } else if (coins > (cloudData.coins || 0)) {
+                needsUpdateBase = true;
+            }
 
-            // СИНХРОНИЗАЦИЯ АПГРЕЙДОВ
-            if (myData.upgrades) {
-                for (let key in myData.upgrades) {
-                    if ((myData.upgrades[key] || 0) > (upgradeLevels[key] || 0)) {
-                        upgradeLevels[key] = myData.upgrades[key];
-                    } else if ((upgradeLevels[key] || 0) > (myData.upgrades[key] || 0)) {
-                        needsPush = true;
+            // 4. УЛУЧШЕНИЯ (Сравниваем каждый апгрейд)
+            if (cloudData.upgrades) {
+                for (let key in cloudData.upgrades) {
+                    if ((cloudData.upgrades[key] || 0) > (upgradeLevels[key] || 0)) {
+                        upgradeLevels[key] = cloudData.upgrades[key];
+                    } else if ((upgradeLevels[key] || 0) > (cloudData.upgrades[key] || 0)) {
+                        needsUpdateBase = true;
                     }
                 }
             }
 
+            // Сохраняем результат "слияния" в память телефона
             saveProgress();
+
+            // Обновляем текст в интерфейсе, если он уже создан
             if (scoreText) scoreText.setText(`${TRANSLATIONS[lang].credits}: ${coins}`);
             if (bestDistText) bestDistText.setText(`${TRANSLATIONS[lang].max_dist}: ${bestDistance}m`);
 
-            // Если телефон новее базы — обновляем базу ПРАВИЛЬНЫМИ данными
-            if (needsPush) {
+            // Если телефон "умнее" базы — отправляем свежие данные в облако
+            if (needsUpdateBase) {
+                console.log("🔼 Телефон впереди базы. Обновляем облако...");
                 submitScore();
             }
-            console.log("Облако подтянуто для ID: " + tgUser.id);
         }
-    } catch (e) { console.error("Sync error:", e); }
+    } catch (e) {
+        console.error("Ошибка слияния данных:", e);
+    }
 }
 
 function shareDuel() {
