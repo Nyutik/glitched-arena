@@ -120,6 +120,7 @@ const TRANSLATIONS = {
 		system_halt: "!! SYSTEM_HALT: CORE_OVERLOAD !!",
         warning_boss: "!! WARNING !!\nBOSS APPROACHING",
         quantum_alert: "QUANTUM_PHANTOM_DETECTED",
+        integrity_restored: "INTEGRITY RESTORED",
 
         // Магазин
         shop_title: "DATA SHOP",
@@ -262,6 +263,7 @@ const TRANSLATIONS = {
 		system_halt:"!! СИСТЕМНАЯ ОСТАНОВКА: ПЕРЕГРУЗКА ЯДРА !!",
         warning_boss: "!! ВНИМАНИЕ !!\nБОСС ПРИБЛИЖАЕТСЯ",
         quantum_alert: "ОБНАРУЖЕН_КВАНТОВЫЙ_ФАНТОМ",
+        integrity_restored: "КОРПУС ВОССТАНОВЛЕН",
 
         // Магазин
         shop_title: "МАГАЗИН ДАННЫХ",
@@ -674,6 +676,23 @@ function clearBattleTexts(scene) {
     }
 }
 
+function resetBossPhrase(scene) {
+    bossPhraseHideCall = safeRemoveTimer(bossPhraseHideCall);
+
+    if (!bossPhraseText || !bossPhraseText.active) return;
+
+    safeKillTweens(scene, bossPhraseText);
+
+    bossPhraseText
+        .setText('')
+        .setAlpha(0)
+        .setVisible(false)
+        .setBackgroundColor(null)
+        .setScale(1)
+        .setY(250);
+}
+
+
 async function create() {
     if (window.Telegram?.WebApp) {
         window.Telegram.WebApp.expand();
@@ -765,17 +784,19 @@ async function create() {
     this.input.on('pointerdown', p => {
         if (!isStarted || isShopOpen || isDead || isPaused || !player?.active) return;
 
+        const isHudTap = p.y < 90;
+        if (isHudTap) return;
+
         if (!this.isFirstMove) {
-            if (p.y > 500) {   // стартовая зона
-                this.isFirstMove = true;
-                player.x = Phaser.Math.Clamp(p.x, 20, 355);
-                player.y = Phaser.Math.Clamp(p.y + yOffset, 80, 620);
-                if (shieldAura) shieldAura.setPosition(player.x, player.y);
-            }
-            return;
+            this.isFirstMove = true;
         }
 
-        if (overdrive >= 100 && !isVictory) {
+        player.x = Phaser.Math.Clamp(p.x, 20, 355);
+        player.y = Phaser.Math.Clamp(p.y + yOffset, 80, 620);
+
+        if (shieldAura) shieldAura.setPosition(player.x, player.y);
+
+        if (overdrive >= 100 && !isVictory && isBossFight) {
             useOverdrive.call(this);
         }
     });
@@ -1020,9 +1041,20 @@ function startRun(scene) {
     }
 
     if (boss) {
+        safeKillTweens(scene, boss);
+        boss.setActive(true);
         boss.setVisible(false);
         boss.setPosition(187, -200);
+        boss.setAlpha(1);
+        boss.setScale(level >= 35 ? 1.4 : (level >= 10 ? 1.2 : 1));
+        boss.setAngle(0);
         boss.clearTint();
+
+        if (boss.body) {
+            boss.body.enable = true;
+            boss.body.setVelocity(0, 0);
+            boss.body.setAcceleration(0, 0);
+        }
     }
 
     if (bossTrail) {
@@ -1034,10 +1066,16 @@ function startRun(scene) {
     }
 
     if (glitchText) {
-        glitchText.setVisible(true);
+        glitchText
+            .setText('')
+            .setBackgroundColor(null)
+            .setAlpha(1)
+            .setVisible(true);
     }
 
-    if (distanceText) distanceText.setVisible(true);
+    if (distanceText) {
+        distanceText.setText('').setVisible(true);
+    }
     if (pHealthLabel) pHealthLabel.setVisible(true);
     if (bHealthLabel) bHealthLabel.setVisible(true);
     if (overdriveBar) overdriveBar.setVisible(true);
@@ -1433,6 +1471,9 @@ function processRevive(scene) {
 }
 
 function startBossFight(scene) {
+    resetBossPhrase(scene);
+    clearBattleTexts(scene);
+
     obstacles.clear(true, true);
     bullets.clear(true, true);
     isBossFight = true;
@@ -1506,7 +1547,7 @@ function startBossFight(scene) {
 
             const pool = isPhase2 ? TRANSLATIONS[lang].p2 : TRANSLATIONS[lang].p1;
             const msg = Phaser.Utils.Array.GetRandom(pool);
-            const color = isPhase3 ? '#ffffff' : isPhase2 ? '#ff4444' : '#ff00ff';
+            const color = isPhase3 ? '#ffffff' : isPhase2 ? '#ff0033' : '#ff00ff';
             const bg = isPhase3 ? '#440000' : null;
 
             showBossPhrase(scene, msg, color, bg, 2500);
@@ -1574,8 +1615,12 @@ function hitBoss(b, bullet) {
     let dmg = 10 * currentStats.atk;
     bossHealth -= dmg;
 
-    // ВЫЗЫВАЕМ КРАСОТУ
-    showDamageText(this, bullet.x, bullet.y, dmg, '#00ff00', '16px');
+    const hitX = bullet ? bullet.x : boss.x;
+    const hitY = bullet ? bullet.y : boss.y;
+
+    if (bullet) bullet.destroy();
+
+    showDamageText(this, hitX, hitY, dmg, '#00ff00', '16px');
 
     coinsThisRun += 2;
     scoreText.setText(`${TRANSLATIONS[lang].credits}: ${coins + coinsThisRun}`);
@@ -1583,7 +1628,6 @@ function hitBoss(b, bullet) {
     let chargeBonus = 2 + (upgradeLevels.ultra * 1.5);
     overdrive = Math.min(100, overdrive + chargeBonus);
 
-    // Вспышка урона
     boss.setTint(0x00ff00);
     this.time.delayedCall(80, () => {
         if (boss && !isDead) {
@@ -1595,30 +1639,53 @@ function hitBoss(b, bullet) {
         }
     });
 
-    // ОПРЕДЕЛЯЕМ МАКСИМАЛЬНОЕ HP БОССА
     let hM = level > 30 ? (13.5 + (level - 30) * 0.22) : (level * 0.45);
     let maxB = 400 * (1 + hM);
 
-    // ФАЗА 2: ПЕРЕХОД (на 50% HP)
     if (bossHealth <= maxB / 2 && !isPhase2) {
         isPhase2 = true;
+
+        resetBossPhrase(this);
+        this.phraseTimer = safeRemoveTimer(this.phraseTimer);
+
+        this.time.delayedCall(300, () => {
+            if (!isBossFight || isVictory || isDead) return;
+
+            this.phraseTimer = this.time.addEvent({
+                delay: 3800,
+                loop: true,
+                callback: () => {
+                    if (!isBossFight || isVictory || isDead) return;
+
+                    const pool = isPhase2 ? TRANSLATIONS[lang].p2 : TRANSLATIONS[lang].p1;
+                    const msg = Phaser.Utils.Array.GetRandom(pool);
+                    const color = isPhase3 ? '#ffffff' : isPhase2 ? '#ff0000' : '#ff00ff';
+                    const bg = isPhase3 ? '#440000' : null;
+
+                    showBossPhrase(this, msg, color, bg, 2500);
+                }
+            });
+        });
+
         boss.setTint(0xff0000);
         bHealthLabel.setFill('#ff0000');
-        glitchText.setText(TRANSLATIONS[lang].critical_race).setFill("#ff0000");
-
-        // ПРАВИЛЬНАЯ ПОКРАСКА ШЛЕЙФА
-        if (bossTrail) {
-            bossTrail.setParticleTint(0xff0000);
-        }
+        glitchText.setText(TRANSLATIONS[lang].critical_race).setFill('#ff0000');
+        if (bossTrail) bossTrail.setParticleTint(0xff0000);
     }
 
-    // ФАЗА 3: УЛЬТРА-ЯРОСТЬ (на 25% HP)
     if (level >= 30 && bossHealth <= maxB * 0.25 && !isPhase3) {
         isPhase3 = true;
-        glitchText.setText(TRANSLATIONS[lang].system_halt)
-            .setFill("#ffffff").setBackgroundColor("#440000").setAlpha(1);
+        resetBossPhrase(this);
+        glitchText
+            .setText(TRANSLATIONS[lang].system_halt)
+            .setFill('#ffffff')
+            .setBackgroundColor('#440000')
+            .setAlpha(1);
+
         this.cameras.main.shake(500, 0.05);
-        if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('error');
+        if (window.Telegram?.WebApp) {
+            Telegram.WebApp.HapticFeedback.notificationOccurred('error');
+        }
     }
 
     if (bossHealth <= 0) {
@@ -1632,77 +1699,73 @@ function useOverdrive() {
 
     overdrive = 0;
     ultraLaserTickAt = 0;
+    playSound(this, 'sfx_ultra', { volume: 0.9 });
 
-    playSound(this, 'sfxultra', { volume: 0.85 });
-    this.cameras.main.shake(850, 0.018);
-
-    const skin = SKINDATA[currentSkin] || SKINDATA.classic;
-
-    if (ultraLaser) {
-        try {
-            this.tweens.killTweensOf(ultraLaser);
-        } catch (e) {}
-        if (ultraLaser.active) ultraLaser.destroy();
+    if (ultraLaser && ultraLaser.active) {
+        ultraLaser.destroy();
         ultraLaser = null;
     }
+
+    let victoryTriggeredByLaser = false;
+    const skin = SKIN_DATA[currentSkin] || SKIN_DATA.classic;
 
     ultraLaser = this.add.sprite(player.x, player.y - 300, 'laser')
         .setTint(skin.bullet)
         .setBlendMode(Phaser.BlendModes.ADD)
         .setDepth(6)
         .setAlpha(0.98)
-        .setScale(1.15);
+        .setScale(1.35);
+
+    this.cameras.main.flash(180, 255, 255, 255, 0.25);
+    this.cameras.main.shake(220, 0.01);
 
     this.tweens.add({
         targets: ultraLaser,
-        scaleX: 54,
+        scaleX: 64,
         alpha: 0,
-        duration: 1200,
+        duration: 1350,
         onUpdate: () => {
-            if (!ultraLaser || !ultraLaser.active || !boss || !boss.active || isVictory || !isBossFight) return;
+            if (victoryTriggeredByLaser || !ultraLaser || !ultraLaser.active || !boss || !boss.active || isVictory || !isBossFight) return;
 
             ultraLaser.x = player.x;
             ultraLaser.y = player.y - 300;
 
             const now = this.time.now;
             if (now < ultraLaserTickAt) return;
-            ultraLaserTickAt = now + 65;
+            ultraLaserTickAt = now + 55;
 
-            if (Math.abs(ultraLaser.x - boss.x) < 105) {
+            if (Math.abs(ultraLaser.x - boss.x) <= 125) {
                 let laserDamage =
-                    level >= 55 ? 34 :
-                    level >= 50 ? 31 :
-                    level >= 45 ? 28 :
-                    level >= 35 ? 24 :
-                    level >= 25 ? 20 :
-                    16;
+                    level >= 55 ? 38 :
+                    level >= 50 ? 35 :
+                    level >= 45 ? 31 :
+                    level >= 35 ? 27 :
+                    level >= 25 ? 23 : 18;
 
                 laserDamage *= currentStats.atk;
 
-                if (isPhase2) laserDamage *= 0.95;
-                if (isPhase3) laserDamage *= 0.92;
+                if (isPhase2) laserDamage *= 0.96;
+                if (isPhase3) laserDamage *= 0.94;
 
                 bossHealth -= laserDamage;
-                showDamageText(this, boss.x, boss.y, laserDamage, 'ffff66', '20px');
-
-                boss.setTint(0xffff66);
-                this.time.delayedCall(45, () => {
-                    if (!boss || !boss.active || isDead) return;
-
-                    if (level >= 35) boss.setTint(0x00ff00);
-                    else if (isPhase2) boss.setTint(0xff0000);
-                    else boss.clearTint();
-                });
 
                 if (bossHealth <= 0) {
                     bossHealth = 0;
+                    victoryTriggeredByLaser = true;
+
+                    if (ultraLaser && ultraLaser.active) {
+                        ultraLaser.destroy();
+                        ultraLaser = null;
+                    }
+
                     triggerVictory(this);
+                    return;
                 }
             }
         },
         onComplete: () => {
-            if (ultraLaser) {
-                if (ultraLaser.active) ultraLaser.destroy();
+            if (ultraLaser && ultraLaser.active) {
+                ultraLaser.destroy();
                 ultraLaser = null;
             }
         }
@@ -1719,6 +1782,17 @@ function triggerVictory(scene) {
 
     clearBattleTexts(scene);
     cleanupScreenFx(scene);
+
+    victoryTextJitter = safeRemoveTimer(victoryTextJitter);
+
+    if (Array.isArray(victoryFx)) {
+        victoryFx.forEach(obj => {
+            try {
+                if (obj && obj.active) obj.destroy();
+            } catch (e) {}
+        });
+        victoryFx = [];
+    }
 
     scene.shootEvent = safeRemoveTimer(scene.shootEvent);
     scene.bossShootEvent = safeRemoveTimer(scene.bossShootEvent);
@@ -1919,24 +1993,40 @@ function triggerVictory(scene) {
 function showRewardUI(scene, titleText) {
     clearBattleTexts(scene);
     cleanupScreenFx(scene);
+
     const container = scene.add.container(0, 0).setDepth(5001);
     const bg = scene.add.graphics().fillStyle(0x000000, 0.9).fillRect(0, 0, 375, 667);
     container.add(bg);
 
     const earnedAmount = coinsThisRun;
+
     const info = scene.add.text(187, 330,
         `${lang === 'ru' ? 'ДОБЫТО' : 'COLLECTED'}: ${earnedAmount} 💰`,
         { fontSize: '24px', fill: '#ffff00', fontWeight: 'bold', fontFamily: 'Arial' }
     ).setOrigin(0.5);
 
-    const doubleBtn = scene.add.text(187, 420,
-        ` x2 ${lang === 'ru' ? 'ЗА РЕКЛАМУ' : 'WITH AD'} `,
-        { fontSize: '20px', fill: '#fff', backgroundColor: '#004400', padding: 15, fontWeight: 'bold' }
+    const doubleBtn = scene.add.text(
+        187, 420,
+        lang === 'ru' ? 'x2 ЗА РЕКЛАМУ' : 'x2 WITH AD',
+        {
+            fontSize: '20px',
+            fill: '#ffffff',
+            backgroundColor: '#004400',
+            padding: { left: 15, right: 15, top: 10, bottom: 10 },
+            fontWeight: 'bold',
+            fontFamily: 'Arial'
+        }
     ).setOrigin(0.5).setInteractive();
 
-    const collectBtn = scene.add.text(187, 500,
-        ` ${lang === 'ru' ? 'ПРОСТО ЗАБРАТЬ' : 'JUST COLLECT'} `,
-        { fontSize: '16px', fill: '#aaa', padding: 10 }
+    const collectBtn = scene.add.text(
+        187, 500,
+        lang === 'ru' ? 'ПРОСТО ЗАБРАТЬ' : 'JUST COLLECT',
+        {
+            fontSize: '16px',
+            fill: '#aaaaaa',
+            padding: { left: 10, right: 10, top: 8, bottom: 8 },
+            fontFamily: 'Arial'
+        }
     ).setOrigin(0.5).setInteractive();
 
     const duelBtn = scene.add.text(187, 560,
@@ -1952,27 +2042,64 @@ function showRewardUI(scene, titleText) {
         showAdSafe(() => finalizeCollection(earnedAmount * 2));
     });
 
-    collectBtn.on('pointerdown', () => finalizeCollection(earnedAmount));
+    collectBtn.on('pointerdown', () => {
+        finalizeCollection(earnedAmount);
+    });
 
     function finalizeCollection(finalSum) {
         coins += finalSum;
         coinsThisRun = 0;
-        saveProgress();
-        submitScore();
-        if (coins >= 5000 && !achievements.rich) achievements.rich = true;
 
-        //isVictory = false;
+        if (coins >= 5000 && !achievements.rich) {
+            achievements.rich = true;
+        }
+
+        isVictory = true;
         isShopOpen = false;
         isDead = false;
         isBossFight = false;
+        isPhase2 = false;
+        isPhase3 = false;
+        isStarted = false;
+
+        clearBattleTexts(scene);
+        cleanupScreenFx(scene);
+
+        if (boss && boss.active) {
+            safeKillTweens(scene, boss);
+            boss.setVisible(false);
+            boss.setActive(true);
+            boss.setAlpha(1);
+            boss.setPosition(187, -200);
+            boss.setAngle(0);
+            boss.clearTint();
+        }
+
+        if (bossTrail) {
+            bossTrail.setVisible(false);
+            bossTrail.setAlpha(1);
+        }
+
+        if (distanceText) distanceText.setText('').setVisible(false);
+        if (glitchText) {
+            glitchText
+                .setText('')
+                .setBackgroundColor(null)
+                .setAlpha(1)
+                .setVisible(false);
+        }
+
+        saveProgress();
+        submitScore();
 
         container.destroy();
-        if (titleText) titleText.destroy();
-        showShop(scene, null);
+        if (titleText && titleText.active) titleText.destroy();
+
+        showShop(scene, null, true);
     }
 }
 
-function showShop(scene, mainMenu) {
+function showShop(scene, mainMenu, fromVictory = false) {
     saveProgress();
     isShopOpen = true;
 
@@ -2264,22 +2391,54 @@ function showShop(scene, mainMenu) {
     };
 
 
-    if (isVictory) {
-        const nextBg = scene.add.rectangle(187, 525, 330, 50, 0x003333).setInteractive().setStrokeStyle(2, 0x00ffff).setDepth(4005);
-        const nextTxt = scene.add.text(187, 525, `${TRANSLATIONS[lang].deploy_btn} ${level}`, { fontSize: '18px', fill: '#00ffff', fontWeight: 'bold' }).setOrigin(0.5).setDepth(4006);
-        scene.tweens.add({ targets: nextBg, alpha: 0.7, duration: 600, yoyo: true, repeat: -1 });
+    if (fromVictory) {
+        const nextSector = level + 1;
+        const nextLabel = `${TRANSLATIONS[lang].deploy_btn} ${nextSector}`
+
+        const nextBg = scene.add.rectangle(187, 545, 250, 50, 0x003333)
+            .setInteractive()
+            .setStrokeStyle(2, 0x00ffff, 0.95);
+
+        const nextTxt = scene.add.text(187, 545, nextLabel, {
+            fontSize: '18px',
+            fontFamily: fontUI,
+            fill: '#00ffff',
+            fontWeight: 'bold',
+            stroke: '#000000',
+            strokeThickness: 4
+        }).setOrigin(0.5);
+
+        overlay.add([nextBg, nextTxt]);
+
+        scene.tweens.add({
+            targets: [nextBg, nextTxt],
+            scaleX: 1.06,
+            scaleY: 1.06,
+            alpha: 0.82,
+            duration: 520,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
 
         nextBg.on('pointerdown', () => {
-            isVictory = false;
-            shouldAutoStart = true;
-            saveProgress();
-
             scene.input.off('wheel');
-            scene.input.off('pointermove');
+
             overlay.destroy();
+            isShopOpen = false;
+            isVictory = false;
+            isDead = false;
+            isBossFight = false;
+            isPhase2 = false;
+            isPhase3 = false;
+            shouldAutoStart = true;
+
+            level += 1;
+            runGoal = 700 + (level - 1) * 100;
+            saveProgress();
             scene.scene.restart();
         });
-        overlay.add([nextBg, nextTxt]);
+
     }
 }
 
@@ -2622,72 +2781,160 @@ function spawnItem() {
 }
 
 function collectItem(p, item) {
-    let type = item.getData('type');
+    const type = item.getData('type');
     item.destroy();
-    const fontUI = 'Arial, sans-serif';
 
     if (type === 'magnet') {
         isMagnetActive = true;
-        glitchText.setText(TRANSLATIONS[lang].magnet_on).setFill('#ff00ff');
-        this.time.delayedCall(8000, () => { isMagnetActive = false; glitchText.setText(''); });
+        glitchText
+            .setText(TRANSLATIONS[lang].magnet_on)
+            .setFill('#ff00ff');
+
+        this.time.delayedCall(8000, () => {
+            isMagnetActive = false;
+            if (glitchText?.active && glitchText.text === TRANSLATIONS[lang].magnet_on) {
+                glitchText.setText('');
+            }
+        });
+        return;
     }
 
-    else if (type === 'heart') {
+    if (type === 'heart') {
         playerHealth = Math.min(maxPlayerHealth, playerHealth + 25);
+
         let txt = this.add.text(player.x, player.y, '+25 ' + TRANSLATIONS[lang].hp_label, {
-            fontFamily: fontUI, fontSize: '18px', fill: '#00ff00', fontWeight: 'bold', stroke: '#000', strokeThickness: 3
+            fontFamily: 'Arial, sans-serif',
+            fontSize: '18px',
+            fill: '#00ff00',
+            fontWeight: 'bold',
+            stroke: '#000',
+            strokeThickness: 3
         }).setDepth(100);
-        this.tweens.add({ targets: txt, y: player.y - 100, alpha: 0, duration: 800, onComplete: () => txt.destroy() });
-        glitchText.setText(lang === 'ru' ? 'КОРПУС ВОССТАНОВЛЕН' : 'INTEGRITY RESTORED').setFill('#ff0088');
-        this.time.delayedCall(1000, () => glitchText.setText(''));
+
+        this.tweens.add({
+            targets: txt,
+            y: player.y - 100,
+            alpha: 0,
+            duration: 800,
+            onComplete: () => txt.destroy()
+        });
+
+        glitchText
+            .setText(TRANSLATIONS[lang].integrity_restored)
+            .setFill('#ff0088');
+
+        this.time.delayedCall(1000, () => {
+            if (glitchText?.active && glitchText.text === TRANSLATIONS[lang].integrity_restored) {
+                glitchText.setText('');
+            }
+        });
+
         this.cameras.main.flash(300, 255, 0, 136, 0.4);
-        if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+        return;
     }
 
-    else if (type === 'nuke') {
-        // ИСПРАВЛЕН КЛЮЧ: sfx_nuke
+    if (type === 'nuke') {
         playSound(this, 'sfx_nuke', { volume: 0.5, stopOnTerminate: true });
         this.time.delayedCall(2000, () => { this.sound.stopByKey('sfx_nuke'); });
 
         let wave = this.add.circle(player.x, player.y, 20, 0xff00ff, 0.7).setDepth(2000);
-        this.tweens.add({ targets: wave, radius: 900, alpha: 0, duration: 900, ease: 'Expo.out', onComplete: () => wave.destroy() });
-        this.cameras.main.flash(450, 255, 0, 255, 0.35);
-        this.cameras.main.shake(700, 0.03);
+        this.tweens.add({
+            targets: wave,
+            radius: 1100,
+            alpha: 0,
+            duration: 1000,
+            ease: 'Expo.easeOut',
+            onComplete: () => wave.destroy()
+        });
+
+        this.cameras.main.flash(500, 255, 0, 255, 0.4);
+        this.cameras.main.shake(850, 0.035);
+
+        obstacles.children.each(obs => {
+            if (!obs || !obs.active) return;
+
+            for (let i = 0; i < 10; i++) {
+                let frag = this.add.rectangle(
+                    obs.x,
+                    obs.y,
+                    Phaser.Math.Between(4, 9),
+                    Phaser.Math.Between(4, 9),
+                    0xff00ff
+                ).setDepth(5);
+
+                this.physics.add.existing(frag);
+                frag.body.setVelocity(
+                    Phaser.Math.Between(-650, 650),
+                    Phaser.Math.Between(-650, 650)
+                );
+                frag.body.setAngularVelocity(Phaser.Math.Between(-500, 500));
+
+                this.tweens.add({
+                    targets: frag,
+                    alpha: 0,
+                    scaleX: 0,
+                    scaleY: 0,
+                    duration: Phaser.Math.Between(650, 1100),
+                    ease: 'Quad.easeOut',
+                    onComplete: () => frag.destroy()
+                });
+            }
+        });
 
         obstacles.clear(true, true);
-        glitchText.setText(TRANSLATIONS[lang].purified).setFill('#ff00ff').setAlpha(1);
-        this.time.delayedCall(1500, () => glitchText.setText(''));
+
+        glitchText
+            .setText(TRANSLATIONS[lang].purified)
+            .setFill('#ff00ff');
+
+        this.time.delayedCall(1500, () => {
+            if (glitchText?.active && glitchText.text === TRANSLATIONS[lang].purified) {
+                glitchText.setText('');
+            }
+        });
+
+        return;
     }
 
-    else if (type === 'coin') {
+    if (type === 'coin') {
         coinsThisRun += isGlitchMode ? 30 : 10;
-        scoreText.setText(`${TRANSLATIONS[lang].credits}: ${coins + coinsThisRun}`);
         updateHudTexts();
+        return;
     }
 
-    else if (type === 'slowmo') {
-        glitchText.setText(TRANSLATIONS[lang].time_warp).setFill("#00ff00");
+    if (type === 'slowmo') {
+        glitchText
+            .setText(TRANSLATIONS[lang].time_warp)
+            .setFill('#00ff00');
+
         this.physics.world.timeScale = 2;
+
         this.time.delayedCall(3000, () => {
             this.physics.world.timeScale = 1;
-            glitchText.setText("");
+            if (glitchText?.active && glitchText.text === TRANSLATIONS[lang].time_warp) {
+                glitchText.setText('');
+            }
         });
+
+        return;
     }
 }
 
-function showComboEffect(scene, combo) {
+function showComboEffect(scene) {
     if (!scene || !scene.cameras || !scene.cameras.main || !comboPopText || !player) return;
+
+    combo++;
 
     playSound(scene, 'sfx_combo', { volume: 0.3 });
 
     comboPopText
         .setPosition(player.x, player.y - 60)
-        .setText(`${TRANSLATIONS[lang].combo_text} x${combo}`)
+        .setText(`+${TRANSLATIONS[lang].combo_text} x${combo}`)
         .setAlpha(1)
         .setScale(1.2)
         .setFill(combo >= 10 ? '#ff0000' : '#00ff00');
 
-    if (combo >= 10 && !isGlitchMode) {
+    if (combo === 10 && !isGlitchMode) {
         isGlitchMode = true;
         scene.cameras.main.setBackgroundColor('#ffffff');
         scene.cameras.main.shake(5000, 0.007);
@@ -2704,26 +2951,28 @@ function showComboEffect(scene, combo) {
                 scene.cameras.main.setBackgroundColor('#000000');
             }
 
-            if (glitchText && glitchText.active) {
+            if (glitchText && glitchText.active && glitchText.text === TRANSLATIONS[lang].hyper_glitch) {
                 glitchText.setText('');
                 glitchText.setBackgroundColor(null);
             }
         });
     }
 
+    scene.tweens.killTweensOf(comboPopText);
+
     scene.tweens.add({
         targets: comboPopText,
         y: player.y - 120,
         alpha: 0,
-        scale: combo >= 10 ? 2 : 1.5,
-        duration: 600
+        scale: combo >= 10 ? 2 : 1.6,
+        duration: 600,
+        ease: 'Quad.easeOut'
     });
 
     if (combo % 5 === 0) {
         const reward = isGlitchMode ? 45 : 15;
         coinsThisRun += reward;
         updateHudTexts();
-
         scene.cameras.main.flash(100, 255, 255, 255, 0.3);
     }
 }
@@ -3210,6 +3459,7 @@ function getShipStats() {
 
 function getBossIntel() {
     const isRu = (lang === 'ru');
+
     if (level < 15) {
         return {
             name: isRu ? "ДРОН-РАЗВЕДЧИК" : "SCOUT_DRONE",
@@ -3228,7 +3478,7 @@ function getBossIntel() {
             desc: isRu ? "Орбитальная защита. Сложно попасть." : "Orbital protection. Hard to hit.",
             tip: isRu ? "УДАРНИК (Пробивай щиты)" : "STRIKER (Break shields)"
         };
-    } else if (level >= 30) {
+    } else if (level < 35) {
         return {
             name: isRu ? "ПЕРЕГРУЗКА ЯДРА" : "CORE_OVERLOAD",
             desc: isRu ? "Режим ярости. Пулевой ад." : "Rage mode. Bullet hell chaos.",
@@ -3560,7 +3810,9 @@ function showDamageText(scene, x, y, damage, color = '#00ff00', size = '16px') {
 }
 
 function showBossPhrase(scene, msg, color = '#ff00ff', bgColor = null, duration = 2600) {
-    if (!scene) return;
+    if (!scene || !isBossFight || isVictory || isDead || !msg) return;
+
+    bossPhraseHideCall = safeRemoveTimer(bossPhraseHideCall);
 
     if (!bossPhraseText || !bossPhraseText.active) {
         bossPhraseText = scene.add.text(187, 250, '', {
@@ -3572,7 +3824,8 @@ function showBossPhrase(scene, msg, color = '#ff00ff', bgColor = null, duration 
             strokeThickness: 5,
             align: 'center',
             wordWrap: { width: 300, useAdvancedWrap: true },
-            lineSpacing: 4
+            lineSpacing: 4,
+            padding: { left: 8, right: 8, top: 4, bottom: 4 }
         })
         .setOrigin(0.5)
         .setDepth(130)
@@ -3580,45 +3833,66 @@ function showBossPhrase(scene, msg, color = '#ff00ff', bgColor = null, duration 
         .setVisible(false);
     }
 
-    if (bossPhraseHideCall) {
-        bossPhraseHideCall.remove(false);
-        bossPhraseHideCall = null;
-    }
+    safeKillTweens(scene, bossPhraseText);
 
-    scene.tweens.killTweensOf(bossPhraseText);
+    const phraseX = Phaser.Math.Between(145, 230);
+    const phraseY = Phaser.Math.Between(215, 280);
+    const finalBg = bgColor || (color === '#ff0033' ? '#2a0000' : '#220022');
 
     bossPhraseText
-        .setText(msg || '')
+        .setText(msg)
         .setFill(color)
-        .setBackgroundColor(bgColor)
-        .setVisible(!!msg)
-        .setAlpha(msg ? 1 : 0)
-        .setScale(1);
-
-    if (!msg) return;
+        .setBackgroundColor(finalBg)
+        .setScale(1.08)
+        .setAlpha(0)
+        .setVisible(true)
+        .setPosition(phraseX, phraseY)
+        .setAngle(Phaser.Math.Between(-4, 4));
 
     scene.tweens.add({
         targets: bossPhraseText,
-        scale: { from: 1.04, to: 1 },
-        duration: 120,
+        alpha: 1,
+        scale: 1,
+        duration: 140,
         ease: 'Quad.easeOut'
     });
 
+    scene.tweens.add({
+        targets: bossPhraseText,
+        x: phraseX + Phaser.Math.Between(-8, 8),
+        y: phraseY + Phaser.Math.Between(-4, 4),
+        angle: Phaser.Math.Between(-2, 2),
+        duration: duration - 260,
+        ease: 'Sine.easeInOut',
+        yoyo: true
+    });
+
     bossPhraseHideCall = scene.time.delayedCall(duration, () => {
-        if (!bossPhraseText || !bossPhraseText.active) return;
+        if (!bossPhraseText || !bossPhraseText.active) {
+            bossPhraseHideCall = null;
+            return;
+        }
+
+        safeKillTweens(scene, bossPhraseText);
 
         scene.tweens.add({
             targets: bossPhraseText,
             alpha: 0,
-            duration: 180,
+            y: bossPhraseText.y - 10,
+            duration: 220,
             onComplete: () => {
-                if (bossPhraseText && bossPhraseText.active) {
-                    bossPhraseText.setText('').setVisible(false).setBackgroundColor(null);
-                }
+                if (!bossPhraseText || !bossPhraseText.active) return;
+                bossPhraseText
+                    .setText('')
+                    .setVisible(false)
+                    .setBackgroundColor(null)
+                    .setScale(1)
+                    .setAngle(0)
+                    .setPosition(187, 250)
+                    .setAlpha(0);
+                bossPhraseHideCall = null;
             }
         });
-
-        bossPhraseHideCall = null;
     });
 }
 
