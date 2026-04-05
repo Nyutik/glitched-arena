@@ -36,6 +36,9 @@ let ultraLaser = null;
 let victoryFx = [];
 let ultraLaserTickAt = 0;
 let lastObstaclePattern = null;
+let bossPhraseHideCall = null;
+let bossPhraseText = null;
+let victoryTextJitter = null;
 let totalDistance = 0, bossesKilled = 0;
 let achievements = {
     flawless: false,
@@ -540,6 +543,45 @@ function playSound(scene, key, config = {}) {
   return true;
 }
 
+function hasTelegramUser() {
+    return !!window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+}
+
+function safeHaptic(type = 'impact', style = 'medium') {
+    try {
+        const tg = window.Telegram?.WebApp;
+        if (!tg || !tg.HapticFeedback) return;
+
+        if (type === 'impact' && tg.HapticFeedback.impactOccurred) {
+            tg.HapticFeedback.impactOccurred(style);
+            return;
+        }
+
+        if (type === 'notification' && tg.HapticFeedback.notificationOccurred) {
+            tg.HapticFeedback.notificationOccurred(style);
+            return;
+        }
+    } catch (e) {
+    }
+}
+
+function safeKillTweens(scene, target) {
+    if (!scene || !scene.tweens || !target) return;
+    try {
+        scene.tweens.killTweensOf(target);
+    } catch (e) {
+    }
+}
+
+function safeRemoveTimer(timer) {
+    if (!timer) return null;
+    try {
+        timer.remove(false);
+    } catch (e) {
+    }
+    return null;
+}
+
 function ensureBgm(scene) {
     if (!scene || !scene.sound) return;
 
@@ -602,6 +644,33 @@ function cleanupScreenFx(scene) {
         scene.children.list
             .filter(obj => obj && obj.active && obj.texture && obj.texture.key === 'laser')
             .forEach(obj => safeDestroy(obj));
+    }
+}
+
+function clearBattleTexts(scene) {
+    bossPhraseHideCall = safeRemoveTimer(bossPhraseHideCall);
+    victoryTextJitter = safeRemoveTimer(victoryTextJitter);
+
+    if (bossPhraseText) {
+        safeKillTweens(scene, bossPhraseText);
+        if (bossPhraseText.active) {
+            bossPhraseText
+                .setText('')
+                .setAlpha(0)
+                .setVisible(false)
+                .setBackgroundColor(null);
+        }
+    }
+
+    if (glitchText) {
+        safeKillTweens(scene, glitchText);
+        if (glitchText.active) {
+            glitchText
+                .setText('')
+                .setAlpha(1)
+                .setVisible(false)
+                .setBackgroundColor(null);
+        }
     }
 }
 
@@ -807,13 +876,14 @@ async function create() {
         align: 'center'
     }).setOrigin(0.5, 0).setDepth(100);
 
-    glitchText = this.add.text(187, 300, '', {
+    glitchText = this.add.text(187, 285, '', {
         fontFamily: fontUI,
-        fontSize: '22px',
+        fontSize: '20px',
         stroke: '#000',
         strokeThickness: 6,
         align: 'center',
-        wordWrap: { width: 340 }
+        wordWrap: { width: 320, useAdvancedWrap: true },
+        lineSpacing: 2
     }).setOrigin(0.5).setDepth(100);
 
     overdriveBar = this.add.graphics().setDepth(100);
@@ -892,6 +962,7 @@ function startRun(scene) {
     isShopOpen = false;
     shouldAutoStart = false;
 
+    clearBattleTexts(scene);
     cleanupScreenFx(scene);
     lastObstaclePattern = null;
 
@@ -963,7 +1034,7 @@ function startRun(scene) {
     }
 
     if (glitchText) {
-        glitchText.setText('').setBackgroundColor(null).setAlpha(1).setVisible(true);
+        glitchText.setVisible(true);
     }
 
     if (distanceText) distanceText.setVisible(true);
@@ -1428,25 +1499,18 @@ function startBossFight(scene) {
     });
 
     scene.phraseTimer = scene.time.addEvent({
-        delay: 3500,
+        delay: 3800,
+        loop: true,
         callback: () => {
-            if(isBossFight && !isVictory && !isDead) {
-                let pool = isPhase2 ? TRANSLATIONS[lang].p2 : TRANSLATIONS[lang].p1;
-                let msg = Phaser.Utils.Array.GetRandom(pool);
+            if (!isBossFight || isVictory || isDead) return;
 
-                let color = isPhase3 ? "#ffffff" : (isPhase2 ? "#ff0000" : "#ff00ff");
+            const pool = isPhase2 ? TRANSLATIONS[lang].p2 : TRANSLATIONS[lang].p1;
+            const msg = Phaser.Utils.Array.GetRandom(pool);
+            const color = isPhase3 ? '#ffffff' : isPhase2 ? '#ff4444' : '#ff00ff';
+            const bg = isPhase3 ? '#440000' : null;
 
-                glitchText.setText(msg).setFill(color);
-                scene.time.delayedCall(3000, () => {
-                    if (isPhase3 && !isVictory) {
-                        glitchText.setText(TRANSLATIONS[lang].system_halt).setFill("#ffffff").setBackgroundColor("#ff0000");
-                    } else {
-                        glitchText.setText('');
-                    }
-                });
-            }
-        },
-        loop: true
+            showBossPhrase(scene, msg, color, bg, 2500);
+        }
     });
 
     // Запуск спавна миньонов (раз в 4 секунды)
@@ -1569,16 +1633,15 @@ function useOverdrive() {
     overdrive = 0;
     ultraLaserTickAt = 0;
 
-    playSound(this, 'sfx_ultra', { volume: 0.8 });
-    this.cameras.main.shake(700, 0.015);
+    playSound(this, 'sfxultra', { volume: 0.85 });
+    this.cameras.main.shake(850, 0.018);
 
     const skin = SKINDATA[currentSkin] || SKINDATA.classic;
 
     if (ultraLaser) {
         try {
             this.tweens.killTweensOf(ultraLaser);
-        } catch (e) {
-        }
+        } catch (e) {}
         if (ultraLaser.active) ultraLaser.destroy();
         ultraLaser = null;
     }
@@ -1587,14 +1650,14 @@ function useOverdrive() {
         .setTint(skin.bullet)
         .setBlendMode(Phaser.BlendModes.ADD)
         .setDepth(6)
-        .setAlpha(0.95)
-        .setScale(1);
+        .setAlpha(0.98)
+        .setScale(1.15);
 
     this.tweens.add({
         targets: ultraLaser,
-        scaleX: 42,
+        scaleX: 54,
         alpha: 0,
-        duration: 950,
+        duration: 1200,
         onUpdate: () => {
             if (!ultraLaser || !ultraLaser.active || !boss || !boss.active || isVictory || !isBossFight) return;
 
@@ -1603,22 +1666,33 @@ function useOverdrive() {
 
             const now = this.time.now;
             if (now < ultraLaserTickAt) return;
-            ultraLaserTickAt = now + 80;
+            ultraLaserTickAt = now + 65;
 
-            if (Math.abs(ultraLaser.x - boss.x) < 95) {
+            if (Math.abs(ultraLaser.x - boss.x) < 105) {
                 let laserDamage =
-                    level >= 50 ? 16 :
-                    level >= 35 ? 14 :
-                    level >= 25 ? 12 :
-                    10;
+                    level >= 55 ? 34 :
+                    level >= 50 ? 31 :
+                    level >= 45 ? 28 :
+                    level >= 35 ? 24 :
+                    level >= 25 ? 20 :
+                    16;
 
                 laserDamage *= currentStats.atk;
 
-                if (isPhase2) laserDamage *= 0.92;
-                if (isPhase3) laserDamage *= 0.88;
+                if (isPhase2) laserDamage *= 0.95;
+                if (isPhase3) laserDamage *= 0.92;
 
                 bossHealth -= laserDamage;
-                showDamageText(this, boss.x, boss.y, laserDamage, 'ffff66', '18px');
+                showDamageText(this, boss.x, boss.y, laserDamage, 'ffff66', '20px');
+
+                boss.setTint(0xffff66);
+                this.time.delayedCall(45, () => {
+                    if (!boss || !boss.active || isDead) return;
+
+                    if (level >= 35) boss.setTint(0x00ff00);
+                    else if (isPhase2) boss.setTint(0xff0000);
+                    else boss.clearTint();
+                });
 
                 if (bossHealth <= 0) {
                     bossHealth = 0;
@@ -1635,200 +1709,216 @@ function useOverdrive() {
     });
 }
 
-function getBossExplosionColor() {
-    if (currentExplosionColor === 0x00ffff && upgradeLevels.fx_blue) return 0x00ffff;
-    if (currentExplosionColor === 0xff00ff && upgradeLevels.fx_pink) return 0xff00ff;
-    return isPhase2 ? 0xff0000 : 0xff00ff;
-}
-
 function triggerVictory(scene) {
-    if (isDead || isVictory) return;
-    cleanupScreenFx(scene);
+    if (!scene || isDead || isVictory) return;
+
     isVictory = true;
     isBossFight = false;
+    isPhase2 = false;
     isPhase3 = false;
 
-    // 1. ЖЕСТКАЯ ОЧИСТКА ВСЕГО ГРАФИЧЕСКОГО МУСОРА
-    if (scene.overheadGfx) scene.overheadGfx.clear().destroy();
-    if (overdriveBar) overdriveBar.clear().setVisible(false);
-    if (roadBar) roadBar.clear().setVisible(false); // УБИРАЕМ ПОЛОСКУ ПОСЕРЕДИНЕ
+    clearBattleTexts(scene);
+    cleanupScreenFx(scene);
 
-    // Удаляем турели и ИХ ШЛЕЙФЫ
-    [bossTurretL, bossTurretR, bossTurretLTrail, bossTurretRTrail].forEach(t => {
-        if (t) { t.destroy(); }
-    });
-    bossTurretL = bossTurretR = bossTurretLTrail = bossTurretRTrail = null;
+    scene.shootEvent = safeRemoveTimer(scene.shootEvent);
+    scene.bossShootEvent = safeRemoveTimer(scene.bossShootEvent);
+    scene.turretShootEvent = safeRemoveTimer(scene.turretShootEvent);
+    scene.minionTimer = safeRemoveTimer(scene.minionTimer);
+    scene.phraseTimer = safeRemoveTimer(scene.phraseTimer);
+    scene.teleportEvent = safeRemoveTimer(scene.teleportEvent);
+    scene.itemTimer = safeRemoveTimer(scene.itemTimer);
+    itemsTimer = safeRemoveTimer(itemsTimer);
+    bossPhraseHideCall = safeRemoveTimer(bossPhraseHideCall);
+    victoryTextJitter = safeRemoveTimer(victoryTextJitter);
 
-    // Чистим группы
-    [bullets, playerBullets, minionBullets, minions, obstacles, bossShields].forEach(g => g?.clear(true, true));
+    bullets?.clear(true, true);
+    playerBullets?.clear(true, true);
+    minionBullets?.clear(true, true);
+    minions?.clear(true, true);
+    obstacles?.clear(true, true);
+    bossShields?.clear(true, true);
 
-    // Останавливаем таймеры
-    [scene.shootEvent, scene.bossShootEvent, scene.turretShootEvent, scene.minionTimer, scene.phraseTimer,
-     scene.teleportEvent, scene.itemTimer, itemsTimer].forEach(t => t?.remove());
+    if (bossTurretL) { safeKillTweens(scene, bossTurretL); bossTurretL.destroy(); bossTurretL = null; }
+    if (bossTurretR) { safeKillTweens(scene, bossTurretR); bossTurretR.destroy(); bossTurretR = null; }
+    if (bossTurretLTrail) { safeKillTweens(scene, bossTurretLTrail); bossTurretLTrail.destroy(); bossTurretLTrail = null; }
+    if (bossTurretRTrail) { safeKillTweens(scene, bossTurretRTrail); bossTurretRTrail.destroy(); bossTurretRTrail = null; }
 
-    // **ФИКС ПОЛОСКИ НАВСЕГДА**
     if (scene.overheadGfx) {
-        scene.overheadGfx.clear().fillStyle(0x000000, 0).fillRect(0, 0, 400, 700).destroy();
+        scene.overheadGfx.clear();
+        scene.overheadGfx.destroy();
         scene.overheadGfx = null;
     }
-    [overdriveBar, roadBar].forEach(b => b?.clear().setVisible(false));
-    [pHealthLabel, bHealthLabel, distanceText].forEach(t => t?.setAlpha(0));
 
-    const explodeCol = currentExplosionColor || 0xff0000;
-    const hexColor = '#' + explodeCol.toString(16).padStart(6, '0');
+    if (overdriveBar) {
+        overdriveBar.clear();
+        overdriveBar.setVisible(false);
+    }
 
-    // ПРЯЧЕМ КОРАБЛЬ И ТРЕЙЛ
-    player.setVisible(false);
-    if (trailEmitter) trailEmitter.stop();
+    if (roadBar) {
+        roadBar.clear();
+        roadBar.setVisible(false);
+    }
 
-    // --- ЛОГИКА УРОВНЕЙ ---
-    const justFinished = level;
-    if (justFinished > bestLevel) bestLevel = justFinished;
-
-    bestLevel = level;
-
-    level++;
-    bossesKilled++;
-
-    if (Math.floor(distance) > bestDistance) bestDistance = Math.floor(distance);
-
-    saveProgress();
-    submitScore();
-
-    // 2. ФАЗА ПОДГОТОВКИ: СЖАТИЕ (IMPLOSION)
-    scene.cameras.main.shake(1000, 0.01);
-    scene.tweens.add({
-        targets: boss,
-        scale: 0.1,
-        alpha: 0,
-        duration: 800,
-        ease: 'Expo.in',
-        onComplete: () => {
-            // 3. ФАЗА ВЗРЫВА: СВЕРХНОВАЯ
-            scene.physics.world.timeScale = 1; // Возвращаем время
-            scene.cameras.main.flash(800, 255, 255, 255); // Ослепительная вспышка
-            scene.cameras.main.shake(2000, 0.05);
-
-            // А) ЛУЧИ ЭНЕРГИИ (God Rays)
-            for (let i = 0; i < 12; i++) {
-                let ray = scene.add.rectangle(boss.x, boss.y, 2, 520, explodeCol)
-                    .setOrigin(0.5, 0)
-                    .setAlpha(0.8)
-                    .setDepth(6000);
-
-                victoryFx.push(ray);
-                ray.angle = i * 30;
-                scene.tweens.add({
-                    targets: ray,
-                    width: 40,
-                    alpha: 0,
-                    duration: 1500,
-                    ease: 'Cubic.easeOut',
-                    onComplete: () => ray.destroy()
-                });
-                // Вращение лучей
-                scene.tweens.add({ targets: ray, angle: '+=90', duration: 1500 });
-            }
-
-            // Б) УДАРНЫЕ ВОЛНЫ (Хроматическая аберрация)
-            for (let i = 0; i < 4; i++) {
-                let wave = scene.add.circle(boss.x, boss.y, 10, explodeCol, 0.4).setDepth(5500).setStrokeStyle(4, 0xffffff);
-
-                victoryFx.push(wave);
-                scene.tweens.add({
-                    targets: wave,
-                    radius: 800,
-                    alpha: 0,
-                    duration: 1200 + (i * 200),
-                    onComplete: () => wave.destroy()
-                });
-            }
-
-            // В) МАССИВНЫЕ ОСКОЛКИ С ТРЕЙЛАМИ
-            for (let i = 0; i < 60; i++) {
-                let chunk = scene.add.rectangle(boss.x, boss.y, 12, 12, i % 2 === 0 ? explodeCol : 0xffffff).setDepth(5000);
-                scene.physics.add.existing(chunk);
-                let angle = Math.random() * Math.PI * 2;
-                let speed = Math.random() * 1200 + 400;
-                chunk.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
-                chunk.body.setAngularVelocity(1000);
-
-                // Трейл для каждого осколка
-                scene.time.addEvent({
-                    delay: 50,
-                    repeat: 10,
-                    callback: () => {
-                        if (!chunk.active) return;
-                        let t = scene.add.rectangle(chunk.x, chunk.y, 6, 6, explodeCol).setAlpha(0.4);
-                        scene.tweens.add({ targets: t, alpha: 0, scale: 0, duration: 400, onComplete: () => t.destroy() });
-                    }
-                });
-
-                scene.tweens.add({ targets: chunk, scale: 0, alpha: 0, duration: 2000 });
-            }
-
-            // Г) ЭФФЕКТ ГЛИТЧА НА ВЕСЬ ЭКРАН
-            let glitchOverlay = scene.add.rectangle(187, 333, 375, 667, explodeCol, 0.2).setDepth(9000).setAlpha(0);
-
-            victoryFx.push(glitchOverlay);
-            scene.tweens.add({
-                targets: glitchOverlay,
-                alpha: { from: 0.5, to: 0 },
-                duration: 100,
-                repeat: 10,
-                onUpdate: () => {
-                    glitchOverlay.setX(187 + Phaser.Math.Between(-10, 10));
-                },
-                onComplete: () => glitchOverlay.destroy()
-            });
-        }
+    [pHealthLabel, bHealthLabel, distanceText].forEach(t => {
+        if (t && t.active) t.setAlpha(0).setVisible(false);
     });
 
-    // 4. ТЕКСТ ПОБЕДЫ (Глитчующий)
-    let vText = scene.add.text(187, 333, TRANSLATIONS[lang].core_destroyed, {
+    if (glitchText && glitchText.active) {
+        glitchText
+            .setText('')
+            .setBackgroundColor(null)
+            .setAlpha(1)
+            .setVisible(false);
+    }
+
+    if (player && player.active) {
+        player.setVisible(false);
+    }
+    if (trailEmitter) trailEmitter.stop();
+
+    const justFinishedLevel = level;
+    bestLevel = Math.max(bestLevel, justFinishedLevel);
+    bestDistance = Math.max(bestDistance, Math.floor(distance));
+    bossesKilled += 1;
+
+    updateHudTexts();
+    saveProgress();
+
+    if (hasTelegramUser()) {
+        submitScore();
+    }
+
+    const explodeCol = currentExplosionColor || 0xff0000;
+    const hexColor = `#${explodeCol.toString(16).padStart(6, '0')}`;
+
+    if (boss && boss.active) {
+        safeKillTweens(scene, boss);
+
+        scene.tweens.add({
+            targets: boss,
+            scaleX: boss.scaleX * 0.25,
+            scaleY: boss.scaleY * 0.25,
+            alpha: 0,
+            angle: boss.angle + 40,
+            duration: 700,
+            ease: 'Expo.easeIn',
+            onComplete: () => {
+                if (boss && boss.active) {
+                    boss.setVisible(false);
+                    boss.setActive(false);
+                }
+            }
+        });
+    }
+
+    scene.physics.world.timeScale = 1;
+    scene.cameras.main.flash(600, 255, 255, 255, 0.35);
+    scene.cameras.main.shake(900, 0.03);
+
+    for (let i = 0; i < 4; i++) {
+        const wave = scene.add.circle(boss.x, boss.y, 14, explodeCol, 0.35)
+            .setDepth(5500)
+            .setStrokeStyle(3, 0xffffff, 0.9);
+
+        victoryFx.push(wave);
+
+        scene.tweens.add({
+            targets: wave,
+            radius: 220 + i * 120,
+            alpha: 0,
+            duration: 700 + i * 180,
+            ease: 'Cubic.easeOut',
+            onComplete: () => {
+                if (wave && wave.active) wave.destroy();
+            }
+        });
+    }
+
+    for (let i = 0; i < 36; i++) {
+        const chunk = scene.add.rectangle(
+            boss.x,
+            boss.y,
+            Phaser.Math.Between(6, 12),
+            Phaser.Math.Between(6, 12),
+            i % 2 === 0 ? explodeCol : 0xffffff
+        ).setDepth(5000);
+
+        scene.physics.add.existing(chunk);
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Phaser.Math.Between(260, 760);
+        chunk.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+        chunk.body.setAngularVelocity(Phaser.Math.Between(-700, 700));
+
+        scene.tweens.add({
+            targets: chunk,
+            alpha: 0,
+            scaleX: 0,
+            scaleY: 0,
+            duration: Phaser.Math.Between(900, 1600),
+            ease: 'Quad.easeOut',
+            onComplete: () => {
+                if (chunk && chunk.active) chunk.destroy();
+            }
+        });
+    }
+
+    const vText = scene.add.text(187, 333, TRANSLATIONS[lang].core_destroyed, {
         fontFamily: 'Courier New',
-        fontSize: '32px',
-        fill: '#fff',
+        fontSize: '28px',
+        fill: '#ffffff',
         fontWeight: 'bold',
         stroke: hexColor,
-        strokeThickness: 10,
+        strokeThickness: 8,
         align: 'center',
-        wordWrap: { width: 340 }
+        wordWrap: { width: 320, useAdvancedWrap: true },
+        lineSpacing: 3
     }).setOrigin(0.5).setDepth(10000).setAlpha(0);
 
     victoryFx.push(vText);
 
-    scene.time.delayedCall(1000, () => {
-        vText.setAlpha(1);
-        scene.tweens.add({
-            targets: vText,
-            scale: 1.2,
-            duration: 100,
-            yoyo: true,
-            repeat: -1
-        });
-        // Постоянный глитч текста
-        scene.time.addEvent({
-            delay: 50,
-            callback: () => { if(vText.active) vText.setX(187 + Phaser.Math.Between(-5, 5)); },
-            loop: true
-        });
+    scene.tweens.add({
+        targets: vText,
+        alpha: 1,
+        scale: { from: 1.08, to: 1 },
+        duration: 220,
+        ease: 'Back.easeOut'
     });
 
-    // 5. ЛОГИКА
-    bossesKilled++;
-    if (Math.floor(distance) > bestDistance) bestDistance = Math.floor(distance);
-    saveProgress();
-    if (playerHealth >= maxPlayerHealth && !achievements.flawless) achievements.flawless = true;
+    victoryTextJitter = scene.time.addEvent({
+        delay: 60,
+        loop: true,
+        callback: () => {
+            if (!vText || !vText.active || !isVictory) {
+                victoryTextJitter = safeRemoveTimer(victoryTextJitter);
+                return;
+            }
+            vText.setX(187 + Phaser.Math.Between(-3, 3));
+        }
+    });
 
-    // Переход к наградам
-    scene.time.delayedCall(4000, () => {
-        vText.destroy();
+    if (playerHealth >= maxPlayerHealth && !achievements.flawless) {
+        achievements.flawless = true;
+    }
+
+    scene.time.delayedCall(2600, () => {
+        victoryTextJitter = safeRemoveTimer(victoryTextJitter);
+
+        if (vText && vText.active) {
+            vText.setX(187);
+        }
+
+        if (glitchText && glitchText.active) {
+            glitchText.setText('').setBackgroundColor(null).setAlpha(1);
+        }
+
         showRewardUI(scene, null);
     });
 }
 
+
 function showRewardUI(scene, titleText) {
+    clearBattleTexts(scene);
+    cleanupScreenFx(scene);
     const container = scene.add.container(0, 0).setDepth(5001);
     const bg = scene.add.graphics().fillStyle(0x000000, 0.9).fillRect(0, 0, 375, 667);
     container.add(bg);
@@ -1885,6 +1975,16 @@ function showRewardUI(scene, titleText) {
 function showShop(scene, mainMenu) {
     saveProgress();
     isShopOpen = true;
+
+    clearBattleTexts(scene);
+    cleanupScreenFx(scene);
+
+    if (distanceText) distanceText.setVisible(false);
+    if (pHealthLabel) pHealthLabel.setVisible(false);
+    if (bHealthLabel) bHealthLabel.setVisible(false);
+    if (overdriveBar) overdriveBar.setVisible(false);
+    if (roadBar) roadBar.setVisible(false);
+
     const overlay = scene.add.container(0, 0).setDepth(4000);
     const bg = scene.add.graphics().fillStyle(0x000000, 0.98).fillRect(0, 0, 375, 667);
     overlay.add(bg);
@@ -2699,6 +2799,9 @@ function minionExplode(scene, x, y) {
 }
 
 function showMenu(scene) {
+    clearBattleTexts(scene);
+    cleanupScreenFx(scene);
+
     ensureBgm(scene);
     isStarted = false;
     isVictory = false;
@@ -3172,14 +3275,27 @@ async function submitScore() {
 
         if (!response.ok) {
             const errText = await response.text();
-            console.error('submitScore HTTP error:', response.status, errText);
+            console.error('submitScore HTTP error', response.status, errText);
             return;
         }
 
         const res = await response.json();
-        console.log('submitScore result:', res);
+
+        if (typeof res.merged_level === 'number') {
+            level = Math.max(level, res.merged_level);
+        }
+        if (typeof res.merged_best_level === 'number') {
+            bestLevel = Math.max(bestLevel, res.merged_best_level);
+        }
+        if (typeof res.merged_score === 'number') {
+            bestDistance = Math.max(bestDistance, res.merged_score);
+        }
+
+        saveProgress();
+        updateHudTexts();
+        console.log('submitScore result', res);
     } catch (e) {
-        console.error('submitScore error:', e);
+        console.error('submitScore error', e);
     }
 }
 
@@ -3443,6 +3559,69 @@ function showDamageText(scene, x, y, damage, color = '#00ff00', size = '16px') {
     });
 }
 
+function showBossPhrase(scene, msg, color = '#ff00ff', bgColor = null, duration = 2600) {
+    if (!scene) return;
+
+    if (!bossPhraseText || !bossPhraseText.active) {
+        bossPhraseText = scene.add.text(187, 250, '', {
+            fontFamily: 'Arial, sans-serif',
+            fontSize: '18px',
+            fill: color,
+            fontWeight: 'bold',
+            stroke: '#000000',
+            strokeThickness: 5,
+            align: 'center',
+            wordWrap: { width: 300, useAdvancedWrap: true },
+            lineSpacing: 4
+        })
+        .setOrigin(0.5)
+        .setDepth(130)
+        .setAlpha(0)
+        .setVisible(false);
+    }
+
+    if (bossPhraseHideCall) {
+        bossPhraseHideCall.remove(false);
+        bossPhraseHideCall = null;
+    }
+
+    scene.tweens.killTweensOf(bossPhraseText);
+
+    bossPhraseText
+        .setText(msg || '')
+        .setFill(color)
+        .setBackgroundColor(bgColor)
+        .setVisible(!!msg)
+        .setAlpha(msg ? 1 : 0)
+        .setScale(1);
+
+    if (!msg) return;
+
+    scene.tweens.add({
+        targets: bossPhraseText,
+        scale: { from: 1.04, to: 1 },
+        duration: 120,
+        ease: 'Quad.easeOut'
+    });
+
+    bossPhraseHideCall = scene.time.delayedCall(duration, () => {
+        if (!bossPhraseText || !bossPhraseText.active) return;
+
+        scene.tweens.add({
+            targets: bossPhraseText,
+            alpha: 0,
+            duration: 180,
+            onComplete: () => {
+                if (bossPhraseText && bossPhraseText.active) {
+                    bossPhraseText.setText('').setVisible(false).setBackgroundColor(null);
+                }
+            }
+        });
+
+        bossPhraseHideCall = null;
+    });
+}
+
 async function syncUserData() {
     const tgUser = getTelegramUser();
     if (!tgUser?.id) return;
@@ -3450,48 +3629,41 @@ async function syncUserData() {
     try {
         const response = await fetch(`${botUrl}/get_user_personal/${tgUser.id}`);
         const cloudData = await response.json();
-
         if (!cloudData || cloudData.error) return;
 
         let shouldPushLocalBack = false;
 
-        if ((cloudData.level || 0) > level) {
+        if ((cloudData.level ?? 0) > level) {
             level = cloudData.level || 1;
             runGoal = 700 + (level - 1) * 100;
-        } else if (level > (cloudData.level || 0)) {
+        } else if (level > (cloudData.level ?? 0)) {
             shouldPushLocalBack = true;
         }
 
-        if ((cloudData.best_level || 0) > bestLevel) {
+        if ((cloudData.best_level ?? 0) > bestLevel) {
             bestLevel = cloudData.best_level;
-        } else if (bestLevel > (cloudData.best_level || 0)) {
+        } else if (bestLevel > (cloudData.best_level ?? 0)) {
             shouldPushLocalBack = true;
         }
 
-        if ((cloudData.score || 0) > bestDistance) {
+        if ((cloudData.score ?? 0) > bestDistance) {
             bestDistance = cloudData.score || 0;
-        } else if (bestDistance > (cloudData.score || 0)) {
+        } else if (bestDistance > (cloudData.score ?? 0)) {
             shouldPushLocalBack = true;
         }
 
-        if ((cloudData.coins || 0) > coins) {
+        if ((cloudData.coins ?? 0) > coins) {
             coins = cloudData.coins || 0;
-        } else if (coins > (cloudData.coins || 0)) {
+        } else if (coins > (cloudData.coins ?? 0)) {
             shouldPushLocalBack = true;
         }
 
         if (cloudData.skin) currentSkin = cloudData.skin;
         if (cloudData.shape) currentShape = cloudData.shape;
         if (cloudData.ship_name) shipName = cloudData.ship_name;
-        if (cloudData.explosion_color) currentExplosionColor = cloudData.explosion_color;
-
-        if (typeof cloudData.total_dist === 'number') {
-            totalDistance = Math.max(totalDistance, cloudData.total_dist);
-        }
-
-        if (typeof cloudData.bosses_killed === 'number') {
-            bossesKilled = Math.max(bossesKilled, cloudData.bosses_killed);
-        }
+        if (typeof cloudData.explosion_color === 'number') currentExplosionColor = cloudData.explosion_color;
+        if (typeof cloudData.total_dist === 'number') totalDistance = Math.max(totalDistance, cloudData.total_dist);
+        if (typeof cloudData.bosses_killed === 'number') bossesKilled = Math.max(bossesKilled, cloudData.bosses_killed);
 
         if (cloudData.upgrades && typeof cloudData.upgrades === 'object') {
             for (const key in cloudData.upgrades) {
@@ -3511,10 +3683,10 @@ async function syncUserData() {
 
         if (shouldPushLocalBack) {
             await submitScore();
-            console.log('Cloud updated from local:', { level, bestLevel, bestDistance });
+            console.log('Cloud updated from local', level, bestLevel, bestDistance);
         }
     } catch (e) {
-        console.error('syncUserData error:', e);
+        console.error('syncUserData error', e);
     }
 }
 
@@ -3740,22 +3912,29 @@ function startTitleGlitch(scene, title) {
 }
 
 async function showAdSafe(onDone) {
-  try {
-    const tgUser = getTelegramUser();
-    if (!window.adController || !tgUser?.id) {
-      console.log('Adsgram unavailable outside Telegram, skip ad');
-      onDone?.();
-      return;
-    }
+    try {
+        const tgUser = getTelegramUser();
 
-    const result = await window.adController.show();
-    if (result?.done) {
-      onDone?.();
-    } else {
-      alert(lang === 'ru' ? 'Посмотри рекламу до конца!' : 'Watch till the end!');
+        if (!window.Telegram?.WebApp || !tgUser?.id) {
+            console.log('Adsgram unavailable outside Telegram, skip ad');
+            onDone?.();
+            return;
+        }
+
+        if (!window.adController || typeof window.adController.show !== 'function') {
+            console.log('Adsgram controller missing, skip ad');
+            onDone?.();
+            return;
+        }
+
+        const result = await window.adController.show();
+
+        if (result?.done) onDone?.();
+        else {
+            alert(lang === 'ru' ? 'Досмотри рекламу до конца!' : 'Watch till the end!');
+        }
+    } catch (e) {
+        console.log('Adsgram failure - silent bypass:', e);
+        onDone?.();
     }
-  } catch (e) {
-    console.log('Adsgram failure - silent bypass', e);
-    onDone?.();
-  }
 }
