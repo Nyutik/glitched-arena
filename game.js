@@ -2421,10 +2421,28 @@ function showShop(scene, mainMenu, fromVictory = false) {
             ease: 'Sine.easeInOut'
         });
 
-        nextBg.on('pointerdown', () => {
-            scene.input.off('wheel');
+        nextBg.on('pointerdown', async () => {
+        const nextLevel = level + 1;
+        const nextBestLevel = Math.max(bestLevel, nextLevel);
 
+        nextBg.disableInteractive();
+        nextTxt.setText(lang === 'ru' ? 'СОХРАНЕНИЕ...' : 'SAVING...');
+
+        try {
+            if (hasTelegramUser()) {
+                await submitScore({
+                    level: nextLevel,
+                    best_level: nextBestLevel
+                });
+            }
+
+            level = nextLevel;
+            bestLevel = Math.max(bestLevel, nextLevel);
+            runGoal = 700 + (level - 1) * 100;
+
+            scene.input.off('wheel');
             overlay.destroy();
+
             isShopOpen = false;
             isVictory = false;
             isDead = false;
@@ -2433,11 +2451,30 @@ function showShop(scene, mainMenu, fromVictory = false) {
             isPhase3 = false;
             shouldAutoStart = true;
 
-            level += 1;
-            runGoal = 700 + (level - 1) * 100;
             saveProgress();
             scene.scene.restart();
-        });
+        } catch (e) {
+            console.error('next sector save failed', e);
+
+            level = nextLevel;
+            bestLevel = Math.max(bestLevel, nextLevel);
+            runGoal = 700 + (level - 1) * 100;
+
+            scene.input.off('wheel');
+            overlay.destroy();
+
+            isShopOpen = false;
+            isVictory = false;
+            isDead = false;
+            isBossFight = false;
+            isPhase2 = false;
+            isPhase3 = false;
+            shouldAutoStart = true;
+
+            saveProgress();
+            scene.scene.restart();
+        }
+    });
 
     }
 }
@@ -3495,10 +3532,7 @@ function getBossIntel() {
 
 async function submitScore() {
     const tgUser = getTelegramUser();
-    if (!tgUser?.id) {
-        console.warn('No Telegram user, skip submitScore');
-        return;
-    }
+    if (!tgUser?.id) return false;
 
     try {
         const payload = {
@@ -3544,8 +3578,10 @@ async function submitScore() {
         saveProgress();
         updateHudTexts();
         console.log('submitScore result', res);
+        return true;
     } catch (e) {
         console.error('submitScore error', e);
+        return false;
     }
 }
 
