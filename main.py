@@ -77,34 +77,41 @@ async def submit_score(data: ScoreData):
 
         old_upgrades = old.get("upgrades") or {}
         new_upgrades = data.upgrades or {}
-
         merged_upgrades = old_upgrades.copy()
+
         for key, val in new_upgrades.items():
             try:
                 merged_upgrades[key] = max(int(val), int(merged_upgrades.get(key, 0)))
             except:
                 merged_upgrades[key] = val or merged_upgrades.get(key, 0)
 
+        merged_level = max(int(data.level or 0), int(old.get("level", 0)))
+        merged_best_level = max(int(data.best_level or 0), int(old.get("best_level", 0)), merged_level)
+
         payload = {
             "telegram_id": data.telegram_id,
             "username": data.username or old.get("username") or "PILOT",
-            "score": max(data.score, old.get("score", 0)),
-            "level": max(data.level, old.get("level", 0)),
-            "best_level": max(data.best_level or 0, old.get("best_level", 0)),
+            "score": max(int(data.score or 0), int(old.get("score", 0))),
+            "level": merged_level,
+            "best_level": merged_best_level,
             "explosion_color": data.explosion_color or old.get("explosion_color") or 0xff0000,
             "skin": data.skin or old.get("skin") or "classic",
             "shape": data.shape or old.get("shape") or "classic",
-            "coins": max(data.coins or 0, old.get("coins", 0)),
+            "coins": max(int(data.coins or 0), int(old.get("coins", 0))),
             "upgrades": merged_upgrades,
-            "total_dist": max(data.total_dist or 0, old.get("total_dist", 0)),
-            "bosses_killed": max(data.bosses_killed or 0, old.get("bosses_killed", 0)),
+            "total_dist": max(int(data.total_dist or 0), int(old.get("total_dist", 0))),
+            "bosses_killed": max(int(data.bosses_killed or 0), int(old.get("bosses_killed", 0))),
             "ship_name": data.ship_name or old.get("ship_name") or "RAZOR-01",
             "score_date": current_date
         }
 
         res = supabase.table("leaderboard").upsert(payload, on_conflict="telegram_id").execute()
-        return {"status": "ok", "merged_level": payload["level"], "merged_score": payload["score"]}
-
+        return {
+            "status": "ok",
+            "merged_level": payload["level"],
+            "merged_best_level": payload["best_level"],
+            "merged_score": payload["score"]
+        }
     except Exception as e:
         print(f"Ошибка submit_score: {e}")
         raise HTTPException(status_code=500, detail=str(e))

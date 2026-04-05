@@ -32,6 +32,10 @@ let overdrive = 0, isVictory = false, isShopOpen = false, isDead = false, isBoss
 
 let player, boss, obstacles, bullets, playerBullets, scoreText, levelText, bestText, bestDistText, distanceText, pHealthLabel, bHealthLabel, glitchText, bossShields;
 let overdriveBar, roadBar, shieldAura, trailEmitter, bossTrail;
+let ultraLaser = null;
+let victoryFx = [];
+let ultraLaserTickAt = 0;
+let lastObstaclePattern = null;
 let totalDistance = 0, bossesKilled = 0;
 let achievements = {
     flawless: false,
@@ -563,6 +567,44 @@ function ensureBgm(scene) {
     }
 }
 
+function cleanupScreenFx(scene) {
+    const safeKillTween = (target) => {
+        if (!scene || !scene.tweens || !target) return;
+        try {
+            scene.tweens.killTweensOf(target);
+        } catch (e) {
+        }
+    };
+
+    const safeDestroy = (target) => {
+        if (!target) return;
+        try {
+            safeKillTween(target);
+            if (target.active || target.scene) target.destroy();
+        } catch (e) {
+        }
+    };
+
+    safeDestroy(ultraLaser);
+    ultraLaser = null;
+
+    if (scene?.ovrText) {
+        safeDestroy(scene.ovrText);
+        scene.ovrText = null;
+    }
+
+    if (Array.isArray(victoryFx)) {
+        victoryFx.forEach(obj => safeDestroy(obj));
+        victoryFx = [];
+    }
+
+    if (scene?.children?.list?.length) {
+        scene.children.list
+            .filter(obj => obj && obj.active && obj.texture && obj.texture.key === 'laser')
+            .forEach(obj => safeDestroy(obj));
+    }
+}
+
 async function create() {
     if (window.Telegram?.WebApp) {
         window.Telegram.WebApp.expand();
@@ -850,6 +892,9 @@ function startRun(scene) {
     isShopOpen = false;
     shouldAutoStart = false;
 
+    cleanupScreenFx(scene);
+    lastObstaclePattern = null;
+
     distance = 0;
     overdrive = 0;
     coinsThisRun = 0;
@@ -932,7 +977,7 @@ function startRun(scene) {
     ensureBgm(scene);
 
     scene.obstacleTimer = scene.time.addEvent({
-        delay: Math.max(300, 1150 - level * 50),
+        delay: Math.max(460, 1220 - level * 28),
         callback: spawnObstacle,
         callbackScope: scene,
         loop: true
@@ -1199,6 +1244,8 @@ function handleDamage(scene, dmg) {
 
 function triggerDeath(scene) {
     if (isDead || isVictory) return;
+    cleanupScreenFx(scene);
+
     isMagnetActive = false;
     isGlitchMode = false;
     coinsThisRun = 0;
@@ -1517,35 +1564,74 @@ function hitBoss(b, bullet) {
 }
 
 function useOverdrive() {
-    // ЗАПРЕТ стрельбы без босса или если уже победили
-    if (overdrive < 100 || isVictory || !isBossFight) return;
+    if (overdrive < 100 || isVictory || !isBossFight || !boss || !boss.active) return;
 
     overdrive = 0;
-    playSound(this, 'sfx_ultra', { volume: 0.8 });
-    this.cameras.main.shake(1000, 0.02);
+    ultraLaserTickAt = 0;
 
-    const skin = SKIN_DATA[currentSkin] || SKIN_DATA.classic;
-    let laser = this.add.sprite(player.x, player.y - 300, 'laser')
+    playSound(this, 'sfx_ultra', { volume: 0.8 });
+    this.cameras.main.shake(700, 0.015);
+
+    const skin = SKINDATA[currentSkin] || SKINDATA.classic;
+
+    if (ultraLaser) {
+        try {
+            this.tweens.killTweensOf(ultraLaser);
+        } catch (e) {
+        }
+        if (ultraLaser.active) ultraLaser.destroy();
+        ultraLaser = null;
+    }
+
+    ultraLaser = this.add.sprite(player.x, player.y - 300, 'laser')
         .setTint(skin.bullet)
-        .setBlendMode('ADD')
-        .setDepth(6);
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(6)
+        .setAlpha(0.95)
+        .setScale(1);
 
     this.tweens.add({
-        targets: laser,
-        scaleX: 60,
+        targets: ultraLaser,
+        scaleX: 42,
         alpha: 0,
-        duration: 1200,
+        duration: 950,
         onUpdate: () => {
-            if (isBossFight && !isVictory && Math.abs(laser.x - boss.x) < 100) {
-                let hM = level > 30 ? (13.5 + (level - 30) * 0.22) : (level * 0.45);
-                let maxB = 400 * (1 + hM);
-                // С 30 уровня урон лазера снижается в 2 раза
-                let damageMultiplier = level >= 35 ? 0.0005 : (level >= 30 ? 0.0015 : 0.003);
-                bossHealth -= (maxB * damageMultiplier) * currentStats.atk;
-                if (bossHealth <= 0) { bossHealth = 0; triggerVictory(this); }
+            if (!ultraLaser || !ultraLaser.active || !boss || !boss.active || isVictory || !isBossFight) return;
+
+            ultraLaser.x = player.x;
+            ultraLaser.y = player.y - 300;
+
+            const now = this.time.now;
+            if (now < ultraLaserTickAt) return;
+            ultraLaserTickAt = now + 80;
+
+            if (Math.abs(ultraLaser.x - boss.x) < 95) {
+                let laserDamage =
+                    level >= 50 ? 16 :
+                    level >= 35 ? 14 :
+                    level >= 25 ? 12 :
+                    10;
+
+                laserDamage *= currentStats.atk;
+
+                if (isPhase2) laserDamage *= 0.92;
+                if (isPhase3) laserDamage *= 0.88;
+
+                bossHealth -= laserDamage;
+                showDamageText(this, boss.x, boss.y, laserDamage, 'ffff66', '18px');
+
+                if (bossHealth <= 0) {
+                    bossHealth = 0;
+                    triggerVictory(this);
+                }
             }
         },
-        onComplete: () => { if(laser) laser.destroy(); }
+        onComplete: () => {
+            if (ultraLaser) {
+                if (ultraLaser.active) ultraLaser.destroy();
+                ultraLaser = null;
+            }
+        }
     });
 }
 
@@ -1557,41 +1643,28 @@ function getBossExplosionColor() {
 
 function triggerVictory(scene) {
     if (isDead || isVictory) return;
+    cleanupScreenFx(scene);
     isVictory = true;
     isBossFight = false;
     isPhase3 = false;
 
-    [bullets, playerBullets, minionBullets, minions, obstacles, bossShields].forEach(g => g?.clear(true, true));
-    [bossTurretL, bossTurretR, bossTurretLTrail, bossTurretRTrail].forEach(t => t?.destroy());
-    bossTurretL = bossTurretR = null;
+    // 1. ЖЕСТКАЯ ОЧИСТКА ВСЕГО ГРАФИЧЕСКОГО МУСОРА
+    if (scene.overheadGfx) scene.overheadGfx.clear().destroy();
+    if (overdriveBar) overdriveBar.clear().setVisible(false);
+    if (roadBar) roadBar.clear().setVisible(false); // УБИРАЕМ ПОЛОСКУ ПОСЕРЕДИНЕ
 
-    if (bossTrail) bossTrail.stop().setVisible(false);
+    // Удаляем турели и ИХ ШЛЕЙФЫ
+    [bossTurretL, bossTurretR, bossTurretLTrail, bossTurretRTrail].forEach(t => {
+        if (t) { t.destroy(); }
+    });
+    bossTurretL = bossTurretR = bossTurretLTrail = bossTurretRTrail = null;
+
+    // Чистим группы
+    [bullets, playerBullets, minionBullets, minions, obstacles, bossShields].forEach(g => g?.clear(true, true));
+
+    // Останавливаем таймеры
     [scene.shootEvent, scene.bossShootEvent, scene.turretShootEvent, scene.minionTimer, scene.phraseTimer,
      scene.teleportEvent, scene.itemTimer, itemsTimer].forEach(t => t?.remove());
-
-    // Прячем всё лишнее
-    if (scene.overheadGfx) scene.overheadGfx.clear();
-    [pHealthLabel, bHealthLabel, distanceText].forEach(t => t?.setAlpha(0));
-    player.setVisible(false);
-
-    // Миньоны — убить все активные tweens перед clear
-    if (minions) {
-        minions.children.each(m => { if (m) scene.tweens.killTweensOf(m); });
-        minions.clear(true, true);
-    }
-    if (minionBullets) minionBullets.clear(true, true);
-
-    // bossTrail — остановить эмиттер
-    if (bossTrail) {
-        bossTrail.stop();
-        bossTrail.setVisible(false);
-    }
-
-    // 1. ОСТАНОВКА МИРА
-    scene.physics.world.timeScale = 0.05; // Почти полная остановка
-    [scene.shootEvent, scene.bossShootEvent, scene.turretShootEvent, scene.minionTimer, scene.phraseTimer,
-     scene.teleportEvent, scene.itemTimer, itemsTimer].forEach(t => t?.remove());
-    [bullets, playerBullets, minionBullets, minions, obstacles, bossShields].forEach(g => g?.clear(true, true));
 
     // **ФИКС ПОЛОСКИ НАВСЕГДА**
     if (scene.overheadGfx) {
@@ -1611,6 +1684,8 @@ function triggerVictory(scene) {
     // --- ЛОГИКА УРОВНЕЙ ---
     const justFinished = level;
     if (justFinished > bestLevel) bestLevel = justFinished;
+
+    bestLevel = level;
 
     level++;
     bossesKilled++;
@@ -1636,7 +1711,12 @@ function triggerVictory(scene) {
 
             // А) ЛУЧИ ЭНЕРГИИ (God Rays)
             for (let i = 0; i < 12; i++) {
-                let ray = scene.add.rectangle(boss.x, boss.y, 2, 800, explodeCol).setOrigin(0.5, 0).setAlpha(0.8).setDepth(6000);
+                let ray = scene.add.rectangle(boss.x, boss.y, 2, 520, explodeCol)
+                    .setOrigin(0.5, 0)
+                    .setAlpha(0.8)
+                    .setDepth(6000);
+
+                victoryFx.push(ray);
                 ray.angle = i * 30;
                 scene.tweens.add({
                     targets: ray,
@@ -1653,6 +1733,8 @@ function triggerVictory(scene) {
             // Б) УДАРНЫЕ ВОЛНЫ (Хроматическая аберрация)
             for (let i = 0; i < 4; i++) {
                 let wave = scene.add.circle(boss.x, boss.y, 10, explodeCol, 0.4).setDepth(5500).setStrokeStyle(4, 0xffffff);
+
+                victoryFx.push(wave);
                 scene.tweens.add({
                     targets: wave,
                     radius: 800,
@@ -1687,6 +1769,8 @@ function triggerVictory(scene) {
 
             // Г) ЭФФЕКТ ГЛИТЧА НА ВЕСЬ ЭКРАН
             let glitchOverlay = scene.add.rectangle(187, 333, 375, 667, explodeCol, 0.2).setDepth(9000).setAlpha(0);
+
+            victoryFx.push(glitchOverlay);
             scene.tweens.add({
                 targets: glitchOverlay,
                 alpha: { from: 0.5, to: 0 },
@@ -1711,6 +1795,8 @@ function triggerVictory(scene) {
         align: 'center',
         wordWrap: { width: 340 }
     }).setOrigin(0.5).setDepth(10000).setAlpha(0);
+
+    victoryFx.push(vText);
 
     scene.time.delayedCall(1000, () => {
         vText.setAlpha(1);
@@ -1980,10 +2066,10 @@ function showShop(scene, mainMenu) {
         createBtn(sY+step*7,   "up_coins",     "desc_coins",    50,   'buy_coins');
         maxScroll = step * 7;
     } else {
-        createBtn(sY, "skin_gold", "desc_gold", 0, 'skin_gold', () => { currentSkin = 'gold'; refreshPlayerAppearance(scene); });
-        createBtn(sY+step, "skin_ghost", "desc_ghost", 0, 'skin_ghost', () => { currentSkin = 'ghost'; refreshPlayerAppearance(scene); });
-        createBtn(sY+step*2, "fx_blue_exp", "desc_blue_exp", 0, 'fx_blue', () => { currentExplosionColor = 0x00ffff; });
-        createBtn(sY+step*3, "fx_pink_exp", "desc_pink_exp", 0, 'fx_pink', () => { currentExplosionColor = 0xff00ff; });
+        createBtn(sY, "skin_gold", "desc_gold", 200, 'skin_gold', () => { currentSkin = 'gold'; refreshPlayerAppearance(scene); });
+        createBtn(sY+step, "skin_ghost", "desc_ghost", 200, 'skin_ghost', () => { currentSkin = 'ghost'; refreshPlayerAppearance(scene); });
+        createBtn(sY+step*2, "fx_blue_exp", "desc_blue_exp", 100, 'fx_blue', () => { currentExplosionColor = 0x00ffff; });
+        createBtn(sY+step*3, "fx_pink_exp", "desc_pink_exp", 100, 'fx_pink', () => { currentExplosionColor = 0xff00ff; });
         maxScroll = step * 4;
     }
 
@@ -2195,30 +2281,119 @@ function playerShoot() {
 
 
 function spawnObstacle() {
-    if (!isStarted || isBossFight || isShopOpen || isPaused) return;
+    if (!isStarted || isBossFight || isShopOpen || isPaused || isVictory || isDead) return;
+    if (!obstacles) return;
 
-    let x = Phaser.Math.Between(50, 320);
-    let obstacle = obstacles.create(x, -20, 'wall'); // Появляется чуть выше
+    const laneXs = [55, 120, 187, 255, 320];
+    const baseSpeed =
+        level >= 55 ? 440 :
+        level >= 45 ? 425 :
+        level >= 35 ? 400 :
+        level >= 25 ? 375 :
+        level >= 15 ? 345 :
+        315;
 
-    // ПСЕВДО-3D: Начинаем с маленького размера
-    obstacle.setScale(0.2).setAlpha(0);
+    const spawnWall = (x, y = -30, scaleX = 1, scaleY = 1, tint = 0xff0000) => {
+        const obstacle = obstacles.create(x, y, 'wall');
+        obstacle.setTint(tint);
+        obstacle.setScale(scaleX, scaleY);
+        obstacle.setVelocityY(baseSpeed);
+        obstacle.setData('isDrone', false);
+        obstacle.setData('missed', false);
+        return obstacle;
+    };
 
-    // Анимация "вылета" на игрока
-    this.tweens.add({
-        targets: obstacle,
-        scale: 1,
-        alpha: 1,
-        duration: 400, // Быстро увеличивается при появлении
-        ease: 'Quad.easeOut'
-    });
+    const spawnDrone = (x, y = -30) => {
+        const obstacle = obstacles.create(x, y, 'wall');
+        obstacle.setTint(0xffaa00);
+        obstacle.setScale(0.72, 0.9);
+        obstacle.setVelocityY(baseSpeed + 15);
+        obstacle.setData('isDrone', true);
+        obstacle.setData('missed', false);
+        return obstacle;
+    };
 
-    if (level >= 3 && Math.random() > 0.65) {
-        obstacle.setData('isDrone', true).setTint(0xffaa00);
-        obstacle.setVelocityY(320 + (level * 8));
+    const patterns = {
+        single: () => {
+            spawnWall(Phaser.Utils.Array.GetRandom(laneXs), -30, 0.95, 1);
+        },
+
+        staggered: () => {
+            let a = Phaser.Math.Between(0, laneXs.length - 1);
+            let b = Phaser.Math.Between(0, laneXs.length - 1);
+            while (b === a) b = Phaser.Math.Between(0, laneXs.length - 1);
+
+            spawnWall(laneXs[a], -30, 0.95, 1);
+            spawnWall(laneXs[b], -130, 0.95, 1);
+        },
+
+        wideGate: () => {
+            const safeLeftIndex = Phaser.Math.Between(0, laneXs.length - 2);
+            laneXs.forEach((x, i) => {
+                if (i !== safeLeftIndex && i !== safeLeftIndex + 1) {
+                    spawnWall(x, -30, 0.82, 1);
+                }
+            });
+        },
+
+        tripleFair: () => {
+            const safeLeftIndex = Phaser.Math.Between(0, laneXs.length - 2);
+            laneXs.forEach((x, i) => {
+                if (i < safeLeftIndex || i > safeLeftIndex + 1) {
+                    spawnWall(x, -30, 0.8, 1);
+                }
+            });
+        },
+
+        droneFair: () => {
+            const safeIndex = Phaser.Math.Between(0, laneXs.length - 1);
+            laneXs.forEach((x, i) => {
+                if (i !== safeIndex && Math.random() < 0.5) {
+                    spawnDrone(x, i % 2 === 0 ? -30 : -110);
+                }
+            });
+        },
+
+        doubleGap: () => {
+            const safeIndex = Phaser.Math.Between(0, laneXs.length - 1);
+            laneXs.forEach((x, i) => {
+                if (i !== safeIndex) {
+                    spawnWall(x, -30, 0.82, 0.95);
+                }
+            });
+        }
+    };
+
+    const pickPattern = (pool) => {
+        let filtered = pool;
+
+        const densePatterns = ['doubleGap', 'tripleFair', 'droneFair'];
+        if (densePatterns.includes(lastObstaclePattern)) {
+            filtered = pool.filter(p => !densePatterns.includes(p));
+            if (!filtered.length) filtered = pool;
+        }
+
+        const next = Phaser.Utils.Array.GetRandom(filtered);
+        lastObstaclePattern = next;
+        return next;
+    };
+
+    let pool;
+
+    if (level < 8) {
+        pool = ['single', 'single', 'staggered'];
+    } else if (level < 20) {
+        pool = ['single', 'single', 'staggered', 'wideGate', 'droneFair'];
+    } else if (level < 35) {
+        pool = ['single', 'staggered', 'wideGate', 'tripleFair', 'droneFair'];
+    } else if (level < 50) {
+        pool = ['single', 'staggered', 'wideGate', 'tripleFair', 'droneFair', 'doubleGap'];
     } else {
-        obstacle.setTint(0xff0000);
-        obstacle.setVelocityY(300 + (level * 12));
+        pool = ['single', 'staggered', 'wideGate', 'tripleFair', 'droneFair', 'doubleGap'];
     }
+
+    const chosen = pickPattern(pool);
+    patterns[chosen]();
 }
 
 function togglePause() {
@@ -2400,27 +2575,39 @@ function collectItem(p, item) {
     }
 }
 
-function showComboEffect(scene) {
-    combo++;
-    if (scene.comboSound) playSound(scene, 'sfx_combo', { volume: 0.3 });
+function showComboEffect(scene, combo) {
+    if (!scene || !scene.cameras || !scene.cameras.main || !comboPopText || !player) return;
 
-    comboPopText.setPosition(player.x, player.y - 60);
-    // Используем перевод слова COMBO
-    comboPopText.setText(`+${TRANSLATIONS[lang].combo_text} x${combo}`);
-    comboPopText.setAlpha(1).setScale(1.2).setFill(combo >= 10 ? '#ff0000' : '#00ff00');
+    playSound(scene, 'sfx_combo', { volume: 0.3 });
 
-    if (combo === 10) {
+    comboPopText
+        .setPosition(player.x, player.y - 60)
+        .setText(`${TRANSLATIONS[lang].combo_text} x${combo}`)
+        .setAlpha(1)
+        .setScale(1.2)
+        .setFill(combo >= 10 ? '#ff0000' : '#00ff00');
+
+    if (combo >= 10 && !isGlitchMode) {
         isGlitchMode = true;
-        this.cameras.main.setBackgroundColor('#ffffff');
+        scene.cameras.main.setBackgroundColor('#ffffff');
         scene.cameras.main.shake(5000, 0.007);
 
-        // Перевод надписи ГИПЕР-ГЛИТЧ
-        glitchText.setText(TRANSLATIONS[lang].hyper_glitch).setFill("#000000").setBackgroundColor("#ff0000");
+        glitchText
+            .setText(TRANSLATIONS[lang].hyper_glitch)
+            .setFill('#000000')
+            .setBackgroundColor('#ff0000');
 
         scene.time.delayedCall(5000, () => {
             isGlitchMode = false;
-            this.cameras.main.setBackgroundColor('#000000');
-            glitchText.setText("").setBackgroundColor(null);
+
+            if (scene.cameras?.main) {
+                scene.cameras.main.setBackgroundColor('#000000');
+            }
+
+            if (glitchText && glitchText.active) {
+                glitchText.setText('');
+                glitchText.setBackgroundColor(null);
+            }
         });
     }
 
@@ -2428,14 +2615,15 @@ function showComboEffect(scene) {
         targets: comboPopText,
         y: player.y - 120,
         alpha: 0,
-        scale: 2,
+        scale: combo >= 10 ? 2 : 1.5,
         duration: 600
     });
 
     if (combo % 5 === 0) {
-        let reward = isGlitchMode ? 45 : 15;
+        const reward = isGlitchMode ? 45 : 15;
         coinsThisRun += reward;
-        scoreText.setText(`${TRANSLATIONS[lang].credits}: ${coins + coinsThisRun}`);
+        updateHudTexts();
+
         scene.cameras.main.flash(100, 255, 255, 255, 0.3);
     }
 }
@@ -2962,10 +3150,10 @@ async function submitScore() {
     try {
         const payload = {
             telegram_id: tgUser.id,
-            username: tgUser.first_name || 'PILOT',
-            score: bestDistance,
-            level: level,
-            best_level: bestLevel,
+            username: tgUser.first_name || tgUser.username || 'PILOT',
+            score: Math.floor(bestDistance),
+            level: Math.max(level, bestLevel),
+            best_level: Math.max(bestLevel, level),
             explosion_color: currentExplosionColor,
             skin: currentSkin,
             shape: currentShape,
@@ -2981,6 +3169,12 @@ async function submitScore() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
+
+        if (!response.ok) {
+            const errText = await response.text();
+            console.error('submitScore HTTP error:', response.status, errText);
+            return;
+        }
 
         const res = await response.json();
         console.log('submitScore result:', res);
@@ -3028,7 +3222,7 @@ async function showLeaderboard(scene, mainMenu) {
         }
     });
 
-    const loadingText = scene.add.text(187, 320, TRANSLATIONS[lang].dbconnecting, {
+    const loadingText = scene.add.text(187, 320, TRANSLATIONS[lang].db_connecting, {
         fontSize: '16px',
         fill: '#00ffff',
         fontWeight: 'bold',
@@ -3051,7 +3245,7 @@ async function showLeaderboard(scene, mainMenu) {
         loadingText.destroy();
 
         if (!Array.isArray(data) || data.length === 0) {
-            const emptyText = scene.add.text(187, 320, TRANSLATIONS[lang].dbempty, {
+            const emptyText = scene.add.text(187, 320, TRANSLATIONS[lang].db_empty, {
                 fontSize: '16px',
                 fill: '#888888',
                 fontFamily: fontUI
@@ -3223,7 +3417,7 @@ async function showLeaderboard(scene, mainMenu) {
 
     } catch (e) {
         console.error(e);
-        loadingText.setText(TRANSLATIONS[lang].dberror).setFill('#ff0000');
+        loadingText.setText(TRANSLATIONS[lang].db_error).setFill('#ff0000');
     }
 }
 
@@ -3261,7 +3455,6 @@ async function syncUserData() {
 
         let shouldPushLocalBack = false;
 
-        // 1. УРОВЕНЬ (Текущий сектор)
         if ((cloudData.level || 0) > level) {
             level = cloudData.level || 1;
             runGoal = 700 + (level - 1) * 100;
@@ -3269,74 +3462,57 @@ async function syncUserData() {
             shouldPushLocalBack = true;
         }
 
-        // 2. РЕКОРД СЕКТОРОВ (bestLevel)
         if ((cloudData.best_level || 0) > bestLevel) {
             bestLevel = cloudData.best_level;
         } else if (bestLevel > (cloudData.best_level || 0)) {
             shouldPushLocalBack = true;
         }
 
-        // 3. ДИСТАНЦИЯ (score)
         if ((cloudData.score || 0) > bestDistance) {
             bestDistance = cloudData.score || 0;
         } else if (bestDistance > (cloudData.score || 0)) {
             shouldPushLocalBack = true;
         }
 
-        // 4. КРЕДИТЫ
         if ((cloudData.coins || 0) > coins) {
             coins = cloudData.coins || 0;
         } else if (coins > (cloudData.coins || 0)) {
             shouldPushLocalBack = true;
         }
 
-        // 5. ВНЕШНИЙ ВИД
         if (cloudData.skin) currentSkin = cloudData.skin;
         if (cloudData.shape) currentShape = cloudData.shape;
         if (cloudData.ship_name) shipName = cloudData.ship_name;
+        if (cloudData.explosion_color) currentExplosionColor = cloudData.explosion_color;
 
-        // 6. ЦВЕТ ВЗРЫВА (Синхронизируем покупку "красоты")
-        if (cloudData.explosion_color) {
-            currentExplosionColor = cloudData.explosion_color;
-        }
-
-        // 7. СТАТИСТИКА ДОСЬЕ
         if (typeof cloudData.total_dist === 'number') {
             totalDistance = Math.max(totalDistance, cloudData.total_dist);
         }
+
         if (typeof cloudData.bosses_killed === 'number') {
             bossesKilled = Math.max(bossesKilled, cloudData.bosses_killed);
         }
 
-        // 8. УЛУЧШЕНИЯ (Мерджим уровни)
         if (cloudData.upgrades && typeof cloudData.upgrades === 'object') {
             for (const key in cloudData.upgrades) {
-                upgradeLevels[key] = Math.max(
-                    upgradeLevels[key] || 0,
-                    cloudData.upgrades[key] || 0
-                );
+                upgradeLevels[key] = Math.max(upgradeLevels[key] || 0, cloudData.upgrades[key] || 0);
             }
         }
 
-        // ПЕРЕСЧЕТ ПАРАМЕТРОВ ПОСЛЕ СИНХРОНИЗАЦИИ
-        maxPlayerHealth = 100 + ((upgradeLevels.health || 0) * 25);
+        maxPlayerHealth = 100 + (upgradeLevels.health || 0) * 25;
         currentStats = getShipStats();
 
         saveProgress();
         updateHudTexts();
 
-        // Обновляем визуал корабля, если данные изменились
         if (player && player.active) {
             refreshPlayerAppearance(this);
         }
 
-        // Если локальный сейв круче облачного - обновляем облако
         if (shouldPushLocalBack) {
             await submitScore();
+            console.log('Cloud updated from local:', { level, bestLevel, bestDistance });
         }
-
-        console.log("✅ Облако синхронизировано: Рекорд S" + bestLevel + ", Сектор S" + level);
-
     } catch (e) {
         console.error('syncUserData error:', e);
     }
