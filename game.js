@@ -845,15 +845,13 @@ async function create() {
 }
 
 function startRun(scene) {
-    shouldAutoStart = false;
     isStarted = true;
     isVictory = false;
     isDead = false;
-    isBossFight = false;
     isPaused = false;
+    isBossFight = false;
     isShopOpen = false;
-    isPhase2 = false;
-    isPhase3 = false;
+    shouldAutoStart = false;
 
     distance = 0;
     overdrive = 0;
