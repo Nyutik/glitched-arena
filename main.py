@@ -36,6 +36,8 @@ class ScoreData(BaseModel):
     username: str
     score: int
     level: int
+    best_level: Optional[int] = 1
+    explosion_color: Optional[int] = 0xff0000
     skin: str
     shape: str
     coins: Optional[int] = 0
@@ -88,6 +90,8 @@ async def submit_score(data: ScoreData):
             "username": data.username or old.get("username") or "PILOT",
             "score": max(data.score, old.get("score", 0)),
             "level": max(data.level, old.get("level", 0)),
+            "best_level": max(data.best_level or 0, old.get("best_level", 0)),
+            "explosion_color": data.explosion_color or old.get("explosion_color") or 0xff0000,
             "skin": data.skin or old.get("skin") or "classic",
             "shape": data.shape or old.get("shape") or "classic",
             "coins": max(data.coins or 0, old.get("coins", 0)),

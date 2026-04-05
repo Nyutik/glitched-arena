@@ -830,7 +830,14 @@ async function create() {
         strokeThickness: 3
     }).setOrigin(0.5).setDepth(100).setAlpha(0);
 
-    await syncUserData.call(this);
+    if (shouldAutoStart) {
+        startRun(this);
+    } else {
+        showMenu(this);
+    }
+
+    syncUserData.call(this);
+
     updateHudTexts();
 
     if (!localStorage.getItem('GLITCHED_ARENA_INTRO_DONE')) {
@@ -2926,7 +2933,9 @@ async function submitScore() {
             telegram_id: tgUser.id,
             username: tgUser.first_name || 'PILOT',
             score: bestDistance,
-            level: getCompletedLevel(),
+            level: level,
+            best_level: bestLevel,
+            explosion_color: currentExplosionColor,
             skin: currentSkin,
             shape: currentShape,
             coins: coins,
@@ -3211,20 +3220,17 @@ function showDamageText(scene, x, y, damage, color = '#00ff00', size = '16px') {
 
 async function syncUserData() {
     const tgUser = getTelegramUser();
-    if (!tgUser?.id) {
-        return;
-    }
+    if (!tgUser?.id) return;
 
     try {
         const response = await fetch(`${botUrl}/get_user_personal/${tgUser.id}`);
         const cloudData = await response.json();
 
-        if (!cloudData || cloudData.error) {
-            return;
-        }
+        if (!cloudData || cloudData.error) return;
 
         let shouldPushLocalBack = false;
 
+        // 1. УРОВЕНЬ (Текущий сектор)
         if ((cloudData.level || 0) > level) {
             level = cloudData.level || 1;
             runGoal = 700 + (level - 1) * 100;
@@ -3232,38 +3238,46 @@ async function syncUserData() {
             shouldPushLocalBack = true;
         }
 
+        // 2. РЕКОРД СЕКТОРОВ (bestLevel)
+        if ((cloudData.best_level || 0) > bestLevel) {
+            bestLevel = cloudData.best_level;
+        } else if (bestLevel > (cloudData.best_level || 0)) {
+            shouldPushLocalBack = true;
+        }
+
+        // 3. ДИСТАНЦИЯ (score)
         if ((cloudData.score || 0) > bestDistance) {
             bestDistance = cloudData.score || 0;
         } else if (bestDistance > (cloudData.score || 0)) {
             shouldPushLocalBack = true;
         }
 
+        // 4. КРЕДИТЫ
         if ((cloudData.coins || 0) > coins) {
             coins = cloudData.coins || 0;
         } else if (coins > (cloudData.coins || 0)) {
             shouldPushLocalBack = true;
         }
 
-        if (cloudData.skin) {
-            currentSkin = cloudData.skin;
+        // 5. ВНЕШНИЙ ВИД
+        if (cloudData.skin) currentSkin = cloudData.skin;
+        if (cloudData.shape) currentShape = cloudData.shape;
+        if (cloudData.ship_name) shipName = cloudData.ship_name;
+
+        // 6. ЦВЕТ ВЗРЫВА (Синхронизируем покупку "красоты")
+        if (cloudData.explosion_color) {
+            currentExplosionColor = cloudData.explosion_color;
         }
 
-        if (cloudData.shape) {
-            currentShape = cloudData.shape;
-        }
-
-        if (cloudData.ship_name) {
-            shipName = cloudData.ship_name;
-        }
-
+        // 7. СТАТИСТИКА ДОСЬЕ
         if (typeof cloudData.total_dist === 'number') {
             totalDistance = Math.max(totalDistance, cloudData.total_dist);
         }
-
         if (typeof cloudData.bosses_killed === 'number') {
             bossesKilled = Math.max(bossesKilled, cloudData.bosses_killed);
         }
 
+        // 8. УЛУЧШЕНИЯ (Мерджим уровни)
         if (cloudData.upgrades && typeof cloudData.upgrades === 'object') {
             for (const key in cloudData.upgrades) {
                 upgradeLevels[key] = Math.max(
@@ -3273,18 +3287,25 @@ async function syncUserData() {
             }
         }
 
+        // ПЕРЕСЧЕТ ПАРАМЕТРОВ ПОСЛЕ СИНХРОНИЗАЦИИ
         maxPlayerHealth = 100 + ((upgradeLevels.health || 0) * 25);
         currentStats = getShipStats();
+
         saveProgress();
         updateHudTexts();
 
-        if (player) {
+        // Обновляем визуал корабля, если данные изменились
+        if (player && player.active) {
             refreshPlayerAppearance(this);
         }
 
+        // Если локальный сейв круче облачного - обновляем облако
         if (shouldPushLocalBack) {
             await submitScore();
         }
+
+        console.log("✅ Облако синхронизировано: Рекорд S" + bestLevel + ", Сектор S" + level);
+
     } catch (e) {
         console.error('syncUserData error:', e);
     }
