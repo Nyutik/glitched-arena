@@ -650,9 +650,8 @@ async function create() {
     this.input.on('pointerdown', p => {
         if (!isStarted || isShopOpen || isDead || isPaused || !player?.active) return;
 
-        const startZoneTop = 500;
         if (!this.isFirstMove) {
-            if (p.y >= startZoneTop) {
+            if (p.y > 500) {   // стартовая зона
                 this.isFirstMove = true;
                 player.x = Phaser.Math.Clamp(p.x, 20, 355);
                 player.y = Phaser.Math.Clamp(p.y + yOffset, 80, 620);
@@ -668,12 +667,10 @@ async function create() {
 
     this.input.on('pointermove', p => {
         if (!isStarted || isShopOpen || isDead || isPaused || !player?.active) return;
-        if (!this.isFirstMove) return;
-
-        player.x = Phaser.Math.Clamp(p.x, 20, 355);
-        player.y = Phaser.Math.Clamp(p.y + yOffset, 80, 620);
-
-        if (shieldAura) shieldAura.setPosition(player.x, player.y);
+        if (this.isFirstMove) {
+            player.x = Phaser.Math.Clamp(p.x, 20, 355);
+            player.y = Phaser.Math.Clamp(p.y + yOffset, 80, 620);
+        }
     });
 
     const skin = SKINDATA[currentSkin] || SKINDATA.classic;
@@ -815,12 +812,6 @@ async function create() {
         this.time.delayedCall(100, () => s.setAlpha(0.4));
     });
 
-    this.input.on('pointerdown', () => {
-        if (isStarted && overdrive >= 100 && !isPaused && !isDead && !isVictory) {
-            useOverdrive.call(this);
-        }
-    });
-
     comboPopText = this.add.text(0, 0, '', {
         fontFamily: fontUI,
         fontSize: '18px',
@@ -829,12 +820,6 @@ async function create() {
         stroke: '#000',
         strokeThickness: 3
     }).setOrigin(0.5).setDepth(100).setAlpha(0);
-
-    if (shouldAutoStart) {
-        startRun(this);
-    } else {
-        showMenu(this);
-    }
 
     syncUserData.call(this);
 
@@ -1317,6 +1302,7 @@ function triggerDeath(scene) {
 function processRevive(scene) {
     lastRunState.pendingDeath = false;
     isDead = false;
+    isVictory = false;
     playerHealth = maxPlayerHealth;
     saveProgress();
     shouldAutoStart = true;
@@ -1374,7 +1360,10 @@ function startBossFight(scene) {
     if (level >= 20) {
         bossShields.clear(true, true);
         for(let i = 0; i < 4; i++) {
-            let s = bossShields.create(boss.x, boss.y, 'pixel').setTint(0xff00ff).setScale(2.5).setAlpha(0.5);
+            let s = bossShields.create(boss.x, boss.y, 'pixel')
+                .setTint(0xff00ff)
+                .setScale(4)
+                .setAlpha(0.7);
             s.body.setImmovable(true);
         }
         glitchText.setText(TRANSLATIONS[lang].defense_engaged).setFill("#ff00ff");
@@ -1566,6 +1555,32 @@ function triggerVictory(scene) {
     isVictory = true;
     isBossFight = false;
     isPhase3 = false;
+
+    [bullets, playerBullets, minionBullets, minions, obstacles, bossShields].forEach(g => g?.clear(true, true));
+    [bossTurretL, bossTurretR, bossTurretLTrail, bossTurretRTrail].forEach(t => t?.destroy());
+    bossTurretL = bossTurretR = null;
+
+    if (bossTrail) bossTrail.stop().setVisible(false);
+    [scene.shootEvent, scene.bossShootEvent, scene.turretShootEvent, scene.minionTimer, scene.phraseTimer,
+     scene.teleportEvent, scene.itemTimer, itemsTimer].forEach(t => t?.remove());
+
+    // Прячем всё лишнее
+    if (scene.overheadGfx) scene.overheadGfx.clear();
+    [pHealthLabel, bHealthLabel, distanceText].forEach(t => t?.setAlpha(0));
+    player.setVisible(false);
+
+    // Миньоны — убить все активные tweens перед clear
+    if (minions) {
+        minions.children.each(m => { if (m) scene.tweens.killTweensOf(m); });
+        minions.clear(true, true);
+    }
+    if (minionBullets) minionBullets.clear(true, true);
+
+    // bossTrail — остановить эмиттер
+    if (bossTrail) {
+        bossTrail.stop();
+        bossTrail.setVisible(false);
+    }
 
     // 1. ОСТАНОВКА МИРА
     scene.physics.world.timeScale = 0.05; // Почти полная остановка
@@ -2206,9 +2221,20 @@ function togglePause() {
     if (isPaused) {
         this.physics.pause();
         this.time.paused = true;
+        ['sfx_nuke', 'sfx_ultra', 'sfx_combo'].forEach(key => {
+            if (this.sound.get(key)?.isPlaying) {
+                this.sound.stopByKey(key);
+            }
+        });
+        const bgm = this.sound.get('bgm');
+        if (bgm && bgm.isPlaying) bgm.pause();
     } else {
         this.physics.resume();
         this.time.paused = false;
+        if (isSoundOn) {
+            const bgm = this.sound.get('bgm');
+            if (bgm && bgm.isPaused) bgm.resume();
+        }
     }
 }
 function generatePlayerTexture(scene) {
