@@ -2145,12 +2145,12 @@ function showShop(scene, mainMenu, fromVictory = false) {
     upBtn.on('pointerdown', () => {
         currentShopTab = 'upgrades';
         overlay.destroy();
-        showShop(scene, mainMenu);
+        showShop(scene, mainMenu, fromVictory);
     });
     fxBtn.on('pointerdown', () => {
         currentShopTab = 'fx';
         overlay.destroy();
-        showShop(scene, mainMenu);
+        showShop(scene, mainMenu, fromVictory);
     });
 
     // --- ЗОНА ПРОКРУТКИ ---
@@ -2248,7 +2248,7 @@ function showShop(scene, mainMenu, fromVictory = false) {
                 }
                 saveProgress();
                 overlay.destroy();
-                showShop(scene, mainMenu);
+                showShop(scene, mainMenu, fromVictory);
                 return;
             }
 
@@ -2257,23 +2257,23 @@ function showShop(scene, mainMenu, fromVictory = false) {
                 if (action) action();
                 saveProgress();
                 overlay.destroy();
-                showShop(scene, mainMenu);
+                showShop(scene, mainMenu, fromVictory);
                 return;
             }
 
             showConfirm(namet, cost, isStarItem, () => {
                 if (isStarItem) {
-                    if (cost === 0) { upgradeLevels[type] = 1; saveProgress(); overlay.destroy(); showShop(scene, mainMenu); return; }
+                    if (cost === 0) { upgradeLevels[type] = 1; saveProgress(); overlay.destroy(); showShop(scene, mainMenu, fromVictory); return; }
                     const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
                     fetch(`${botUrl}/get_invoice?item_type=${type}&user_id=${user?.id}&username=${user?.first_name}`).then(r => r.json()).then(data => {
-                        if (data.url) { window.Telegram.WebApp.openInvoice(data.url, (status) => { if (status === 'paid') { if (type === 'buy_coins') coins += 5000; else upgradeLevels[type] = 1; if (action) action(); saveProgress(); overlay.destroy(); showShop(scene, mainMenu); } }); }
+                        if (data.url) { window.Telegram.WebApp.openInvoice(data.url, (status) => { if (status === 'paid') { if (type === 'buy_coins') coins += 5000; else upgradeLevels[type] = 1; if (action) action(); saveProgress(); overlay.destroy(); showShop(scene, mainMenu, fromVictory); } }); }
                     });
                 } else if (coins >= cost) {
                     coins -= cost;
                     if (type === 'shield') { isShieldActive = true; upgradeLevels.shield = 1; }
                     else { upgradeLevels[type] = (upgradeLevels[type] || 0) + 1; }
                     if (action) action();
-                    saveProgress(); overlay.destroy(); showShop(scene, mainMenu);
+                    saveProgress(); overlay.destroy(); showShop(scene, mainMenu, fromVictory);
                 } else scene.cameras.main.shake(200, 0.01);
             });
         });
