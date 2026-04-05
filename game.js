@@ -70,6 +70,8 @@ const TRANSLATIONS = {
         apply: "<< APPLY & EXIT",
         share_duel: "⚔️ CHALLENGE FRIEND",
         share_duel_text: "I reached Sector %lvl% in Glitched Arena! Can you survive longer?",
+        share_win_text: "I cleared Sector %lvl% in Glitched Arena! Can you beat it?",
+        share_loss_text: "System failure in Sector %lvl%... Can you survive longer?",
         profile: "[ PROFILE ]",
 
         // HUD
@@ -210,6 +212,8 @@ const TRANSLATIONS = {
         apply: "<< ПРИМЕНИТЬ",
         share_duel: "⚔️ ВЫЗВАТЬ НА ДУЭЛЬ",
         share_duel_text: "Я дошел до Сектора %lvl% в Glitched Arena! Выживешь дольше?",
+        share_win_text: "Я зачистил Сектор %lvl% в Глитч Арене! Попробуй повторить!",
+        share_loss_text: "Моя система дала сбой в Секторе %lvl%... Кто отомстит за меня?",
         profile: "[ ПРОФИЛЬ ]",
 
         // HUD
@@ -670,6 +674,7 @@ async function create() {
         if (this.isFirstMove) {
             player.x = Phaser.Math.Clamp(p.x, 20, 355);
             player.y = Phaser.Math.Clamp(p.y + yOffset, 80, 620);
+            if (shieldAura) shieldAura.setPosition(player.x, player.y);
         }
     });
 
@@ -1295,7 +1300,7 @@ function triggerDeath(scene) {
 
     // Кнопка дуэли
     btn(520, TRANSLATIONS[lang].share_duel, '#004488', () => {
-        shareDuel();
+        shareDuel('loss');
     });
 }
 
@@ -1765,7 +1770,7 @@ function showRewardUI(scene, titleText) {
 
     container.add([info, doubleBtn, collectBtn, duelBtn]);
 
-    duelBtn.on('pointerdown', () => shareDuel());
+    duelBtn.on('pointerdown', () => shareDuel('win'));
 
     doubleBtn.on('pointerdown', () => {
         showAdSafe(() => finalizeCollection(earnedAmount * 2));
@@ -1975,10 +1980,10 @@ function showShop(scene, mainMenu) {
         createBtn(sY+step*7,   "up_coins",     "desc_coins",    50,   'buy_coins');
         maxScroll = step * 7;
     } else {
-        createBtn(sY, "skin_gold", "desc_gold", 300, 'skin_gold', () => { currentSkin = 'gold'; refreshPlayerAppearance(scene); });
-        createBtn(sY+step, "skin_ghost", "desc_ghost", 300, 'skin_ghost', () => { currentSkin = 'ghost'; refreshPlayerAppearance(scene); });
-        createBtn(sY+step*2, "fx_blue_exp", "desc_blue_exp", 290, 'fx_blue', () => { currentExplosionColor = 0x00ffff; });
-        createBtn(sY+step*3, "fx_pink_exp", "desc_pink_exp", 200, 'fx_pink', () => { currentExplosionColor = 0xff00ff; });
+        createBtn(sY, "skin_gold", "desc_gold", 0, 'skin_gold', () => { currentSkin = 'gold'; refreshPlayerAppearance(scene); });
+        createBtn(sY+step, "skin_ghost", "desc_ghost", 0, 'skin_ghost', () => { currentSkin = 'ghost'; refreshPlayerAppearance(scene); });
+        createBtn(sY+step*2, "fx_blue_exp", "desc_blue_exp", 0, 'fx_blue', () => { currentExplosionColor = 0x00ffff; });
+        createBtn(sY+step*3, "fx_pink_exp", "desc_pink_exp", 0, 'fx_pink', () => { currentExplosionColor = 0xff00ff; });
         maxScroll = step * 4;
     }
 
@@ -3337,8 +3342,11 @@ async function syncUserData() {
     }
 }
 
-function shareDuel() {
-    const text = encodeURIComponent(TRANSLATIONS[lang].share_duel_text.replace("%lvl%", level));
+function shareDuel(status = 'win') {
+    let displayLvl = (status === 'win') ? (level - 1) : level;
+    let baseText = (status === 'win') ? TRANSLATIONS[lang].share_win_text : TRANSLATIONS[lang].share_loss_text;
+
+    const text = encodeURIComponent(baseText.replace("%lvl%", displayLvl));
     const url = `https://t.me/share/url?url=${encodeURIComponent(SHARE_LINK)}&text=${text}`;
 
     if (window.Telegram?.WebApp) {
