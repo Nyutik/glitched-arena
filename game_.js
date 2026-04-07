@@ -436,7 +436,7 @@ const config = {
     physics: { default: 'arcade', arcade: { gravity: { y: 0 } } },
     scene: { preload, create, update }
 };
-const game = new Phaser.Game(config);
+const game_ = new Phaser.Game(config);
 
 function getCompletedLevel() {
     return isVictory ? Math.max(1, level - 1) : Math.max(1, level);

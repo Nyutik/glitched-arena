@@ -1,0 +1,109 @@
+// ============================================
+// 05-EFFECTS.JS — Эффекты и визуал
+// ============================================
+// За что отвечает:
+// - showDamageText, showComboEffect
+// - triggerVictory, showRewardUI, showAdSafe
+// - applyGlitchEffect, startTitleGlitch
+// ============================================
+
+function showDamageText(scene, x, y, damage, color = '#00ff00', size = '16px') {
+    let txt = scene.add.text(x, y, `-${Math.floor(damage)}`, { fontFamily: 'Arial, sans-serif', fontSize: size, fill: color, fontWeight: 'bold', stroke: '#000', strokeThickness: 3, padding: 5 }).setDepth(100);
+    scene.tweens.add({ targets: txt, y: y - 100, x: x + Phaser.Math.Between(-40, 40), alpha: 0, scale: size === '26px' ? 1.5 : 1.2, duration: 900, onComplete: () => txt.destroy() });
+}
+
+function showComboEffect(scene) {
+    if (!scene || !scene.cameras || !scene.cameras.main || !comboPopText || !player) return;
+    combo++;
+    playSound(scene, 'sfx_combo', { volume: 0.3 });
+    comboPopText.setPosition(player.x, player.y - 60).setText(`+${TRANSLATIONS[lang].combo_text} x${combo}`).setAlpha(1).setScale(1.2).setFill(combo >= 10 ? '#ff0000' : '#00ff00');
+    if (combo === 10 && !isGlitchMode) {
+        isGlitchMode = true; scene.cameras.main.setBackgroundColor('#ffffff'); scene.cameras.main.shake(5000, 0.007);
+        glitchText.setText(TRANSLATIONS[lang].hyper_glitch).setFill('#000000').setBackgroundColor('#ff0000');
+        scene.time.delayedCall(5000, () => {
+            isGlitchMode = false;
+            if (scene.cameras?.main) scene.cameras.main.setBackgroundColor('#000000');
+            if (glitchText && glitchText.active && glitchText.text === TRANSLATIONS[lang].hyper_glitch) { glitchText.setText(''); glitchText.setBackgroundColor(null); }
+        });
+    }
+    scene.tweens.killTweensOf(comboPopText);
+    scene.tweens.add({ targets: comboPopText, y: player.y - 120, alpha: 0, scale: combo >= 10 ? 2 : 1.6, duration: 600, ease: 'Quad.easeOut' });
+    if (combo % 5 === 0) { const reward = isGlitchMode ? 45 : 15; coinsThisRun += reward; updateHudTexts(); scene.cameras.main.flash(100, 255, 255, 255, 0.3); }
+}
+
+async function triggerVictory(scene) {
+    if (!scene || isDead || isVictory) return;
+    isVictory = true; isBossFight = false; isPhase2 = false; isPhase3 = false;
+    try { clearBattleTexts(scene); cleanupScreenFx(scene); if (roadBar) roadBar.clear().setVisible(false); if (overdriveBar) overdriveBar.clear().setVisible(false); if (scene.overheadGfx) scene.overheadGfx.clear(); if (bHealthLabel) bHealthLabel.setVisible(false); if (pHealthLabel) pHealthLabel.setVisible(false); if (distanceText) distanceText.setVisible(false); } catch (e) { console.warn("Cleanup error:", e); }
+    if (player) player.setVisible(false); if (trailEmitter) trailEmitter.stop();
+    if (bossTrail) { bossTrail.stop(); bossTrail.setVisible(false); }
+    scene.shootEvent = safeRemoveTimer(scene.shootEvent); scene.bossShootEvent = safeRemoveTimer(scene.bossShootEvent); scene.turretShootEvent = safeRemoveTimer(scene.turretShootEvent); scene.minionTimer = safeRemoveTimer(scene.minionTimer); scene.phraseTimer = safeRemoveTimer(scene.phraseTimer); scene.teleportEvent = safeRemoveTimer(scene.teleportEvent); scene.itemTimer = safeRemoveTimer(scene.itemTimer); itemsTimer = safeRemoveTimer(itemsTimer); victoryTextJitter = safeRemoveTimer(victoryTextJitter);
+    try { bullets?.clear(true, true); playerBullets?.clear(true, true); minionBullets?.clear(true, true); minions?.clear(true, true); obstacles?.clear(true, true); bossShields?.clear(true, true); } catch (e) { console.warn("Group clear error:", e); }
+    if (bossTurretL) { bossTurretL.destroy(); bossTurretL = null; } if (bossTurretR) { bossTurretR.destroy(); bossTurretR = null; }
+    const completedLevel = level; level++; bestLevel = Math.max(bestLevel, completedLevel); bossesKilled += 1; saveProgress();
+    if (hasTelegramUser()) submitScore({ level: level, best_level: bestLevel });
+    const explodeCol = currentExplosionColor || 0xff0000; const hexColor = `#${explodeCol.toString(16).padStart(6, '0')}`;
+    if (boss && boss.active) {
+        scene.tweens.add({ targets: boss, scale: 0.1, alpha: 0.5, duration: 600, ease: 'Back.easeIn', onComplete: () => {
+            scene.cameras.main.flash(800, 255, 255, 255, 0.5); scene.cameras.main.shake(1000, 0.04);
+            if (boss) boss.setVisible(false);
+            for (let i = 0; i < 12; i++) { let ray = scene.add.rectangle(boss.x, boss.y, 2, 1000, explodeCol).setOrigin(0.5, 0.5).setAlpha(0.8).setDepth(6000); ray.angle = i * 30; scene.tweens.add({ targets: ray, width: 50, alpha: 0, duration: 1500, ease: 'Cubic.easeOut', onComplete: () => ray.destroy() }); }
+            for (let i = 0; i < 4; i++) { let wave = scene.add.circle(boss.x, boss.y, 10, explodeCol, 0.4).setDepth(5500).setStrokeStyle(4, 0xffffff); scene.tweens.add({ targets: wave, radius: 800, alpha: 0, duration: 1000 + (i * 200), onComplete: () => wave.destroy() }); }
+            for (let i = 0; i < 40; i++) { let chunk = scene.add.rectangle(boss.x, boss.y, 8, 8, i % 2 === 0 ? explodeCol : 0xffffff).setDepth(5000); scene.physics.add.existing(chunk); let angle = Math.random() * Math.PI * 2; let speed = Phaser.Math.Between(400, 1000); chunk.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed); scene.tweens.add({ targets: chunk, alpha: 0, scale: 0, duration: 2000, onComplete: () => chunk.destroy() }); }
+            let vText = scene.add.text(187, 333, TRANSLATIONS[lang].core_destroyed, { fontFamily: 'Courier New', fontSize: '32px', fill: '#ffffff', fontWeight: 'bold', stroke: hexColor, strokeThickness: 12, align: 'center', wordWrap: { width: 340 } }).setOrigin(0.5).setDepth(10000);
+            scene.tweens.add({ targets: vText, scale: {from: 0.8, to: 1.1}, duration: 200, yoyo: true, repeat: -1 });
+            scene.time.delayedCall(2500, () => { if (vText) vText.destroy(); showRewardUI(scene, null); });
+        }});
+    } else { showRewardUI(scene, null); }
+}
+
+function showRewardUI(scene, titleText) {
+    clearBattleTexts(scene); cleanupScreenFx(scene);
+    const container = scene.add.container(0, 0).setDepth(5001);
+    const bg = scene.add.graphics().fillStyle(0x000000, 0.9).fillRect(0, 0, 375, 667);
+    container.add(bg);
+    const earnedAmount = coinsThisRun;
+    const info = scene.add.text(187, 330, `${lang === 'ru' ? 'ДОБЫТО' : 'COLLECTED'}: ${earnedAmount} 💰`, { fontSize: '24px', fill: '#ffff00', fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5);
+    const doubleBtn = scene.add.text(187, 420, lang === 'ru' ? 'x2 ЗА РЕКЛАМУ' : 'x2 WITH AD', { fontSize: '20px', fill: '#ffffff', backgroundColor: '#004400', padding: { left: 15, right: 15, top: 10, bottom: 10 }, fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5).setInteractive();
+    const collectBtn = scene.add.text(187, 500, lang === 'ru' ? 'ПРОСТО ЗАБРАТЬ' : 'JUST COLLECT', { fontSize: '16px', fill: '#aaaaaa', padding: { left: 10, right: 10, top: 8, bottom: 8 }, fontFamily: 'Arial' }).setOrigin(0.5).setInteractive();
+    const duelBtn = scene.add.text(187, 560, ` ⚔️ ${TRANSLATIONS[lang].share_duel} `, { fontSize: '14px', fill: '#00ffff', padding: 10 }).setOrigin(0.5).setInteractive();
+    container.add([info, doubleBtn, collectBtn, duelBtn]);
+    duelBtn.on('pointerdown', () => shareDuel('win'));
+    doubleBtn.on('pointerdown', () => { showAdSafe(() => finalizeCollection(earnedAmount * 2)); });
+    collectBtn.on('pointerdown', () => { finalizeCollection(earnedAmount); });
+    async function finalizeCollection(finalSum) {
+        coins += finalSum; coinsThisRun = 0;
+        if (coins >= 5000 && !achievements.rich) achievements.rich = true;
+        isVictory = true; isShopOpen = false; isDead = false; isBossFight = false; isPhase2 = false; isPhase3 = false; isStarted = false;
+        clearBattleTexts(scene); cleanupScreenFx(scene);
+        if (boss && boss.active) { safeKillTweens(scene, boss); boss.setVisible(false); boss.setActive(true); boss.setAlpha(1); boss.setPosition(187, -200); boss.setAngle(0); boss.clearTint(); }
+        if (bossTrail) { bossTrail.setVisible(false); bossTrail.setAlpha(1); }
+        if (distanceText) distanceText.setText('').setVisible(false);
+        if (glitchText) { glitchText.setText('').setBackgroundColor(null).setAlpha(1).setVisible(false); }
+        saveProgress(); await submitScore();
+        container.destroy(); if (titleText && titleText.active) titleText.destroy();
+        showShop(scene, null, true);
+    }
+}
+
+async function showAdSafe(onDone) {
+    try {
+        const tgUser = getTelegramUser();
+        if (!window.Telegram?.WebApp || !tgUser?.id) { console.log('Adsgram unavailable outside Telegram, skip ad'); onDone?.(); return; }
+        if (!window.adController || typeof window.adController.show !== 'function') { console.log('Adsgram controller missing, skip ad'); onDone?.(); return; }
+        const result = await window.adController.show();
+        if (result?.done) onDone?.(); else alert(lang === 'ru' ? 'Досмотри рекламу до конца!' : 'Watch till the end!');
+    } catch (e) { console.log('Adsgram failure - silent bypass:', e); onDone?.(); }
+}
+
+function applyGlitchEffect(scene, textObject) {
+    if (!textObject || !textObject.active) return;
+    const originalX = textObject.x; const originalColor = textObject.style.color;
+    scene.time.delayedCall(1, () => { textObject.setX(originalX + Phaser.Math.Between(-8, 8)); textObject.setFill('#ff00ff'); textObject.setAlpha(0.7); });
+    scene.time.delayedCall(60, () => { textObject.setX(originalX); textObject.setFill(originalColor); textObject.setAlpha(1); });
+}
+
+function startTitleGlitch(scene, title) {
+    if (scene.glitchTimer) scene.glitchTimer.remove();
+    scene.glitchTimer = scene.time.addEvent({ delay: 2000, callback: () => applyGlitchEffect(scene, title), callbackScope: scene, loop: true });
+}
