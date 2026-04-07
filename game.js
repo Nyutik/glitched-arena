@@ -1741,8 +1741,10 @@ function useOverdrive() {
         .setAlpha(0.98)
         .setScale(1.35);
 
-    this.cameras.main.flash(180, 255, 255, 255, 0.25);
-    this.cameras.main.shake(220, 0.01);
+    // --- УЛУЧШЕННЫЕ ЭФФЕКТЫ ---
+    this.cameras.main.flash(200, 255, 255, 255, 0.3);
+    // Трясем дольше (1.2 сек) и сильнее (0.02 вместо 0.01)
+    this.cameras.main.shake(1200, 0.02); 
 
     this.tweens.add({
         targets: ultraLaser,
@@ -1752,8 +1754,13 @@ function useOverdrive() {
         onUpdate: () => {
             if (victoryTriggeredByLaser || !ultraLaser || !ultraLaser.active || !boss || !boss.active || isVictory || !isBossFight) return;
 
-            ultraLaser.x = player.x;
-            ultraLaser.y = player.y - 300;
+            // ЭФФЕКТ ВИБРАЦИИ ЛУЧА (Джиттер)
+            // Луч теперь "дрожит" вокруг игрока, создавая эффект нестабильной энергии
+            ultraLaser.x = player.x + (Math.random() * 10 - 5);
+            ultraLaser.y = player.y - 300 + (Math.random() * 4 - 2);
+            
+            // Мерцание альфы для эффекта горения
+            ultraLaser.alpha = 0.8 + Math.random() * 0.2;
 
             const now = this.time.now;
             if (now < ultraLaserTickAt) return;
@@ -1805,25 +1812,28 @@ async function triggerVictory(scene) {
     isPhase2 = false;
     isPhase3 = false;
 
-    // --- БЕЗОПАСНАЯ ОЧИСТКА ТЕКСТОВ ---
+    // 1. МГНОВЕННАЯ ЧИСТКА ГРАФИКИ И ТЕКСТОВ
     try {
         clearBattleTexts(scene);
         cleanupScreenFx(scene);
+        if (roadBar) roadBar.clear().setVisible(false);
+        if (overdriveBar) overdriveBar.clear().setVisible(false);
+        if (scene.overheadGfx) scene.overheadGfx.clear();
+        
+        // ПРИНУДИТЕЛЬНО СКРЫВАЕМ ОСТАТКИ ЖИЗНИ И ДИСТАНЦИИ
+        if (bHealthLabel) bHealthLabel.setVisible(false);
+        if (pHealthLabel) pHealthLabel.setVisible(false);
+        if (distanceText) distanceText.setVisible(false);
     } catch (e) { console.warn("Cleanup error:", e); }
 
-    victoryTextJitter = safeRemoveTimer(victoryTextJitter);
+    // Скрываем игрока и его шлейф сразу
+    if (player) player.setVisible(false);
+    if (trailEmitter) trailEmitter.stop();
 
-    // --- БЕЗОПАСНАЯ ОЧИСТКА ЭФФЕКТОВ ---
-    if (Array.isArray(victoryFx)) {
-        victoryFx.forEach(obj => {
-            try {
-                if (obj && obj.active) {
-                    if (obj.destroy) obj.destroy();
-                    else if (obj.setVisible) obj.setVisible(false);
-                }
-            } catch (e) {}
-        });
-        victoryFx = [];
+    // Останавливаем шлейф босса (чтобы не было красных пятен)
+    if (bossTrail) {
+        bossTrail.stop();
+        bossTrail.setVisible(false);
     }
 
     // --- ОСТАНОВКА ВСЕХ СОБЫТИЙ ---
@@ -1835,55 +1845,106 @@ async function triggerVictory(scene) {
     scene.teleportEvent = safeRemoveTimer(scene.teleportEvent);
     scene.itemTimer = safeRemoveTimer(scene.itemTimer);
     itemsTimer = safeRemoveTimer(itemsTimer);
+    victoryTextJitter = safeRemoveTimer(victoryTextJitter);
 
+    // Чистим все группы (включая ловушки-фантомы)
     try {
         bullets?.clear(true, true);
         playerBullets?.clear(true, true);
         minionBullets?.clear(true, true);
         minions?.clear(true, true);
-        obstacles?.clear(true, true);
+        obstacles?.clear(true, true); // Чистим стены и ловушки босса 35+
         bossShields?.clear(true, true);
     } catch (e) { console.warn("Group clear error:", e); }
 
-    if (bossTurretL) { try { bossTurretL.destroy(); } catch(e){} bossTurretL = null; }
-    if (bossTurretR) { try { bossTurretR.destroy(); } catch(e){} bossTurretR = null; }
+    if (bossTurretL) { bossTurretL.destroy(); bossTurretL = null; }
+    if (bossTurretR) { bossTurretR.destroy(); bossTurretR = null; }
 
-    if (scene.overheadGfx) {
-        try { scene.overheadGfx.clear(); } catch(e){}
-    }
-
-    // --- ЛОГИКА ПРОГРЕССА: УВЕЛИЧИВАЕМ УРОВЕНЬ СРАЗУ ---
+    // --- ЛОГИКА ПРОГРЕССА ---
     const completedLevel = level;
     level++; 
     bestLevel = Math.max(bestLevel, completedLevel);
     bossesKilled += 1;
-
     saveProgress();
 
     if (hasTelegramUser()) {
-        await submitScore({
-            level: level,
-            best_level: bestLevel
-        });
+        await submitScore({ level: level, best_level: bestLevel });
     }
+
+    // --- ФИНАЛЬНОЕ ШОУ (ВЗРЫВ) ---
+    const explodeCol = currentExplosionColor || 0xff0000;
+    const hexColor = `#${explodeCol.toString(16).padStart(6, '0')}`;
 
     if (boss && boss.active) {
+        // Сначала Implosion (сжатие)
         scene.tweens.add({
             targets: boss,
-            scale: 0,
-            alpha: 0,
-            duration: 500,
-            onComplete: () => { if (boss) boss.setVisible(false); }
+            scale: 0.1,
+            alpha: 0.5,
+            duration: 600,
+            ease: 'Back.easeIn',
+            onComplete: () => {
+                // ТЕПЕРЬ СУПЕРНОВА
+                scene.cameras.main.flash(800, 255, 255, 255, 0.5);
+                scene.cameras.main.shake(1000, 0.04);
+                
+                if (boss) boss.setVisible(false);
+
+                // 1. ЛУЧИ (God Rays) в цвете босса
+                for (let i = 0; i < 12; i++) {
+                    let ray = scene.add.rectangle(boss.x, boss.y, 2, 1000, explodeCol).setOrigin(0.5, 0.5).setAlpha(0.8).setDepth(6000);
+                    ray.angle = i * 30;
+                    scene.tweens.add({
+                        targets: ray,
+                        width: 50,
+                        alpha: 0,
+                        duration: 1500,
+                        ease: 'Cubic.easeOut',
+                        onComplete: () => ray.destroy()
+                    });
+                }
+
+                // 2. УДАРНЫЕ ВОЛНЫ
+                for (let i = 0; i < 4; i++) {
+                    let wave = scene.add.circle(boss.x, boss.y, 10, explodeCol, 0.4).setDepth(5500).setStrokeStyle(4, 0xffffff);
+                    scene.tweens.add({
+                        targets: wave,
+                        radius: 800,
+                        alpha: 0,
+                        duration: 1000 + (i * 200),
+                        onComplete: () => wave.destroy()
+                    });
+                }
+
+                // 3. ОСКОЛКИ
+                for (let i = 0; i < 40; i++) {
+                    let chunk = scene.add.rectangle(boss.x, boss.y, 8, 8, i % 2 === 0 ? explodeCol : 0xffffff).setDepth(5000);
+                    scene.physics.add.existing(chunk);
+                    let angle = Math.random() * Math.PI * 2;
+                    let speed = Phaser.Math.Between(400, 1000);
+                    chunk.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+                    scene.tweens.add({ targets: chunk, alpha: 0, scale: 0, duration: 2000, onComplete: () => chunk.destroy() });
+                }
+
+                // 4. ТЕКСТ ПОБЕДЫ (С твоим цветом!)
+                let vText = scene.add.text(187, 333, TRANSLATIONS[lang].core_destroyed, {
+                    fontFamily: 'Courier New', fontSize: '32px', fill: '#ffffff', fontWeight: 'bold',
+                    stroke: hexColor, strokeThickness: 12, align: 'center', wordWrap: { width: 340 }
+                }).setOrigin(0.5).setDepth(10000);
+
+                scene.tweens.add({ targets: vText, scale: {from: 0.8, to: 1.1}, duration: 200, yoyo: true, repeat: -1 });
+                
+                // Удаляем текст перед анонсом наград
+                scene.time.delayedCall(2500, () => {
+                    if (vText) vText.destroy();
+                    showRewardUI(scene, null);
+                });
+            }
         });
-    }
-
-    scene.cameras.main.flash(500, 255, 255, 255, 0.4);
-    scene.cameras.main.shake(500, 0.02);
-
-    // Гарантированный вызов окна награды через 2 секунды
-    scene.time.delayedCall(2000, () => {
+    } else {
+        // Если босса нет, просто показываем награды
         showRewardUI(scene, null);
-    });
+    }
 }
 
 
