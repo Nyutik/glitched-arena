@@ -1086,6 +1086,30 @@ function startRun(scene) {
     ensureBgm(scene);
     scene.isFirstMove = false;
 
+    // --- ФИНАЛЬНАЯ ЗАЩИТА УПРАВЛЕНИЯ ---
+    // Удаляем старые (на всякий случай) и вешаем новые обработчики при каждом старте
+    scene.input.off('pointerdown');
+    scene.input.off('pointermove');
+
+    scene.input.on('pointerdown', p => {
+        if (!isStarted || isShopOpen || isDead || isPaused || !player?.active) return;
+        if (p.y < 90) return;
+        scene.isFirstMove = true;
+        player.x = Phaser.Math.Clamp(p.x, 20, 355);
+        player.y = Phaser.Math.Clamp(p.y + yOffset, 80, 620);
+        if (shieldAura) shieldAura.setPosition(player.x, player.y);
+        if (overdrive >= 100 && !isVictory && isBossFight) useOverdrive.call(scene);
+    });
+
+    scene.input.on('pointermove', p => {
+        if (!isStarted || isShopOpen || isDead || isPaused || !player?.active) return;
+        if (scene.isFirstMove) {
+            player.x = Phaser.Math.Clamp(p.x, 20, 355);
+            player.y = Phaser.Math.Clamp(p.y + yOffset, 80, 620);
+            if (shieldAura) shieldAura.setPosition(player.x, player.y);
+        }
+    });
+
     scene.obstacleTimer = scene.time.addEvent({
         delay: Math.max(460, 1220 - level * 28),
         callback: spawnObstacle,
@@ -1781,20 +1805,28 @@ async function triggerVictory(scene) {
     isPhase2 = false;
     isPhase3 = false;
 
-    clearBattleTexts(scene);
-    cleanupScreenFx(scene);
+    // --- БЕЗОПАСНАЯ ОЧИСТКА ТЕКСТОВ ---
+    try {
+        clearBattleTexts(scene);
+        cleanupScreenFx(scene);
+    } catch (e) { console.warn("Cleanup error:", e); }
 
     victoryTextJitter = safeRemoveTimer(victoryTextJitter);
 
+    // --- БЕЗОПАСНАЯ ОЧИСТКА ЭФФЕКТОВ ---
     if (Array.isArray(victoryFx)) {
         victoryFx.forEach(obj => {
             try {
-                if (obj && obj.active) obj.destroy();
+                if (obj && obj.active) {
+                    if (obj.destroy) obj.destroy();
+                    else if (obj.setVisible) obj.setVisible(false);
+                }
             } catch (e) {}
         });
         victoryFx = [];
     }
 
+    // --- ОСТАНОВКА ВСЕХ СОБЫТИЙ ---
     scene.shootEvent = safeRemoveTimer(scene.shootEvent);
     scene.bossShootEvent = safeRemoveTimer(scene.bossShootEvent);
     scene.turretShootEvent = safeRemoveTimer(scene.turretShootEvent);
@@ -1803,188 +1835,53 @@ async function triggerVictory(scene) {
     scene.teleportEvent = safeRemoveTimer(scene.teleportEvent);
     scene.itemTimer = safeRemoveTimer(scene.itemTimer);
     itemsTimer = safeRemoveTimer(itemsTimer);
-    bossPhraseHideCall = safeRemoveTimer(bossPhraseHideCall);
-    victoryTextJitter = safeRemoveTimer(victoryTextJitter);
 
-    bullets?.clear(true, true);
-    playerBullets?.clear(true, true);
-    minionBullets?.clear(true, true);
-    minions?.clear(true, true);
-    obstacles?.clear(true, true);
-    bossShields?.clear(true, true);
+    try {
+        bullets?.clear(true, true);
+        playerBullets?.clear(true, true);
+        minionBullets?.clear(true, true);
+        minions?.clear(true, true);
+        obstacles?.clear(true, true);
+        bossShields?.clear(true, true);
+    } catch (e) { console.warn("Group clear error:", e); }
 
-    if (bossTurretL) { safeKillTweens(scene, bossTurretL); bossTurretL.destroy(); bossTurretL = null; }
-    if (bossTurretR) { safeKillTweens(scene, bossTurretR); bossTurretR.destroy(); bossTurretR = null; }
-    if (bossTurretLTrail) { safeKillTweens(scene, bossTurretLTrail); bossTurretLTrail.destroy(); bossTurretLTrail = null; }
-    if (bossTurretRTrail) { safeKillTweens(scene, bossTurretRTrail); bossTurretRTrail.destroy(); bossTurretRTrail = null; }
+    if (bossTurretL) { try { bossTurretL.destroy(); } catch(e){} bossTurretL = null; }
+    if (bossTurretR) { try { bossTurretR.destroy(); } catch(e){} bossTurretR = null; }
 
     if (scene.overheadGfx) {
-        scene.overheadGfx.clear();
-        scene.overheadGfx.destroy();
-        scene.overheadGfx = null;
+        try { scene.overheadGfx.clear(); } catch(e){}
     }
 
-    if (overdriveBar) {
-        overdriveBar.clear();
-        overdriveBar.setVisible(false);
-    }
-
-    if (roadBar) {
-        roadBar.clear();
-        roadBar.setVisible(false);
-    }
-
-    [pHealthLabel, bHealthLabel, distanceText].forEach(t => {
-        if (t && t.active) t.setAlpha(0).setVisible(false);
-    });
-
-    if (glitchText && glitchText.active) {
-        glitchText
-            .setText('')
-            .setBackgroundColor(null)
-            .setAlpha(1)
-            .setVisible(false);
-    }
-
-    if (player && player.active) {
-        player.setVisible(false);
-    }
-    if (trailEmitter) trailEmitter.stop();
-
-    bestLevel = Math.max(bestLevel, level);
-    bestDistance = Math.max(bestDistance, Math.floor(distance));
+    // --- ЛОГИКА ПРОГРЕССА: УВЕЛИЧИВАЕМ УРОВЕНЬ СРАЗУ ---
+    const completedLevel = level;
+    level++; 
+    bestLevel = Math.max(bestLevel, completedLevel);
     bossesKilled += 1;
 
-    updateHudTexts();
     saveProgress();
 
     if (hasTelegramUser()) {
-        await submitScore();
+        await submitScore({
+            level: level,
+            best_level: bestLevel
+        });
     }
-
-    const explodeCol = currentExplosionColor || 0xff0000;
-    const hexColor = `#${explodeCol.toString(16).padStart(6, '0')}`;
 
     if (boss && boss.active) {
-        safeKillTweens(scene, boss);
-
         scene.tweens.add({
             targets: boss,
-            scaleX: boss.scaleX * 0.25,
-            scaleY: boss.scaleY * 0.25,
+            scale: 0,
             alpha: 0,
-            angle: boss.angle + 40,
-            duration: 700,
-            ease: 'Expo.easeIn',
-            onComplete: () => {
-                if (boss && boss.active) {
-                    boss.setVisible(false);
-                    boss.setActive(false);
-                }
-            }
+            duration: 500,
+            onComplete: () => { if (boss) boss.setVisible(false); }
         });
     }
 
-    scene.physics.world.timeScale = 1;
-    scene.cameras.main.flash(600, 255, 255, 255, 0.35);
-    scene.cameras.main.shake(900, 0.03);
+    scene.cameras.main.flash(500, 255, 255, 255, 0.4);
+    scene.cameras.main.shake(500, 0.02);
 
-    for (let i = 0; i < 4; i++) {
-        const wave = scene.add.circle(boss.x, boss.y, 14, explodeCol, 0.35)
-            .setDepth(5500)
-            .setStrokeStyle(3, 0xffffff, 0.9);
-
-        victoryFx.push(wave);
-
-        scene.tweens.add({
-            targets: wave,
-            radius: 220 + i * 120,
-            alpha: 0,
-            duration: 700 + i * 180,
-            ease: 'Cubic.easeOut',
-            onComplete: () => {
-                if (wave && wave.active) wave.destroy();
-            }
-        });
-    }
-
-    for (let i = 0; i < 36; i++) {
-        const chunk = scene.add.rectangle(
-            boss.x,
-            boss.y,
-            Phaser.Math.Between(6, 12),
-            Phaser.Math.Between(6, 12),
-            i % 2 === 0 ? explodeCol : 0xffffff
-        ).setDepth(5000);
-
-        scene.physics.add.existing(chunk);
-        const angle = Math.random() * Math.PI * 2;
-        const speed = Phaser.Math.Between(260, 760);
-        chunk.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
-        chunk.body.setAngularVelocity(Phaser.Math.Between(-700, 700));
-
-        scene.tweens.add({
-            targets: chunk,
-            alpha: 0,
-            scaleX: 0,
-            scaleY: 0,
-            duration: Phaser.Math.Between(900, 1600),
-            ease: 'Quad.easeOut',
-            onComplete: () => {
-                if (chunk && chunk.active) chunk.destroy();
-            }
-        });
-    }
-
-    const vText = scene.add.text(187, 333, TRANSLATIONS[lang].core_destroyed, {
-        fontFamily: 'Courier New',
-        fontSize: '28px',
-        fill: '#ffffff',
-        fontWeight: 'bold',
-        stroke: hexColor,
-        strokeThickness: 8,
-        align: 'center',
-        wordWrap: { width: 320, useAdvancedWrap: true },
-        lineSpacing: 3
-    }).setOrigin(0.5).setDepth(10000).setAlpha(0);
-
-    victoryFx.push(vText);
-
-    scene.tweens.add({
-        targets: vText,
-        alpha: 1,
-        scale: { from: 1.08, to: 1 },
-        duration: 220,
-        ease: 'Back.easeOut'
-    });
-
-    victoryTextJitter = scene.time.addEvent({
-        delay: 60,
-        loop: true,
-        callback: () => {
-            if (!vText || !vText.active || !isVictory) {
-                victoryTextJitter = safeRemoveTimer(victoryTextJitter);
-                return;
-            }
-            vText.setX(187 + Phaser.Math.Between(-3, 3));
-        }
-    });
-
-    if (playerHealth >= maxPlayerHealth && !achievements.flawless) {
-        achievements.flawless = true;
-    }
-
-    scene.time.delayedCall(2600, () => {
-        victoryTextJitter = safeRemoveTimer(victoryTextJitter);
-
-        if (vText && vText.active) {
-            vText.setX(187);
-        }
-
-        if (glitchText && glitchText.active) {
-            glitchText.setText('').setBackgroundColor(null).setAlpha(1);
-        }
-
+    // Гарантированный вызов окна награды через 2 секунды
+    scene.time.delayedCall(2000, () => {
         showRewardUI(scene, null);
     });
 }
@@ -2392,7 +2289,7 @@ function showShop(scene, mainMenu, fromVictory = false) {
 
 
     if (fromVictory) {
-        const nextSector = level + 1;
+        const nextSector = level;
         const nextLabel = `${TRANSLATIONS[lang].deploy_btn} ${nextSector}`
 
         const nextBg = scene.add.rectangle(187, 545, 250, 50, 0x003333)
@@ -2422,32 +2319,16 @@ function showShop(scene, mainMenu, fromVictory = false) {
         });
 
         nextBg.on('pointerdown', async () => {
-            const nextLevel = level + 1;
-            const nextBestLevel = Math.max(bestLevel, nextLevel);
-
             nextBg.disableInteractive();
-            nextTxt.setText(lang === 'ru' ? 'СОХРАНЕНИЕ...' : 'SAVING...');
+            nextTxt.setText(lang === 'ru' ? 'ЗАПУСК...' : 'LAUNCHING...');
 
-            console.log(`[Sync] Transition to level ${nextLevel}. Current best: ${nextBestLevel}`);
+            console.log(`[Shop] Launching next sector: ${level}`);
 
             try {
+                // Синхронизируем текущий уровень (на всякий случай)
                 if (hasTelegramUser()) {
-                    const success = await submitScore({
-                        level: nextLevel,
-                        best_level: nextBestLevel
-                    });
-                    
-                    if (success) {
-                        console.log('✅ Level synced to cloud before transition');
-                    } else {
-                        console.warn('⚠️ Cloud sync failed, level will be synced on next run');
-                    }
+                    await submitScore();
                 }
-
-                // Обновляем локальные данные В ЛЮБОМ СЛУЧАЕ, чтобы игрок мог играть дальше
-                level = nextLevel;
-                bestLevel = nextBestLevel;
-                runGoal = 700 + (level - 1) * 100;
 
                 scene.input.off('wheel');
                 overlay.destroy();
@@ -2463,12 +2344,7 @@ function showShop(scene, mainMenu, fromVictory = false) {
                 saveProgress();
                 scene.scene.restart();
             } catch (e) {
-                console.error('❌ Critical error during level transition:', e);
-                // В случае критической ошибки всё равно даем играть локально
-                level = nextLevel;
-                bestLevel = nextBestLevel;
-                runGoal = 700 + (level - 1) * 100;
-                saveProgress();
+                console.error('❌ Error during next sector launch:', e);
                 scene.scene.restart();
             }
         });
@@ -3596,8 +3472,8 @@ async function showLeaderboard(scene, mainMenu) {
     overlay.add(backLabel);
 
     backBtn.on('pointerdown', () => {
-        scene.input.off('pointermove');
-        scene.input.off('wheel');
+        // УДАЛЯЕМ ОПАСНЫЕ СТРОКИ off('pointermove') и off('wheel') здесь, 
+        // так как они удаляют ВСЁ управление в игре.
         overlay.destroy();
         mainMenu.setVisible(true);
         if (typeof startTitleGlitch === 'function') {
