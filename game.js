@@ -1084,6 +1084,7 @@ function startRun(scene) {
     updateHudTexts();
 
     ensureBgm(scene);
+    scene.isFirstMove = false;
 
     scene.obstacleTimer = scene.time.addEvent({
         delay: Math.max(460, 1220 - level * 28),
@@ -3783,11 +3784,11 @@ async function showLeaderboard(scene, mainMenu) {
         const listHeight = Math.max(0, (data.length + 3) * 45);
         const maxY = Math.max(0, listHeight - 420);
 
-        scene.input.on('wheel', (p, o, dx, dy) => {
+        const onLeaderboardWheel = (p, o, dx, dy) => {
             listContainer.y = Phaser.Math.Clamp(listContainer.y - dy, -maxY, 0);
-        });
+        };
 
-        scene.input.on('pointermove', (p) => {
+        const onLeaderboardMove = (p) => {
             if (p.isDown) {
                 listContainer.y = Phaser.Math.Clamp(
                     listContainer.y + p.y - p.prevPosition.y,
@@ -3795,8 +3796,20 @@ async function showLeaderboard(scene, mainMenu) {
                     0
                 );
             }
-        });
+        };
 
+        scene.input.on('wheel', onLeaderboardWheel);
+        scene.input.on('pointermove', onLeaderboardMove);
+
+        backBtn.on('pointerdown', () => {
+            scene.input.off('wheel', onLeaderboardWheel);
+            scene.input.off('pointermove', onLeaderboardMove);
+            overlay.destroy();
+            mainMenu.setVisible(true);
+            if (typeof startTitleGlitch === 'function') {
+                startTitleGlitch(scene, mainMenu.titleRef);
+            }
+        });
     } catch (e) {
         console.error(e);
         loadingText.setText(TRANSLATIONS[lang].db_error).setFill('#ff0000');
