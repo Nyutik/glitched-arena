@@ -85,8 +85,11 @@ async def submit_score(data: ScoreData):
             except:
                 merged_upgrades[key] = val or merged_upgrades.get(key, 0)
 
-        merged_level = max(int(data.level or 0), int(old.get("level", 0)))
-        merged_best_level = max(int(data.best_level or 0), int(old.get("best_level", 0)), merged_level)
+        new_level = int(data.level or 0)
+        new_best = int(data.best_level or 0)
+        merged_level = max(new_level, int(old.get("level", 0)))
+        # Рекорд - это либо старый рекорд, либо новый присланный, либо мы только что прошли уровень
+        merged_best_level = max(new_best, int(old.get("best_level", 0)), int(old.get("level", 0)))
 
         payload = {
             "telegram_id": data.telegram_id,

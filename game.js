@@ -1772,7 +1772,7 @@ function useOverdrive() {
     });
 }
 
-function triggerVictory(scene) {
+async function triggerVictory(scene) {
     if (!scene || isDead || isVictory) return;
 
     isVictory = true;
@@ -1850,8 +1850,7 @@ function triggerVictory(scene) {
     }
     if (trailEmitter) trailEmitter.stop();
 
-    const justFinishedLevel = level;
-    bestLevel = Math.max(bestLevel, justFinishedLevel);
+    bestLevel = Math.max(bestLevel, level);
     bestDistance = Math.max(bestDistance, Math.floor(distance));
     bossesKilled += 1;
 
@@ -1859,7 +1858,7 @@ function triggerVictory(scene) {
     saveProgress();
 
     if (hasTelegramUser()) {
-        submitScore();
+        await submitScore();
     }
 
     const explodeCol = currentExplosionColor || 0xff0000;
@@ -2046,7 +2045,7 @@ function showRewardUI(scene, titleText) {
         finalizeCollection(earnedAmount);
     });
 
-    function finalizeCollection(finalSum) {
+    async function finalizeCollection(finalSum) {
         coins += finalSum;
         coinsThisRun = 0;
 
@@ -2090,7 +2089,7 @@ function showRewardUI(scene, titleText) {
         }
 
         saveProgress();
-        submitScore();
+        await submitScore();
 
         container.destroy();
         if (titleText && titleText.active) titleText.destroy();
@@ -3530,17 +3529,18 @@ function getBossIntel() {
     }
 }
 
-async function submitScore() {
+async function submitScore(manualData = null) {
     const tgUser = getTelegramUser();
     if (!tgUser?.id) return false;
 
     try {
+        // Если передали данные вручную (например, из магазина) - берем их, иначе глобальные
         const payload = {
             telegram_id: tgUser.id,
             username: tgUser.first_name || tgUser.username || 'PILOT',
             score: Math.floor(bestDistance),
-            level: Math.max(level, bestLevel),
-            best_level: Math.max(bestLevel, level),
+            level: manualData ? manualData.level : level,
+            best_level: manualData ? manualData.best_level : bestLevel,
             explosion_color: currentExplosionColor,
             skin: currentSkin,
             shape: currentShape,
@@ -3557,30 +3557,14 @@ async function submitScore() {
             body: JSON.stringify(payload)
         });
 
-        if (!response.ok) {
-            const errText = await response.text();
-            console.error('submitScore HTTP error', response.status, errText);
-            return;
+        if (response.ok) {
+            const res = await response.json();
+            console.log('✅ Синхронизация успешна:', res);
+            return true;
         }
-
-        const res = await response.json();
-
-        if (typeof res.merged_level === 'number') {
-            level = Math.max(level, res.merged_level);
-        }
-        if (typeof res.merged_best_level === 'number') {
-            bestLevel = Math.max(bestLevel, res.merged_best_level);
-        }
-        if (typeof res.merged_score === 'number') {
-            bestDistance = Math.max(bestDistance, res.merged_score);
-        }
-
-        saveProgress();
-        updateHudTexts();
-        console.log('submitScore result', res);
-        return true;
+        return false;
     } catch (e) {
-        console.error('submitScore error', e);
+        console.error('❌ Ошибка submitScore:', e);
         return false;
     }
 }
