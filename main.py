@@ -71,9 +71,13 @@ async def get_invoice(item_type: str, user_id: int, username: str):
 async def submit_score(data: ScoreData):
     try:
         current_date = datetime.now().isoformat()
+        print(f"[Sync] Incoming score from {data.username} (ID: {data.telegram_id}): Level={data.level}, Best={data.best_level}")
 
         existing = supabase.table("leaderboard").select("*").eq("telegram_id", data.telegram_id).execute()
         old = existing.data[0] if existing.data else {}
+
+        if old:
+            print(f"[Sync] Existing data for {data.telegram_id}: Level={old.get('level')}, Best={old.get('best_level')}")
 
         old_upgrades = old.get("upgrades") or {}
         new_upgrades = data.upgrades or {}
@@ -87,9 +91,10 @@ async def submit_score(data: ScoreData):
 
         new_level = int(data.level or 0)
         new_best = int(data.best_level or 0)
+        
+        # Гарантируем, что уровень в базе не откатывается назад
         merged_level = max(new_level, int(old.get("level", 0)))
-        # Рекорд - это либо старый рекорд, либо новый присланный, либо мы только что прошли уровень
-        merged_best_level = max(new_best, int(old.get("best_level", 0)), int(old.get("level", 0)))
+        merged_best_level = max(new_best, int(old.get("best_level", 0)), merged_level)
 
         payload = {
             "telegram_id": data.telegram_id,
@@ -108,7 +113,9 @@ async def submit_score(data: ScoreData):
             "score_date": current_date
         }
 
+        print(f"[Sync] Upserting payload: Level={payload['level']}, Best={payload['best_level']}")
         res = supabase.table("leaderboard").upsert(payload, on_conflict="telegram_id").execute()
+        
         return {
             "status": "ok",
             "merged_level": payload["level"],
@@ -116,7 +123,7 @@ async def submit_score(data: ScoreData):
             "merged_score": payload["score"]
         }
     except Exception as e:
-        print(f"Ошибка submit_score: {e}")
+        print(f"❌ Ошибка submit_score: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/get_leaderboard")

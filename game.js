@@ -2421,43 +2421,56 @@ function showShop(scene, mainMenu, fromVictory = false) {
         });
 
         nextBg.on('pointerdown', async () => {
-        const nextLevel = level + 1;
-        const nextBestLevel = Math.max(bestLevel, nextLevel);
+            const nextLevel = level + 1;
+            const nextBestLevel = Math.max(bestLevel, nextLevel);
 
-        nextBg.disableInteractive();
-        nextTxt.setText(lang === 'ru' ? 'СОХРАНЕНИЕ...' : 'SAVING...');
+            nextBg.disableInteractive();
+            nextTxt.setText(lang === 'ru' ? 'СОХРАНЕНИЕ...' : 'SAVING...');
 
-        try {
-            if (hasTelegramUser()) {
-                await submitScore({
-                    level: nextLevel,
-                    best_level: nextBestLevel
-                });
+            console.log(`[Sync] Transition to level ${nextLevel}. Current best: ${nextBestLevel}`);
+
+            try {
+                if (hasTelegramUser()) {
+                    const success = await submitScore({
+                        level: nextLevel,
+                        best_level: nextBestLevel
+                    });
+                    
+                    if (success) {
+                        console.log('✅ Level synced to cloud before transition');
+                    } else {
+                        console.warn('⚠️ Cloud sync failed, level will be synced on next run');
+                    }
+                }
+
+                // Обновляем локальные данные В ЛЮБОМ СЛУЧАЕ, чтобы игрок мог играть дальше
+                level = nextLevel;
+                bestLevel = nextBestLevel;
+                runGoal = 700 + (level - 1) * 100;
+
+                scene.input.off('wheel');
+                overlay.destroy();
+
+                isShopOpen = false;
+                isVictory = false;
+                isDead = false;
+                isBossFight = false;
+                isPhase2 = false;
+                isPhase3 = false;
+                shouldAutoStart = true;
+
+                saveProgress();
+                scene.scene.restart();
+            } catch (e) {
+                console.error('❌ Critical error during level transition:', e);
+                // В случае критической ошибки всё равно даем играть локально
+                level = nextLevel;
+                bestLevel = nextBestLevel;
+                runGoal = 700 + (level - 1) * 100;
+                saveProgress();
+                scene.scene.restart();
             }
-
-            level = nextLevel;
-            bestLevel = Math.max(bestLevel, nextLevel);
-            runGoal = 700 + (level - 1) * 100;
-
-            scene.input.off('wheel');
-            overlay.destroy();
-
-            isShopOpen = false;
-            isVictory = false;
-            isDead = false;
-            isBossFight = false;
-            isPhase2 = false;
-            isPhase3 = false;
-            shouldAutoStart = true;
-
-            saveProgress();
-            scene.scene.restart();
-        } catch (e) {
-            console.error('next sector save failed', e);
-
-            level = nextLevel;
-            bestLevel = Math.max(bestLevel, nextLevel);
-            runGoal = 700 + (level - 1) * 100;
+        });
 
             scene.input.off('wheel');
             overlay.destroy();
