@@ -2372,19 +2372,19 @@ function bossShoot() {
         this.isSilenceEvent = true;
         let bgm = this.sound.get('bgm');
 
-        // 1. Выключаем музыку и пугаем игрока
         if (bgm && isSoundOn) bgm.pause();
-        glitchText.setText(TRANSLATIONS[lang].audio_glitch).setFill("#ff0000").setAlpha(1);
+        
+        // ВМЕСТО glitchText используем наш крутой BossPhrase!
+        showBossPhrase(this, TRANSLATIONS[lang].audio_glitch, "#ff0000", "#440000", 2000);
+        
         this.cameras.main.flash(500, 255, 0, 0, 0.2);
 
-        // 2. Через 2 секунды возвращаем музыку и пускаем супер-атаку
         this.time.delayedCall(2000, () => {
             if (bgm && isSoundOn) bgm.resume();
-            glitchText.setText("");
-
-            // Запускаем ГИПЕР-ВЕЕР
+            
+            // ГИПЕР-ВЕЕР после паузы
             let angleToPlayer = Phaser.Math.Angle.Between(boss.x, boss.y, player.x, player.y);
-            for (let i = -5; i <= 5; i++) { // Очень широкий и плотный веер
+            for (let i = -5; i <= 5; i++) {
                 let angle = angleToPlayer + (i * 0.1);
                 bullets.create(boss.x, boss.y, 'pixel')
                     .setVelocity(Math.cos(angle) * 550, Math.sin(angle) * 550)
@@ -3722,80 +3722,54 @@ function showBossPhrase(scene, msg, color = '#ff00ff', bgColor = null, duration 
     if (!bossPhraseText || !bossPhraseText.active) {
         bossPhraseText = scene.add.text(187, 250, '', {
             fontFamily: 'Arial, sans-serif',
-            fontSize: '18px',
+            fontSize: '20px',
             fill: color,
             fontWeight: 'bold',
             stroke: '#000000',
-            strokeThickness: 5,
+            strokeThickness: 6,
             align: 'center',
             wordWrap: { width: 300, useAdvancedWrap: true },
-            lineSpacing: 4,
-            padding: { left: 8, right: 8, top: 4, bottom: 4 }
-        })
-        .setOrigin(0.5)
-        .setDepth(130)
-        .setAlpha(0)
-        .setVisible(false);
+            lineSpacing: 4
+        }).setOrigin(0.5).setDepth(130);
     }
 
     safeKillTweens(scene, bossPhraseText);
 
-    const phraseX = Phaser.Math.Between(145, 230);
-    const phraseY = Phaser.Math.Between(215, 280);
-    const finalBg = bgColor || (color === '#ff0033' ? '#2a0000' : '#220022');
-
     bossPhraseText
         .setText(msg)
         .setFill(color)
-        .setBackgroundColor(finalBg)
-        .setScale(1.08)
-        .setAlpha(0)
+        .setBackgroundColor(bgColor)
+        .setAlpha(1)
         .setVisible(true)
-        .setPosition(phraseX, phraseY)
-        .setAngle(Phaser.Math.Between(-4, 4));
+        .setScale(1.1);
 
     scene.tweens.add({
         targets: bossPhraseText,
-        alpha: 1,
         scale: 1,
-        duration: 140,
-        ease: 'Quad.easeOut'
+        duration: 100,
+        ease: 'Back.easeOut'
     });
 
-    scene.tweens.add({
-        targets: bossPhraseText,
-        x: phraseX + Phaser.Math.Between(-8, 8),
-        y: phraseY + Phaser.Math.Between(-4, 4),
-        angle: Phaser.Math.Between(-2, 2),
-        duration: duration - 260,
-        ease: 'Sine.easeInOut',
-        yoyo: true
+    const jitter = scene.time.addEvent({
+        delay: 50,
+        loop: true,
+        callback: () => {
+            if (!bossPhraseText || !bossPhraseText.active) return;
+            bossPhraseText.setX(187 + (Math.random() * 4 - 2));
+        }
     });
 
     bossPhraseHideCall = scene.time.delayedCall(duration, () => {
-        if (!bossPhraseText || !bossPhraseText.active) {
-            bossPhraseHideCall = null;
-            return;
-        }
-
-        safeKillTweens(scene, bossPhraseText);
-
+        if (jitter) jitter.remove();
+        if (!bossPhraseText || !bossPhraseText.active) return;
         scene.tweens.add({
             targets: bossPhraseText,
             alpha: 0,
-            y: bossPhraseText.y - 10,
-            duration: 220,
+            duration: 200,
             onComplete: () => {
-                if (!bossPhraseText || !bossPhraseText.active) return;
-                bossPhraseText
-                    .setText('')
-                    .setVisible(false)
-                    .setBackgroundColor(null)
-                    .setScale(1)
-                    .setAngle(0)
-                    .setPosition(187, 250)
-                    .setAlpha(0);
-                bossPhraseHideCall = null;
+                if (bossPhraseText && bossPhraseText.active) {
+                    bossPhraseText.setVisible(false).setX(187);
+                }
             }
         });
     });
