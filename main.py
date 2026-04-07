@@ -85,20 +85,32 @@ async def submit_score(data: ScoreData):
 
         for key, val in new_upgrades.items():
             try:
-                merged_upgrades[key] = max(int(val), int(merged_upgrades.get(key, 0)))
+                # Безопасно достаем старое значение, учитывая возможный None в словаре
+                old_val = merged_upgrades.get(key)
+                if old_val is None: old_val = 0
+                
+                new_val_int = int(val) if val is not None else 0
+                old_val_int = int(old_val)
+                
+                merged_upgrades[key] = max(new_val_int, old_val_int)
             except:
-                merged_upgrades[key] = val or merged_upgrades.get(key, 0)
+                merged_upgrades[key] = val if val is not None else merged_upgrades.get(key, 0)
 
-        new_level = int(data.level or 0)
-        new_best = int(data.best_level or 0)
+        new_level = int(data.level) if data.level is not None else 0
+        new_best = int(data.best_level) if data.best_level is not None else 0
         
-        # Гарантируем, что уровень в базе не откатывается назад (обрабатываем None из БД)
-        db_level = int(old.get("level") or 0)
-        db_best = int(old.get("best_level") or 0)
-        db_score = int(old.get("score") or 0)
-        db_coins = int(old.get("coins") or 0)
-        db_total_dist = int(old.get("total_dist") or 0)
-        db_bosses_killed = int(old.get("bosses_killed") or 0)
+        # Гарантируем, что уровень в базе не откатывается назад (строгая обработка None)
+        def safe_int(val):
+            if val is None: return 0
+            try: return int(val)
+            except: return 0
+
+        db_level = safe_int(old.get("level"))
+        db_best = safe_int(old.get("best_level"))
+        db_score = safe_int(old.get("score"))
+        db_coins = safe_int(old.get("coins"))
+        db_total_dist = safe_int(old.get("total_dist"))
+        db_bosses_killed = safe_int(old.get("bosses_killed"))
 
         merged_level = max(new_level, db_level)
         merged_best_level = max(new_best, db_best, merged_level)
@@ -106,16 +118,16 @@ async def submit_score(data: ScoreData):
         payload = {
             "telegram_id": data.telegram_id,
             "username": data.username or old.get("username") or "PILOT",
-            "score": max(int(data.score or 0), db_score),
+            "score": max(safe_int(data.score), db_score),
             "level": merged_level,
             "best_level": merged_best_level,
             "explosion_color": data.explosion_color or old.get("explosion_color") or 0xff0000,
             "skin": data.skin or old.get("skin") or "classic",
             "shape": data.shape or old.get("shape") or "classic",
-            "coins": max(int(data.coins or 0), db_coins),
+            "coins": max(safe_int(data.coins), db_coins),
             "upgrades": merged_upgrades,
-            "total_dist": max(int(data.total_dist or 0), db_total_dist),
-            "bosses_killed": max(int(data.bosses_killed or 0), db_bosses_killed),
+            "total_dist": max(safe_int(data.total_dist), db_total_dist),
+            "bosses_killed": max(safe_int(data.bosses_killed), db_bosses_killed),
             "ship_name": data.ship_name or old.get("ship_name") or "RAZOR-01",
             "score_date": current_date
         }
