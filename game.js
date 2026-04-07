@@ -1868,7 +1868,8 @@ async function triggerVictory(scene) {
     saveProgress();
 
     if (hasTelegramUser()) {
-        await submitScore({ level: level, best_level: bestLevel });
+        // УБИРАЕМ await: отправляем данные в фоне, чтобы не ждать ответа сервера
+        submitScore({ level: level, best_level: bestLevel });
     }
 
     // --- ФИНАЛЬНОЕ ШОУ (ВЗРЫВ) ---
