@@ -92,23 +92,30 @@ async def submit_score(data: ScoreData):
         new_level = int(data.level or 0)
         new_best = int(data.best_level or 0)
         
-        # Гарантируем, что уровень в базе не откатывается назад
-        merged_level = max(new_level, int(old.get("level", 0)))
-        merged_best_level = max(new_best, int(old.get("best_level", 0)), merged_level)
+        # Гарантируем, что уровень в базе не откатывается назад (обрабатываем None из БД)
+        db_level = int(old.get("level") or 0)
+        db_best = int(old.get("best_level") or 0)
+        db_score = int(old.get("score") or 0)
+        db_coins = int(old.get("coins") or 0)
+        db_total_dist = int(old.get("total_dist") or 0)
+        db_bosses_killed = int(old.get("bosses_killed") or 0)
+
+        merged_level = max(new_level, db_level)
+        merged_best_level = max(new_best, db_best, merged_level)
 
         payload = {
             "telegram_id": data.telegram_id,
             "username": data.username or old.get("username") or "PILOT",
-            "score": max(int(data.score or 0), int(old.get("score", 0))),
+            "score": max(int(data.score or 0), db_score),
             "level": merged_level,
             "best_level": merged_best_level,
             "explosion_color": data.explosion_color or old.get("explosion_color") or 0xff0000,
             "skin": data.skin or old.get("skin") or "classic",
             "shape": data.shape or old.get("shape") or "classic",
-            "coins": max(int(data.coins or 0), int(old.get("coins", 0))),
+            "coins": max(int(data.coins or 0), db_coins),
             "upgrades": merged_upgrades,
-            "total_dist": max(int(data.total_dist or 0), int(old.get("total_dist", 0))),
-            "bosses_killed": max(int(data.bosses_killed or 0), int(old.get("bosses_killed", 0))),
+            "total_dist": max(int(data.total_dist or 0), db_total_dist),
+            "bosses_killed": max(int(data.bosses_killed or 0), db_bosses_killed),
             "ship_name": data.ship_name or old.get("ship_name") or "RAZOR-01",
             "score_date": current_date
         }
