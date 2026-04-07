@@ -2471,23 +2471,6 @@ function showShop(scene, mainMenu, fromVictory = false) {
                 scene.scene.restart();
             }
         });
-
-            scene.input.off('wheel');
-            overlay.destroy();
-
-            isShopOpen = false;
-            isVictory = false;
-            isDead = false;
-            isBossFight = false;
-            isPhase2 = false;
-            isPhase3 = false;
-            shouldAutoStart = true;
-
-            saveProgress();
-            scene.scene.restart();
-        }
-    });
-
     }
 }
 
