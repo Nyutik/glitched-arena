@@ -9,6 +9,53 @@
 // - spawnItem, collectItem, spawnObstacle
 // ============================================
 
+function showAchievement(scene, key, name, desc) {
+    const achOverlay = scene.add.container(0, 0).setDepth(8000);
+    const bg = scene.add.graphics().fillStyle(0x000000, 0.8).fillRect(0, 200, 375, 150);
+    const border = scene.add.rectangle(187, 275, 300, 100, 0x222222).setStrokeStyle(3, 0xffff00);
+    const icon = scene.add.text(60, 275, "🏆", { fontSize: '36px' }).setOrigin(0.5);
+    const titleTxt = scene.add.text(187, 240, TRANSLATIONS[lang].achievement_unlocked, { fontSize: '14px', fill: '#ffff00', fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5);
+    const nameTxt = scene.add.text(187, 265, name, { fontSize: '18px', fill: '#ffffff', fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5);
+    const descTxt = scene.add.text(187, 295, desc, { fontSize: '12px', fill: '#aaaaaa', fontFamily: 'Arial' }).setOrigin(0.5);
+    achOverlay.add([bg, border, icon, titleTxt, nameTxt, descTxt]);
+    scene.cameras.main.shake(200, 0.01);
+    if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+    scene.tweens.add({ targets: achOverlay, alpha: 0, delay: 2500, duration: 500, onComplete: () => achOverlay.destroy() });
+}
+
+function checkAchievements(scene) {
+    const isRu = lang === 'ru';
+    if (!achievements.marathon && bestDistance >= 5000) {
+        achievements.marathon = true;
+        showAchievement(scene, 'marathon', TRANSLATIONS[lang].marathons, TRANSLATIONS[lang].run_m);
+    }
+    if (!achievements.rich && coins >= 5000) {
+        achievements.rich = true;
+        showAchievement(scene, 'rich', TRANSLATIONS[lang].tycoon, TRANSLATIONS[lang].rich_credit);
+    }
+    if (!achievements.speedster && distance >= 2000) {
+        achievements.speedster = true;
+        showAchievement(scene, 'speedster', TRANSLATIONS[lang].speedster, TRANSLATIONS[lang].speed_desc);
+    }
+    if (!achievements.collector && coinsCollectedThisRun >= 1000) {
+        achievements.collector = true;
+        showAchievement(scene, 'collector', TRANSLATIONS[lang].collector, TRANSLATIONS[lang].collect_desc);
+    }
+    if (!achievements.survivor10 && bossesSurvived >= 10) {
+        achievements.survivor10 = true;
+        showAchievement(scene, 'survivor10', TRANSLATIONS[lang].survivor10, TRANSLATIONS[lang].surv10_desc);
+    }
+    if (!achievements.survivor50 && bossesSurvived >= 50) {
+        achievements.survivor50 = true;
+        showAchievement(scene, 'survivor50', TRANSLATIONS[lang].survivor50, TRANSLATIONS[lang].surv50_desc);
+    }
+    if (!achievements.bossSlayer && bossesKilled >= 25) {
+        achievements.bossSlayer = true;
+        showAchievement(scene, 'bossSlayer', TRANSLATIONS[lang].bossSlayer, TRANSLATIONS[lang].boss_desc);
+    }
+    saveProgress();
+}
+
 function handleDamage(scene, dmg) {
     if (isDead || isVictory || !isStarted) return;
     combo = 0;
@@ -59,6 +106,7 @@ function triggerDeath(scene) {
     lastRunState = { isDead: true, pendingDeath: true };
     if (scene.ovrText) { scene.ovrText.destroy(); scene.ovrText = null; }
     player.setVisible(false); player.setTint(0x333333); trailEmitter.stop();
+    if (secondCore) { secondCore.destroy(); secondCore = null; } if (scene?.dualCoreShootTimer) { scene.dualCoreShootTimer.remove(); scene.dualCoreShootTimer = null; }
     saveProgress();
     if (glitchText) glitchText.setText("").setBackgroundColor(null);
     scene.physics.pause();
@@ -109,6 +157,14 @@ function playerShoot() {
         playerBullets.create(player.x+18, player.y, 'pixel').setVelocityY(-750).setTint(bColor);
     }
     playerBullets.create(player.x, player.y-20, 'pixel').setVelocityY(-750).setTint(bColor);
+    if (currentShape === 'viper' && upgradeLevels.ship_viper > 0) {
+        viperShotCounter++;
+        if (viperShotCounter >= 5) {
+            viperShotCounter = 0;
+            playerBullets.create(player.x - 25, player.y + 5, 'pixel').setVelocity(-300, -600).setTint(bColor).setScale(0.6);
+            playerBullets.create(player.x + 25, player.y + 5, 'pixel').setVelocity(300, -600).setTint(bColor).setScale(0.6);
+        }
+    }
 }
 
 function useOverdrive() {
@@ -201,12 +257,88 @@ function startBossFight(scene) {
             }
         }, loop: true });
     } else if (level >= 30) { boss.setTint(0xffffff); if (bossTrail) bossTrail.setParticleTint(0xff00ff); glitchText.setText(TRANSLATIONS[lang].boss_detected).setFill("#ff00ff"); }
+    if (level >= 40) {
+        boss.setTint(0xff8800).setScale(1.6); if (bossTrail) bossTrail.setParticleTint(0xff8800);
+        glitchText.setText("!! THE WALL DETECTED !!").setFill("#ff8800").setBackgroundColor("#442200");
+        scene.tweens.add({ targets: boss, scale: { from: 1.4, to: 1.8 }, duration: 1000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        scene.wallZoneTimer = scene.time.addEvent({ delay: 3000, callback: () => {
+            if (isBossFight && !isVictory && !isDead && !isPaused) {
+                updateWallZone(scene);
+            }
+        }, loop: true });
+        updateWallZone(scene);
+    }
+    if (level >= 50) {
+        if (bossTrail) bossTrail.stop();
+        boss.setTint(0xff00ff).setScale(1.2);
+        bossHealth *= 1.5;
+        glitchText.setText("!! DUAL CORE DETECTED !!").setFill("#ff00ff").setBackgroundColor("#440044");
+        dualCoreAngle = 0;
+        secondCore = scene.add.circle(187, 160, 30, 0xff0000, 0.7).setStrokeStyle(3, 0xff6666).setDepth(150);
+        scene.tweens.add({ targets: boss, alpha: { from: 1, to: 0.3 }, duration: 500, yoyo: true, repeat: -1 });
+        scene.tweens.add({ targets: secondCore, alpha: { from: 0.7, to: 0.3 }, duration: 500, yoyo: true, repeat: -1 });
+        dualCores = [];
+    }
+    if (level >= 60) {
+        boss.setTint(0x00ffff).setScale(1.3);
+        glitchText.setText("!! THE STORM APPROACHES !!").setFill("#00ffff").setBackgroundColor("#004444");
+        bossHealth *= 1.3;
+        stormAngle = 0;
+        stormZoneCount = 3;
+    }
+    if (level >= 70) {
+        boss.setTint(0xaa00ff).setScale(1.5);
+        glitchText.setText("!! THE VOID RISES !!").setFill("#aa00ff").setBackgroundColor("#220033");
+        bossHealth *= 1.5;
+        absorbedBullets = 0;
+    }
+}
+
+function updateWallZone(scene) {
+    if (wallZoneGraphics) { wallZoneGraphics.destroy(); wallZoneGraphics = null; }
+    const zoneWidth = 125;
+    const zoneHeight = 667;
+    wallZoneGraphics = scene.add.graphics().setDepth(500);
+    currentWallZone = Phaser.Math.Between(0, 2);
+    for (let i = 0; i < 3; i++) {
+        if (i === currentWallZone) {
+            wallZoneGraphics.fillStyle(0x00ff00, 0.15);
+            wallZoneGraphics.fillRect(i * zoneWidth, 0, zoneWidth, zoneHeight);
+            wallZoneGraphics.lineStyle(4, 0x00ff00, 0.8);
+            wallZoneGraphics.strokeRect(i * zoneWidth, 0, zoneWidth, zoneHeight);
+        } else {
+            wallZoneGraphics.fillStyle(0xff0000, 0.25);
+            wallZoneGraphics.fillRect(i * zoneWidth, 0, zoneWidth, zoneHeight);
+            wallZoneGraphics.lineStyle(4, 0xff0000, 0.8);
+            wallZoneGraphics.strokeRect(i * zoneWidth, 0, zoneWidth, zoneHeight);
+        }
+    }
+    scene.time.delayedCall(2800, () => { if (wallZoneGraphics) { wallZoneGraphics.destroy(); wallZoneGraphics = null; } });
+}
+
+function isInSafeZone() {
+    if (level < 40 || !isBossFight) return true;
+    const zoneWidth = 125;
+    const playerZone = Math.floor(player.x / zoneWidth);
+    return playerZone === currentWallZone;
+}
+
+function isInStormZone() {
+    if (level < 60 || !isBossFight) return false;
+    const screenWidth = 375;
+    const sectorWidth = screenWidth / stormZoneCount;
+    const playerAngle = Math.atan2(player.y - 333, player.x - 187);
+    const normalizedAngle = ((playerAngle + Math.PI) % (Math.PI * 2)) / (Math.PI * 2);
+    const playerSector = Math.floor(normalizedAngle * stormZoneCount);
+    const rotatingSafeSector = Math.floor((stormAngle / (Math.PI * 2)) * stormZoneCount) % stormZoneCount;
+    return playerSector !== rotatingSafeSector;
 }
 
 function bossShoot() {
     if (isShopOpen || isDead || !isBossFight || isPaused || bullets.getLength() > 200) return;
     let baseBullets = 10 + Math.floor(level / 2);
     let count = isPhase3 ? 32 : (isPhase2 ? Math.min(26, baseBullets + 6) : Math.min(22, baseBullets));
+    if (level >= 50) count = Math.min(36, count + 10);
     let speed = isPhase3 ? 400 : (280 + level * 7);
     let patternType = Math.floor(this.time.now / 5000) % 2;
     let isSniperLevel = (level % 5 === 0);
@@ -224,7 +356,7 @@ function bossShoot() {
         });
         return;
     }
-    let bulletColor = level >= 35 ? 0x00ff00 : (isPhase2 ? 0xff0000 : 0xff00ff);
+    let bulletColor = level >= 50 ? 0xff00ff : (level >= 40 ? 0xff8800 : (level >= 35 ? 0x00ff00 : (isPhase2 ? 0xff0000 : 0xff00ff)));
     if (isPhase3) { for (let i = 0; i < count; i++) { let angle = i * (Math.PI * 2 / count) + Math.sin(this.time.now * 0.001) * 2; bullets.create(boss.x, boss.y, 'pixel').setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed).setScale(2).setTint(bulletColor); } }
     else if (patternType === 0) { for (let i = 0; i < count; i++) { let angle = i * (Math.PI * 2 / count); bullets.create(boss.x, boss.y, 'pixel').setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed).setScale(1.5).setTint(bulletColor); } }
     else { let angleToPlayer = Phaser.Math.Angle.Between(boss.x, boss.y, player.x, player.y); let spread = Math.max(0.2, 0.5 - level * 0.02); for (let i = -2; i <= 2; i++) { let angle = angleToPlayer + (i * spread); bullets.create(boss.x, boss.y, 'pixel').setVelocity(Math.cos(angle) * (speed + 40), Math.sin(angle) * (speed + 40)).setScale(1.5).setTint(bulletColor); } }
@@ -233,12 +365,25 @@ function bossShoot() {
 function hitBoss(b, bullet) {
     if (isVictory) return;
     if (bullet) bullet.destroy();
-    let dmg = 10 * currentStats.atk; bossHealth -= dmg;
+    let dmg = 10 * currentStats.atk;
+    if (level >= 40 && isInSafeZone()) dmg *= 1.5;
+    if (level >= 50) dmg *= 0.7;
+    if (level >= 70 && absorbedBullets > 0) {
+        const absorbBonus = Math.min(absorbedBullets * 0.05, 0.5);
+        dmg *= (1 + absorbBonus);
+        absorbedBullets = 0;
+    }
+    let isCrit = false;
+    if (currentSkin === 'crimson' && Math.random() < 0.05) { dmg *= 2; isCrit = true; }
+    bossHealth -= dmg;
     const hitX = bullet ? bullet.x : boss.x; const hitY = bullet ? bullet.y : boss.y;
     if (bullet) bullet.destroy();
-    showDamageText(this, hitX, hitY, dmg, '#00ff00', '16px');
+    showDamageText(this, hitX, hitY, dmg, isCrit ? '#ff0000' : '#00ff00', isCrit ? '22px' : '16px');
+    if (isCrit) { this.cameras.main.shake(50, 0.01); }
     coinsThisRun += 2; scoreText.setText(`${TRANSLATIONS[lang].credits}: ${coins + coinsThisRun}`);
-    let chargeBonus = 2 + (upgradeLevels.ultra * 1.5); overdrive = Math.min(100, overdrive + chargeBonus);
+    let chargeBonus = 2 + (upgradeLevels.ultra * 1.5);
+    if (currentSkin === 'plasma') chargeBonus *= 1.05;
+    overdrive = Math.min(100, overdrive + chargeBonus);
     boss.setTint(0x00ff00);
     this.time.delayedCall(80, () => { if (boss && !isDead) { if (level >= 35) boss.setTint(0x00ff00); else isPhase2 ? boss.setTint(0xff0000) : boss.clearTint(); } });
     let hM = level > 30 ? (13.5 + (level - 30) * 0.22) : (level * 0.45); let maxB = 400 * (1 + hM);
@@ -248,9 +393,12 @@ function hitBoss(b, bullet) {
             if (!isBossFight || isVictory || isDead) return;
             this.phraseTimer = this.time.addEvent({ delay: 3800, loop: true, callback: () => {
                 if (!isBossFight || isVictory || isDead) return;
-                const pool = isPhase2 ? TRANSLATIONS[lang].p2 : TRANSLATIONS[lang].p1;
+                let pool;
+                if (level >= 40) pool = isPhase2 ? TRANSLATIONS[lang].wall_p2 : TRANSLATIONS[lang].wall_p1;
+                else pool = isPhase2 ? TRANSLATIONS[lang].p2 : TRANSLATIONS[lang].p1;
                 const msg = Phaser.Utils.Array.GetRandom(pool);
-                const color = isPhase3 ? '#ffffff' : isPhase2 ? '#ff0000' : '#ff00ff';
+                let color = isPhase3 ? '#ffffff' : isPhase2 ? '#ff0000' : '#ff00ff';
+                if (level >= 40) color = isPhase2 ? '#ff0000' : '#ff8800';
                 const bg = isPhase3 ? '#440000' : null;
                 showBossPhrase(this, msg, color, bg, 2500);
             }});
@@ -297,6 +445,9 @@ function minionExplode(scene, x, y) {
         bullets.children.each(b => { if (b && b.active) { let dist = Phaser.Math.Distance.Between(x, y, b.x, b.y); if (dist < blast.radius) { b.destroy(); coinsThisRun += 1; } } });
     }, onComplete: () => blast.destroy() });
     if (upgradeLevels.omega > 0) { overdrive = Math.min(100, overdrive + 20); let chargeFlash = scene.add.circle(player.x, player.y, 40, 0xffff00, 0.5); scene.tweens.add({ targets: chargeFlash, scale: 2, alpha: 0, duration: 300, onComplete: () => chargeFlash.destroy() }); }
+    let coinBonus = 5;
+    if (currentSkin === 'solar') coinBonus = Math.floor(coinBonus * 1.1);
+    coinsThisRun += coinBonus; updateHudTexts();
     for(let i = 0; i < 15; i++) { let p = scene.add.rectangle(x, y, 4, 4, 0x00ff00); scene.physics.add.existing(p); p.body.setVelocity(Phaser.Math.Between(-300, 300), Phaser.Math.Between(-300, 300)); scene.time.delayedCall(400, () => p.destroy()); }
 }
 
@@ -322,7 +473,14 @@ function collectItem(p, item) {
     if (type === 'heart') { playerHealth = Math.min(maxPlayerHealth, playerHealth + 25); let txt = this.add.text(player.x, player.y, '+25 ' + TRANSLATIONS[lang].hp_label, { fontFamily: 'Arial, sans-serif', fontSize: '18px', fill: '#00ff00', fontWeight: 'bold', stroke: '#000', strokeThickness: 3 }).setDepth(100); this.tweens.add({ targets: txt, y: player.y - 100, alpha: 0, duration: 800, onComplete: () => txt.destroy() }); glitchText.setText(TRANSLATIONS[lang].integrity_restored).setFill('#ff0088'); this.time.delayedCall(1000, () => { if (glitchText?.active && glitchText.text === TRANSLATIONS[lang].integrity_restored) glitchText.setText(''); }); this.cameras.main.flash(300, 255, 0, 136, 0.4); return; }
     if (type === 'nuke') { playSound(this, 'sfx_nuke', { volume: 0.5, stopOnTerminate: true }); this.time.delayedCall(2000, () => { this.sound.stopByKey('sfx_nuke'); }); let wave = this.add.circle(player.x, player.y, 20, 0xff00ff, 0.7).setDepth(2000); this.tweens.add({ targets: wave, radius: 1100, alpha: 0, duration: 1000, ease: 'Expo.easeOut', onComplete: () => wave.destroy() }); this.cameras.main.flash(500, 255, 0, 255, 0.4); this.cameras.main.shake(850, 0.035); obstacles.children.each(obs => { if (!obs || !obs.active) return; for (let i = 0; i < 10; i++) { let frag = this.add.rectangle(obs.x, obs.y, Phaser.Math.Between(4, 9), Phaser.Math.Between(4, 9), 0xff00ff).setDepth(5); this.physics.add.existing(frag); frag.body.setVelocity(Phaser.Math.Between(-650, 650), Phaser.Math.Between(-650, 650)); frag.body.setAngularVelocity(Phaser.Math.Between(-500, 500)); this.tweens.add({ targets: frag, alpha: 0, scaleX: 0, scaleY: 0, duration: Phaser.Math.Between(650, 1100), ease: 'Quad.easeOut', onComplete: () => frag.destroy() }); } }); obstacles.clear(true, true); glitchText.setText(TRANSLATIONS[lang].purified).setFill('#ff00ff'); this.time.delayedCall(1500, () => { if (glitchText?.active && glitchText.text === TRANSLATIONS[lang].purified) glitchText.setText(''); }); return; }
     if (type === 'coin') { coinsThisRun += isGlitchMode ? 30 : 10; updateHudTexts(); return; }
-    if (type === 'slowmo') { glitchText.setText(TRANSLATIONS[lang].time_warp).setFill('#00ff00'); this.physics.world.timeScale = 2; this.time.delayedCall(3000, () => { this.physics.world.timeScale = 1; if (glitchText?.active && glitchText.text === TRANSLATIONS[lang].time_warp) glitchText.setText(''); }); return; }
+    if (type === 'slowmo') { 
+        glitchText.setText(TRANSLATIONS[lang].time_warp).setFill('#00ff00'); 
+        this.physics.world.timeScale = 2; 
+        let slowDur = baseSlowmoDuration;
+        if (currentSkin === 'frost') slowDur += 1000;
+        this.time.delayedCall(slowDur, () => { this.physics.world.timeScale = 1; if (glitchText?.active && glitchText.text === TRANSLATIONS[lang].time_warp) glitchText.setText(''); }); 
+        return; 
+    }
 }
 
 function spawnObstacle() {

@@ -54,14 +54,59 @@ function create() {
     const doPause = () => togglePause.call(this); pauseBtn.on('pointerdown', doPause); pauseBg.on('pointerdown', doPause);
     pHealthLabel = this.add.text(10, 65, 'YOU 100/100', { fontFamily: fontUI, fontSize: '12px', fill: '#00ffff' }).setDepth(100);
     bHealthLabel = this.add.text(365, 65, '', { fontFamily: fontUI, fontSize: '12px', fill: '#ff00ff' }).setOrigin(1, 0).setDepth(100);
+    rankXPText = this.add.text(365, 80, '', { fontFamily: fontUI, fontSize: '10px', fill: '#ffaa00' }).setOrigin(1, 0).setDepth(100);
     distanceText = this.add.text(187, 105, '', { fontFamily: fontUI, fontSize: '14px', fill: '#00ffff', align: 'center' }).setOrigin(0.5, 0).setDepth(100);
     glitchText = this.add.text(187, 285, '', { fontFamily: fontUI, fontSize: '20px', stroke: '#000', strokeThickness: 6, align: 'center', wordWrap: { width: 320, useAdvancedWrap: true }, lineSpacing: 2 }).setOrigin(0.5).setDepth(100);
     overdriveBar = this.add.graphics().setDepth(100); roadBar = this.add.graphics().setDepth(100); this.overheadGfx = this.add.graphics().setDepth(11);
-    this.physics.add.overlap(player, obstacles, (p, o) => { o.destroy(); handleDamage(this, 35); });
-    this.physics.add.overlap(player, bullets, (p, b) => { b.destroy(); handleDamage(this, 15); });
+    this.physics.add.overlap(player, obstacles, (p, o) => { 
+        if (currentShape === 'phase' && upgradeLevels.ship_phase > 0 && Math.random() < 0.10) {
+            o.destroy();
+            if (glitchText) glitchText.setText("PHASE SHIFT!").setFill('#aa00ff');
+            this.time.delayedCall(500, () => { if (glitchText && glitchText.text === "PHASE SHIFT!") glitchText.setText(''); });
+            this.cameras.main.flash(100, 170, 0, 255, 0.3);
+            return;
+        }
+        o.destroy(); handleDamage(this, 35); 
+    });
+    this.physics.add.overlap(player, bullets, (p, b) => { 
+        if (currentSkin === 'void_skin' && Math.random() < 0.03) {
+            b.destroy();
+            if (glitchText) glitchText.setText("VOID DODGE!").setFill('#aa00ff');
+            this.time.delayedCall(500, () => { if (glitchText && glitchText.text === "VOID DODGE!") glitchText.setText(''); });
+            return;
+        }
+        if (level >= 70 && boss && boss.active) {
+            const dist = Phaser.Math.Distance.Between(b.x, b.y, p.x, p.y);
+            if (dist < voidAbsorbRadius + 60 && Math.random() < 0.4) {
+                absorbedBullets++;
+                voidChargeLevel = Math.min(absorbedBullets / 20, 1);
+                b.destroy();
+                const absorbFx = this.add.circle(b.x, b.y, 10, 0xaa00ff, 0.8).setDepth(150);
+                this.tweens.add({ targets: absorbFx, scale: 2, alpha: 0, duration: 300, onComplete: () => absorbFx.destroy() });
+                if (absorbedBullets % 5 === 0) {
+                    if (glitchText) glitchText.setText(`VOID CHARGE: ${absorbedBullets}`).setFill('#aa00ff');
+                    this.time.delayedCall(500, () => { if (glitchText && glitchText.text.includes('VOID CHARGE')) glitchText.setText(''); });
+                }
+                return;
+            }
+        }
+        b.destroy(); 
+        let dmg = 15;
+        if (level >= 40 && !isInSafeZone()) dmg = 25;
+        if (level >= 60 && isInStormZone()) dmg = 30;
+        if (level >= 70 && absorbedBullets > 0) {
+            const extraDmg = Math.min(absorbedBullets * 2, 30);
+            dmg += extraDmg;
+            absorbedBullets = 0;
+            if (glitchText) glitchText.setText("VOID STRIKE!").setFill('#ff0000');
+            this.time.delayedCall(500, () => { if (glitchText && glitchText.text === "VOID STRIKE!") glitchText.setText(''); });
+        }
+        bossDamageTaken += dmg;
+        handleDamage(this, dmg); 
+    });
     this.physics.add.overlap(boss, playerBullets, hitBoss, null, this);
     this.physics.add.overlap(player, items, collectItem, null, this);
-    this.physics.add.overlap(minions, playerBullets, (minion, bullet) => { let mx = minion.x; let my = minion.y; minion.destroy(); bullet.destroy(); coinsThisRun += 5; updateHudTexts(); minionExplode(this, mx, my); });
+    this.physics.add.overlap(minions, playerBullets, (minion, bullet) => { let mx = minion.x; let my = minion.y; minion.destroy(); bullet.destroy(); coinsThisRun += 5; updateHudTexts(); minionExplode(this, mx, my); checkDailyQuest(this, 'kill50'); awardRankXP(this, 5, 'kill'); });
     this.physics.add.overlap(player, minionBullets, (p, b) => { b.destroy(); handleDamage(this, 10); });
     this.physics.add.overlap(player, minions, (p, m) => { m.destroy(); handleDamage(this, 20); });
     this.physics.add.overlap(bossShields, playerBullets, (s, b) => { b.destroy(); s.setAlpha(1); this.time.delayedCall(100, () => s.setAlpha(0.4)); });
@@ -83,8 +128,11 @@ function update(time, delta) {
     minionBullets.children.each(b => { if (b && b.y > 750) b.destroy(); });
     if (!isBossFight) {
         let deltaDist = delta * (0.08 + level * 0.01 + upgradeLevels.speed * 0.03) * currentStats.spd; distance += deltaDist; totalDistance += deltaDist;
+        rankXPDistanceAccum += deltaDist;
+        if (rankXPDistanceAccum >= 50) { awardRankXP(this, 1, 'distance'); rankXPDistanceAccum -= 50; }
         let currentDist = Math.floor(distance);
         if (currentDist > bestDistance) { bestDistance = currentDist; bestDistText.setText(`${TRANSLATIONS[lang].max_dist}: ${bestDistance}m`).setFill('#ffff00'); }
+        if (!achievements.speedster && currentDist >= 2000) { achievements.speedster = true; checkAchievements(this); }
         let prog = Math.min(distance / runGoal, 1); roadBar.clear().fillStyle(0xffffff, 0.2).fillRect(100, 50, 175, 2).fillStyle(0x00ffff, 1).fillRect(100, 50, prog * 175, 2);
         let toBoss = Math.max(0, Math.floor(runGoal - distance)); let label = level < 15 ? `${TRANSLATIONS[lang].to_mega_boss}: ${15 - level} ${TRANSLATIONS[lang].sector}` : `${TRANSLATIONS[lang].elite_phase}: ${level}`;
         distanceText.setY(105).setText(`${currentDist}m\n${label}\n${TRANSLATIONS[lang].distance_to}: ${toBoss}m`);
@@ -96,6 +144,54 @@ function update(time, delta) {
         if (bossTurretL && bossTurretL.active) { bossTurretL.setPosition(boss.x - 50, boss.y + 10); bossTurretR.setPosition(boss.x + 50, boss.y + 10); }
         if (level >= 20 && bossShields.getLength() > 0) { Phaser.Actions.RotateAroundDistance(bossShields.getChildren(), boss, 0.03, 110); bossShields.children.each(s => { s.setTint(isPhase2 ? 0xff0000 : 0xff00ff); }); }
         if (boss && boss.active) { boss.x += (Math.random() - 0.5) * 2; boss.y += (Math.random() - 0.5) * 2; }
+        if (level >= 40 && wallZoneGraphics) {
+            if (!isInSafeZone()) {
+                this.cameras.main.shake(50, 0.005);
+            }
+        }
+        if (level >= 50 && secondCore) {
+            dualCoreAngle += 0.03;
+            const radius = 120;
+            secondCore.x = boss.x + Math.cos(dualCoreAngle) * radius;
+            secondCore.y = boss.y + Math.sin(dualCoreAngle) * radius;
+            if (!this.dualCoreShootTimer) {
+                this.dualCoreShootTimer = this.time.addEvent({ delay: 1500, callback: () => {
+                    if (isBossFight && !isVictory && !isDead && secondCore && secondCore.active) {
+                        let angleToPlayer = Phaser.Math.Angle.Between(secondCore.x, secondCore.y, player.x, player.y);
+                        for (let i = -1; i <= 1; i++) {
+                            let b = bullets.create(secondCore.x, secondCore.y, 'pixel');
+                            b.setVelocity(Math.cos(angleToPlayer + i * 0.2) * 350, Math.sin(angleToPlayer + i * 0.2) * 350);
+                            b.setTint(0xff4444).setScale(1.3);
+                        }
+                    }
+                }, loop: true });
+            }
+        }
+        if (level >= 60) {
+            stormAngle += 0.02;
+            if (!this.stormZoneTimer) {
+                this.stormZoneTimer = this.time.addEvent({ delay: 100, callback: () => {
+                    if (!isBossFight || isVictory || isDead || !boss) return;
+                    if (isInStormZone()) {
+                        this.cameras.main.shake(30, 0.003);
+                    }
+                }, loop: true });
+            }
+        }
+        if (level >= 70 && boss && boss.active && !isVictory && !isDead) {
+            if (!this.voidZoneTimer) {
+                this.voidZoneTimer = this.time.addEvent({ delay: 50, callback: () => {
+                    if (!isBossFight || isVictory || isDead || !boss) return;
+                    if (voidAbsorbGraphics) voidAbsorbGraphics.destroy();
+                    const radius = voidAbsorbRadius + (voidChargeLevel * 40);
+                    voidAbsorbGraphics = this.add.graphics().setDepth(50);
+                    voidAbsorbGraphics.lineStyle(3, 0xaa00ff, 0.4 + voidChargeLevel * 0.3);
+                    voidAbsorbGraphics.strokeCircle(boss.x, boss.y, radius);
+                    voidAbsorbGraphics.fillStyle(0xaa00ff, 0.05 + voidChargeLevel * 0.1);
+                    voidAbsorbGraphics.fillCircle(boss.x, boss.y, radius);
+                }, loop: true });
+            }
+        }
         distanceText.setText("");
     }
     overdriveBar.clear().fillStyle(0x333333).fillRect(87, 645, 200, 8).fillStyle(0xffff00).fillRect(87, 645, (overdrive/100) * 200, 8);
@@ -112,7 +208,13 @@ function update(time, delta) {
 function startRun(scene) {
     isStarted = true; isVictory = false; isDead = false; isPaused = false; isBossFight = false; isShopOpen = false; shouldAutoStart = false;
     clearBattleTexts(scene); cleanupScreenFx(scene); lastObstaclePattern = null;
-    distance = 0; overdrive = 0; coinsThisRun = 0; playerHealth = maxPlayerHealth; bossHealth = 400 * (1 + (level >= 30 ? (30 * 0.45 + (level - 30) * 0.22) : level * 0.45)); isMagnetActive = false; isGlitchMode = false; scene.isFirstMove = false;
+    currentStats = getShipStats(); maxPlayerHealth = 100 + (upgradeLevels.health || 0) * 25 + currentStats.hpBonus; playerHealth = maxPlayerHealth;
+    distance = 0; overdrive = 0; coinsThisRun = 0; viperShotCounter = 0;
+    bossDamageTaken = 0; coinsCollectedThisRun = 0; overdriveUsedToKill = false;
+    if (wallZoneGraphics) { wallZoneGraphics.destroy(); wallZoneGraphics = null; }
+    if (secondCore) { secondCore.destroy(); secondCore = null; }
+    if (stormZoneGraphics) { stormZoneGraphics.destroy(); stormZoneGraphics = null; }
+    if (this.stormZoneTimer) { this.stormZoneTimer.remove(); this.stormZoneTimer = null; } bossHealth = 400 * (1 + (level >= 30 ? (30 * 0.45 + (level - 30) * 0.22) : level * 0.45)); isMagnetActive = false; isGlitchMode = false; scene.isFirstMove = false;
     if (scene.physics?.world) { scene.physics.resume(); scene.physics.world.timeScale = 1; }
     if (scene.time) scene.time.paused = false;
     scene.obstacleTimer?.remove(); scene.shootEvent?.remove(); scene.itemTimer?.remove(); scene.bossShootEvent?.remove(); scene.turretShootEvent?.remove(); scene.minionTimer?.remove(); scene.phraseTimer?.remove(); scene.teleportEvent?.remove();
@@ -146,6 +248,10 @@ function generatePlayerTexture(scene) {
     const skin = SKIN_DATA[currentSkin] || SKIN_DATA.classic;
     g.fillStyle(skin.body, skin.alpha || 1);
     if (currentShape === 'striker') { g.fillTriangle(16, 2, 0, 38, 32, 38); g.fillRect(0, 30, 4, 10); g.fillRect(28, 30, 4, 10); g.fillStyle(skin.eyes, 1); g.fillRect(12, 25, 2, 4); g.fillRect(18, 25, 2, 4); }
+    else if (currentShape === 'tank') { g.fillRoundedRect(2, 6, 28, 24, 8); g.fillRect(-2, 12, 6, 16); g.fillRect(28, 12, 6, 16); g.fillStyle(skin.eyes, 1); g.fillRect(10, 14, 3, 3); g.fillRect(19, 14, 3, 3); g.lineStyle(2, 0xff8800, 0.8); g.strokeRoundedRect(2, 6, 28, 24, 8); }
+    else if (currentShape === 'dart') { g.fillTriangle(16, 0, 4, 36, 28, 36); g.fillStyle(skin.eyes, 1); g.fillRect(14, 24, 2, 3); g.fillRect(18, 24, 2, 3); g.lineStyle(2, skin.trail, 0.5); g.lineBetween(16, 8, 16, 0); }
+    else if (currentShape === 'viper') { g.fillTriangle(16, 2, 0, 38, 32, 38); g.fillRect(6, 28, 4, 12); g.fillRect(22, 28, 4, 12); g.fillStyle(skin.eyes, 1); g.fillRect(12, 24, 2, 4); g.fillRect(18, 24, 2, 4); }
+    else if (currentShape === 'phase') { g.fillRoundedRect(4, 10, 24, 18, 6); g.fillStyle(skin.eyes, 1); g.fillRect(12, 16, 2, 2); g.fillRect(18, 16, 2, 2); g.lineStyle(2, skin.trail, 0.3); g.strokeCircle(16, 20, 14); }
     else { g.fillRoundedRect(4, 10, 24, 18, 6); g.fillStyle(skin.eyes, 1); g.fillRect(12, 16, 2, 2); g.fillRect(18, 16, 2, 2); }
     if (upgradeLevels.fire > 0) { g.fillStyle(0xff0000, 1); g.fillRect(0, 12, 6, 14); g.fillRect(26, 12, 6, 14); }
     g.lineStyle(3, 0x00ffff, 1); g.lineBetween(16, 10, 16, -5);
@@ -167,7 +273,10 @@ async function syncUserData() {
         if (typeof cloudData.total_dist === 'number') totalDistance = Math.max(totalDistance, cloudData.total_dist);
         if (typeof cloudData.bosses_killed === 'number') bossesKilled = Math.max(bossesKilled, cloudData.bosses_killed);
         if (cloudData.upgrades && typeof cloudData.upgrades === 'object') { for (const key in cloudData.upgrades) upgradeLevels[key] = Math.max(upgradeLevels[key] || 0, cloudData.upgrades[key] || 0); }
-        maxPlayerHealth = 100 + (upgradeLevels.health || 0) * 25; currentStats = getShipStats();
+        if (cloudData.achievements && typeof cloudData.achievements === 'object') { for (const key in cloudData.achievements) if (cloudData.achievements[key]) achievements[key] = true; }
+        if (typeof cloudData.rank_xp === 'number') rankXP = Math.max(rankXP || 0, cloudData.rank_xp);
+        if (cloudData.daily_quests && typeof cloudData.daily_quests === 'object') { for (const key in cloudData.daily_quests) if (!dailyQuests[key] || cloudData.daily_quests[key].completed) dailyQuests[key] = cloudData.daily_quests[key]; }
+        currentStats = getShipStats(); maxPlayerHealth = 100 + (upgradeLevels.health || 0) * 25 + currentStats.hpBonus;
         saveProgress(); updateHudTexts();
         if (player && player.active) refreshPlayerAppearance(this);
         if (shouldPushLocalBack) { await submitScore(); console.log('Cloud updated from local', level, bestLevel, bestDistance); }
@@ -177,7 +286,7 @@ async function syncUserData() {
 async function submitScore(manualData = null) {
     const tgUser = getTelegramUser(); if (!tgUser?.id) return false;
     try {
-        const payload = { telegram_id: tgUser.id, username: tgUser.first_name || tgUser.username || 'PILOT', score: Math.floor(bestDistance), level: manualData ? manualData.level : level, best_level: manualData ? manualData.best_level : bestLevel, explosion_color: currentExplosionColor, skin: currentSkin, shape: currentShape, coins, upgrades: upgradeLevels, total_dist: Math.floor(totalDistance), bosses_killed: bossesKilled, ship_name: shipName || 'RAZOR-01' };
+        const payload = { telegram_id: tgUser.id, username: tgUser.first_name || tgUser.username || 'PILOT', score: Math.floor(bestDistance), level: manualData ? manualData.level : level, best_level: manualData ? manualData.best_level : bestLevel, explosion_color: currentExplosionColor, skin: currentSkin, shape: currentShape, coins, upgrades: upgradeLevels, achievements, total_dist: Math.floor(totalDistance), bosses_killed: bossesKilled, ship_name: shipName || 'RAZOR-01', rank_xp: rankXP, daily_quests: dailyQuests };
         const response = await fetch(`${botUrl}/submit_score`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         if (response.ok) { console.log('✅ Синхронизация успешна:', await response.json()); return true; }
         return false;

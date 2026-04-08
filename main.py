@@ -45,12 +45,20 @@ class ScoreData(BaseModel):
     total_dist: Optional[int] = 0
     bosses_killed: Optional[int] = 0
     ship_name: Optional[str] = "RAZOR-01"
+    achievements: Optional[dict] = {}
+    rank_xp: Optional[int] = 0
+    daily_quests: Optional[dict] = {}
 
 # --- API ЭНДПОИНТЫ ---
 
 @app.get("/get_invoice")
 async def get_invoice(item_type: str, user_id: int, username: str):
-    prices_map = {"skin_gold": 300, "skin_ghost": 300, "omega": 100, "buy_coins": 50}
+    prices_map = {
+        "skin_gold": 200, "skin_ghost": 200, "skin_crimson": 300, "skin_void": 300,
+        "skin_plasma": 300, "skin_solar": 300, "skin_frost": 300,
+        "skin_striker": 1500, "ship_tank": 1200, "ship_dart": 1000, "ship_viper": 1500, "ship_phase": 1800,
+        "omega": 100, "buy_coins": 50, "fx_blue": 100, "fx_pink": 100
+    }
     amount = prices_map.get(item_type, 100)
 
     # Теперь в полезную нагрузку пишем ID, а не имя!
@@ -85,7 +93,6 @@ async def submit_score(data: ScoreData):
 
         for key, val in new_upgrades.items():
             try:
-                # Безопасно достаем старое значение, учитывая возможный None в словаре
                 old_val = merged_upgrades.get(key)
                 if old_val is None: old_val = 0
                 
@@ -95,6 +102,10 @@ async def submit_score(data: ScoreData):
                 merged_upgrades[key] = max(new_val_int, old_val_int)
             except:
                 merged_upgrades[key] = val if val is not None else merged_upgrades.get(key, 0)
+        
+        old_achievements = old.get("achievements") or {}
+        new_achievements = data.achievements or {}
+        merged_achievements = {**old_achievements, **new_achievements}
 
         new_level = int(data.level) if data.level is not None else 0
         new_best = int(data.best_level) if data.best_level is not None else 0
@@ -126,9 +137,12 @@ async def submit_score(data: ScoreData):
             "shape": data.shape or old.get("shape") or "classic",
             "coins": max(safe_int(data.coins), db_coins),
             "upgrades": merged_upgrades,
+            "achievements": merged_achievements,
             "total_dist": max(safe_int(data.total_dist), db_total_dist),
             "bosses_killed": max(safe_int(data.bosses_killed), db_bosses_killed),
             "ship_name": data.ship_name or old.get("ship_name") or "RAZOR-01",
+            "rank_xp": max(safe_int(data.rank_xp), safe_int(old.get("rank_xp"))),
+            "daily_quests": data.daily_quests or old.get("daily_quests") or {},
             "score_date": current_date
         }
 
@@ -201,6 +215,33 @@ async def got_payment(message: types.Message):
         user_res = supabase.table("leaderboard").select("*").eq("telegram_id", tg_id).execute()
         old = user_res.data[0] if user_res.data else {}
 
+        skin_mapping = {
+            "skin_gold": "gold",
+            "skin_ghost": "ghost",
+            "skin_crimson": "crimson",
+            "skin_void": "void_skin",
+            "skin_plasma": "plasma",
+            "skin_solar": "solar",
+            "skin_frost": "frost"
+        }
+        
+        shape_mapping = {
+            "skin_striker": "striker",
+            "ship_tank": "tank",
+            "ship_dart": "dart",
+            "ship_viper": "viper",
+            "ship_phase": "phase"
+        }
+        
+        upgrade_mapping = {
+            "omega": "omega", "fx_blue": "fx_blue", "fx_pink": "fx_pink",
+            "skin_striker": "skin_striker", "ship_tank": "ship_tank",
+            "ship_dart": "ship_dart", "ship_viper": "ship_viper",
+            "ship_phase": "ship_phase", "skin_crimson": "skin_crimson",
+            "skin_void": "skin_void", "skin_plasma": "skin_plasma",
+            "skin_solar": "skin_solar", "skin_frost": "skin_frost"
+        }
+
         if item_type == "buy_coins":
             current = old.get("coins", 0)
             supabase.table("leaderboard").upsert({
@@ -219,17 +260,19 @@ async def got_payment(message: types.Message):
                 "ship_name": old.get("ship_name", "RAZOR-01"),
                 "score_date": old.get("score_date") or datetime.now().isoformat()
             }, on_conflict="telegram_id").execute()
-
-        elif item_type == "omega":
-            merge_user_upgrades(tg_id, {"omega": 1})
-
-        elif item_type == "skin_gold":
-            merge_user_upgrades(tg_id, {"skingold": 1})
-            supabase.table("leaderboard").update({"skin": "gold"}).eq("telegram_id", tg_id).execute()
-
-        elif item_type == "skin_ghost":
-            merge_user_upgrades(tg_id, {"skinghost": 1})
-            supabase.table("leaderboard").update({"skin": "ghost"}).eq("telegram_id", tg_id).execute()
+        elif item_type in skin_mapping:
+            upgrade_key = item_type
+            new_skin = skin_mapping[item_type]
+            merge_user_upgrades(tg_id, {upgrade_key: 1})
+            supabase.table("leaderboard").update({"skin": new_skin}).eq("telegram_id", tg_id).execute()
+        elif item_type in shape_mapping:
+            upgrade_key = upgrade_mapping.get(item_type, item_type)
+            new_shape = shape_mapping[item_type]
+            merge_user_upgrades(tg_id, {upgrade_key: 1})
+            supabase.table("leaderboard").update({"shape": new_shape}).eq("telegram_id", tg_id).execute()
+        elif item_type in upgrade_mapping:
+            upgrade_key = upgrade_mapping[item_type]
+            merge_user_upgrades(tg_id, {upgrade_key: 1})
 
         await message.answer(f"🦾 Система обновлена! Покупка привязана к ID: {tg_id}")
 

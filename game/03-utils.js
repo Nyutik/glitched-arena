@@ -92,7 +92,97 @@ function saveProgress() {
     localStorage.setItem('GLITCHED_ARENA_MASTER_SAVE_V2', JSON.stringify({
         level, lang, upgradeLevels, bestLevel, coins, bestDistance, maxPlayerHealth,
         isShieldActive, yOffset, currentShape, currentSkin, isDeadInSave: isDead,
-        totalDistance, bossesKilled, achievements, currentExplosionColor, lastRunState
+        totalDistance, bossesKilled, achievements, currentExplosionColor, lastRunState,
+        dailyQuests, lastDailyReset
+    }));
+}
+
+// --- ЕЖЕДНЕВНЫЕ ЗАДАНИЯ ---
+
+function initDailyQuests() {
+    const today = new Date().toDateString();
+    if (lastDailyReset !== today) {
+        dailyQuests = {
+            kill50: { target: 50, current: 0, reward: 150, completed: false },
+            noshield: { completed: false, started: false },
+            combo15: { completed: false },
+            clearboss: { completed: false }
+        };
+        lastDailyReset = today;
+        saveProgress();
+    } else {
+        if (dailyQuests.noShield && !dailyQuests.noshield) {
+            dailyQuests.noshield = { ...dailyQuests.noShield };
+            delete dailyQuests.noShield;
+        }
+        if (dailyQuests.clearBoss && !dailyQuests.clearboss) {
+            dailyQuests.clearboss = { ...dailyQuests.clearBoss };
+            delete dailyQuests.clearBoss;
+        }
+    }
+}
+
+function checkDailyQuest(scene, questId) {
+    const quest = dailyQuests[questId];
+    if (!quest || quest.completed) return false;
+    
+    if (questId === 'kill50') {
+        quest.current++;
+        if (quest.current >= quest.target) {
+            quest.completed = true;
+            coins += quest.reward;
+            saveProgress();
+            showQuestComplete(scene, TRANSLATIONS[lang].quest_kill50, quest.reward);
+            return true;
+        }
+    } else if (questId === 'noshield' && !isShieldActive && !quest.started) {
+        quest.started = true;
+        saveProgress();
+    } else if (questId === 'noshield' && quest.started && !isShieldActive && isBossFight) {
+        quest.completed = true;
+        coins += quest.reward;
+        saveProgress();
+        showQuestComplete(scene, TRANSLATIONS[lang].quest_noshield, quest.reward);
+        return true;
+    } else if (questId === 'combo15' && combo >= 15) {
+        quest.completed = true;
+        coins += quest.reward;
+        saveProgress();
+        showQuestComplete(scene, TRANSLATIONS[lang].quest_combo15, quest.reward);
+        return true;
+    } else if (questId === 'clearboss') {
+        quest.completed = true;
+        coins += quest.reward;
+        saveProgress();
+        showQuestComplete(scene, TRANSLATIONS[lang].quest_clearboss, quest.reward);
+        return true;
+    }
+    return false;
+}
+
+function showQuestComplete(scene, questName, reward) {
+    const questOverlay = scene.add.container(0, 0).setDepth(7000);
+    const bg = scene.add.graphics().fillStyle(0x000000, 0.85).fillRect(0, 0, 375, 667);
+    const border = scene.add.rectangle(187, 333, 280, 100, 0x222222).setStrokeStyle(3, 0x00ff00);
+    const titleTxt = scene.add.text(187, 290, "QUEST COMPLETE!", { fontSize: '18px', fill: '#00ff00', fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5);
+    const questTxt = scene.add.text(187, 320, questName, { fontSize: '14px', fill: '#ffffff', fontFamily: 'Arial' }).setOrigin(0.5);
+    const rewardTxt = scene.add.text(187, 350, `+${reward} 💰`, { fontSize: '20px', fill: '#ffff00', fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5);
+    const okBtn = scene.add.text(187, 390, "[ OK ]", { fontSize: '16px', fill: '#00ffff', fontFamily: 'Arial' }).setOrigin(0.5).setInteractive();
+    okBtn.on('pointerdown', () => questOverlay.destroy());
+    questOverlay.add([bg, border, titleTxt, questTxt, rewardTxt, okBtn]);
+    scene.cameras.main.shake(100, 0.005);
+    if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+    scene.time.delayedCall(3000, () => { if (questOverlay) questOverlay.destroy(); });
+}
+
+function saveProgress() {
+    let currentDist = Math.floor(distance);
+    if (currentDist > bestDistance) bestDistance = currentDist;
+    localStorage.setItem('GLITCHED_ARENA_MASTER_SAVE_V2', JSON.stringify({
+        level, lang, upgradeLevels, bestLevel, coins, bestDistance, maxPlayerHealth,
+        isShieldActive, yOffset, currentShape, currentSkin, isDeadInSave: isDead,
+        totalDistance, bossesKilled, achievements, currentExplosionColor, lastRunState,
+        dailyQuests, lastDailyReset, rankXP
     }));
 }
 
@@ -106,15 +196,19 @@ function loadProgress() {
         if (p.lang) lang = p.lang;
         level = p.level || 1; bestLevel = p.bestLevel || 1; bestDistance = p.bestDistance || 0;
         coins = p.coins || 0; totalDistance = p.totalDistance || 0; bossesKilled = p.bossesKilled || 0;
-        achievements = p.achievements || { flawless: false, rich: false, marathon: false };
+        achievements = { ...achievements, ...p.achievements };
         maxPlayerHealth = p.maxPlayerHealth || 100; isShieldActive = p.isShieldActive || false;
         currentShape = p.currentShape || 'classic'; currentSkin = p.currentSkin || 'classic';
         yOffset = p.yOffset !== undefined ? p.yOffset : -50; isDead = p.isDeadInSave || false;
         lastRunState = p.lastRunState || { isDead: false, pendingDeath: false };
         currentExplosionColor = p.currentExplosionColor || 0xff0000;
         upgradeLevels = { ...upgradeLevels, ...p.upgradeLevels };
+        dailyQuests = p.dailyQuests || {};
+        lastDailyReset = p.lastDailyReset || null;
+        rankXP = p.rankXP || 0;
         runGoal = 700 + (level - 1) * 100;
     }
+    initDailyQuests();
 }
 
 // Adsgram init

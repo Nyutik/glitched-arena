@@ -23,7 +23,7 @@ function showShop(scene, mainMenu, fromVictory = false) {
     overlay.add([upBtn, upText, fxBtn, fxText]);
     upBtn.on('pointerdown', () => { currentShopTab = 'upgrades'; overlay.destroy(); showShop(scene, mainMenu, fromVictory); });
     fxBtn.on('pointerdown', () => { currentShopTab = 'fx'; overlay.destroy(); showShop(scene, mainMenu, fromVictory); });
-    const scrollAreaTop = 110; const scrollAreaBottom = isVictory ? 510 : 560; const scrollHeight = scrollAreaBottom - scrollAreaTop;
+    const scrollAreaTop = 110; const scrollAreaBottom = isVictory ? 500 : 620; const scrollHeight = scrollAreaBottom - scrollAreaTop;
     const scrollWindow = scene.add.container(0, scrollAreaTop).setDepth(4001); overlay.add(scrollWindow);
     const contentContainer = scene.add.container(0, 0); scrollWindow.add(contentContainer);
     const mask = scene.make.graphics().fillRect(10, scrollAreaTop, 355, scrollHeight).createGeometryMask(); scrollWindow.setMask(mask);
@@ -39,10 +39,12 @@ function showShop(scene, mainMenu, fromVictory = false) {
         confirmOverlay.add([cBg, panel, txt, price, yesBtn, noBtn]);
     };
     const createBtn = (y, nameKey, descKey, cost, type, action) => {
-        const isCustom = ['skin_striker', 'skin_gold', 'skin_ghost', 'fx_blue', 'fx_pink'].includes(type);
+        const shipTypes = ['skin_striker', 'ship_tank', 'ship_dart', 'ship_viper', 'ship_phase'];
+        const skinTypes = ['skin_gold', 'skin_ghost', 'skin_crimson', 'skin_void', 'skin_plasma', 'skin_solar', 'skin_frost'];
+        const isCustom = ['skin_striker', 'skin_gold', 'skin_ghost', 'fx_blue', 'fx_pink', 'ship_tank', 'ship_dart', 'ship_viper', 'ship_phase', 'skin_crimson', 'skin_void', 'skin_plasma', 'skin_solar', 'skin_frost'].includes(type);
         const maxLvl = (type === 'health') ? 20 : 1;
         let curLvl = (type === 'shield') ? (isShieldActive ? 1 : 0) : (upgradeLevels[type] || 0);
-        let isEquipped = (type === 'skin_striker' && currentShape === 'striker') || (type === 'skin_gold' && currentSkin === 'gold') || (type === 'skin_ghost' && currentSkin === 'ghost') || (type === 'fx_blue' && currentExplosionColor === 0x00ffff) || (type === 'fx_pink' && currentExplosionColor === 0xff00ff);
+        let isEquipped = (type === 'skin_striker' && currentShape === 'striker') || (type === 'ship_tank' && currentShape === 'tank') || (type === 'ship_dart' && currentShape === 'dart') || (type === 'ship_viper' && currentShape === 'viper') || (type === 'ship_phase' && currentShape === 'phase') || (type === 'skin_gold' && currentSkin === 'gold') || (type === 'skin_ghost' && currentSkin === 'ghost') || (type === 'skin_crimson' && currentSkin === 'crimson') || (type === 'skin_void' && currentSkin === 'void_skin') || (type === 'skin_plasma' && currentSkin === 'plasma') || (type === 'skin_solar' && currentSkin === 'solar') || (type === 'skin_frost' && currentSkin === 'frost') || (type === 'fx_blue' && currentExplosionColor === 0x00ffff) || (type === 'fx_pink' && currentExplosionColor === 0xff00ff);
         let isOwned = (upgradeLevels[type] > 0); let isMaxed = (!isCustom && curLvl >= maxLvl);
         const isStarItem = ['skin_gold', 'skin_ghost', 'omega', 'buy_coins', 'fx_blue', 'fx_pink'].includes(type);
         const isLocked = (type === 'omega' && level < 40 && !upgradeLevels.omega);
@@ -67,14 +69,14 @@ function showShop(scene, mainMenu, fromVictory = false) {
     };
     let sY = 30, step = 58;
     if (currentShopTab === 'upgrades') {
-        createBtn(sY, "up_antenna", "desc_antenna", 400, 'ultra'); createBtn(sY+step, "up_cannons", "desc_cannons", 800, 'fire'); createBtn(sY+step*2, "up_speed", "desc_speed", 300, 'speed'); createBtn(sY+step*3, "up_hull", "desc_hull", 500, 'health', () => { maxPlayerHealth += 25; playerHealth = maxPlayerHealth; }); createBtn(sY+step*4, "up_shield", "desc_shield", 150, 'shield'); createBtn(sY+step*5, "skin_striker", "desc_striker", 1500, 'skin_striker', () => { currentShape = 'striker'; refreshPlayerAppearance(scene); }); createBtn(sY+step*6, "up_omega", "desc_omega", 100, 'omega', () => { upgradeLevels.omega = 1; }); createBtn(sY+step*7, "up_coins", "desc_coins", 50, 'buy_coins'); maxScroll = step * 7;
+        createBtn(sY, "up_antenna", "desc_antenna", 400, 'ultra'); createBtn(sY+step, "up_cannons", "desc_cannons", 800, 'fire'); createBtn(sY+step*2, "up_speed", "desc_speed", 300, 'speed'); createBtn(sY+step*3, "up_hull", "desc_hull", 500, 'health', () => { maxPlayerHealth += 25; playerHealth = maxPlayerHealth; }); createBtn(sY+step*4, "up_shield", "desc_shield", 150, 'shield'); createBtn(sY+step*5, "skin_striker", "desc_striker", 1500, 'skin_striker', () => { currentShape = 'striker'; refreshPlayerAppearance(scene); }); createBtn(sY+step*6, "ship_tank", "desc_tank", 1200, 'ship_tank', () => { currentShape = 'tank'; refreshPlayerAppearance(scene); }); createBtn(sY+step*7, "ship_dart", "desc_dart", 1000, 'ship_dart', () => { currentShape = 'dart'; refreshPlayerAppearance(scene); }); createBtn(sY+step*8, "ship_viper", "desc_viper", 1500, 'ship_viper', () => { currentShape = 'viper'; refreshPlayerAppearance(scene); }); createBtn(sY+step*9, "ship_phase", "desc_phase", 1800, 'ship_phase', () => { currentShape = 'phase'; refreshPlayerAppearance(scene); }); createBtn(sY+step*10, "up_omega", "desc_omega", 100, 'omega', () => { upgradeLevels.omega = 1; }); createBtn(sY+step*11, "up_coins", "desc_coins", 50, 'buy_coins'); maxScroll = step * 11;
     } else {
-        createBtn(sY, "skin_gold", "desc_gold", 200, 'skin_gold', () => { currentSkin = 'gold'; refreshPlayerAppearance(scene); }); createBtn(sY+step, "skin_ghost", "desc_ghost", 200, 'skin_ghost', () => { currentSkin = 'ghost'; refreshPlayerAppearance(scene); }); createBtn(sY+step*2, "fx_blue_exp", "desc_blue_exp", 100, 'fx_blue', () => { currentExplosionColor = 0x00ffff; }); createBtn(sY+step*3, "fx_pink_exp", "desc_pink_exp", 100, 'fx_pink', () => { currentExplosionColor = 0xff00ff; }); maxScroll = step * 4;
+        createBtn(sY, "skin_gold", "desc_gold", 200, 'skin_gold', () => { currentSkin = 'gold'; refreshPlayerAppearance(scene); }); createBtn(sY+step, "skin_ghost", "desc_ghost", 200, 'skin_ghost', () => { currentSkin = 'ghost'; refreshPlayerAppearance(scene); }); createBtn(sY+step*2, "skin_crimson", "desc_crimson", 300, 'skin_crimson', () => { currentSkin = 'crimson'; refreshPlayerAppearance(scene); }); createBtn(sY+step*3, "skin_void", "desc_void", 300, 'skin_void', () => { currentSkin = 'void_skin'; refreshPlayerAppearance(scene); }); createBtn(sY+step*4, "skin_plasma", "desc_plasma", 300, 'skin_plasma', () => { currentSkin = 'plasma'; refreshPlayerAppearance(scene); }); createBtn(sY+step*5, "skin_solar", "desc_solar", 300, 'skin_solar', () => { currentSkin = 'solar'; refreshPlayerAppearance(scene); }); createBtn(sY+step*6, "skin_frost", "desc_frost", 300, 'skin_frost', () => { currentSkin = 'frost'; refreshPlayerAppearance(scene); }); createBtn(sY+step*7, "fx_blue_exp", "desc_blue_exp", 100, 'fx_blue', () => { currentExplosionColor = 0x00ffff; }); createBtn(sY+step*8, "fx_pink_exp", "desc_pink_exp", 100, 'fx_pink', () => { currentExplosionColor = 0xff00ff; }); maxScroll = step * 8;
     }
-    const itemCount = (currentShopTab === 'upgrades' ? 7 : 5); const contentHeight = sY + (step * itemCount);
-    const paddingBottom = isVictory ? 200 : 150; maxScroll = Math.max(0, contentHeight - scrollHeight + paddingBottom);
+    const itemCount = (currentShopTab === 'upgrades' ? 12 : 9); const contentHeight = sY + (step * itemCount);
+    const paddingBottom = isVictory ? 100 : 100; maxScroll = Math.max(0, contentHeight - scrollHeight + paddingBottom);
     scene.input.on('wheel', (p, obj, dx, dy) => { scrollY = Phaser.Math.Clamp(scrollY - dy * 0.8, -maxScroll, 0); contentContainer.y = scrollY; });
-    scene.input.on('pointermove', (p) => { if (p.isDown && p.y > 110 && p.y < 560) { scrollY = Phaser.Math.Clamp(scrollY + (p.y - p.prevPosition.y), -maxScroll, 0); contentContainer.y = scrollY; } });
+    scene.input.on('pointermove', (p) => { if (p.isDown && p.y > 110 && p.y < scrollAreaBottom) { scrollY = Phaser.Math.Clamp(scrollY + (p.y - p.prevPosition.y), -maxScroll, 0); contentContainer.y = scrollY; } });
     const footerY = 625; const btnWidth = 165;
     const backBg = scene.add.rectangle(100, footerY, btnWidth, 45, 0x330033).setInteractive().setStrokeStyle(1, 0xff00ff, 0.5);
     const backTxt = scene.add.text(100, footerY, TRANSLATIONS[lang].back, { fontSize: '13px', fill: '#ff00ff', fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5);
@@ -107,10 +109,18 @@ function showProfile(scene, mainMenu) {
     scrollContainer.add(scene.add.text(187, currentY, statusText, { fontSize: '18px', fill: level > 40 ? "#ff00ff" : "#00ffff", fontWeight: 'bold' }).setOrigin(0.5)); currentY += 50;
     const statsBox = scene.add.rectangle(187, currentY + 60, 320, 140, 0x111111).setStrokeStyle(1, 0x00ffff, 0.2); scrollContainer.add(statsBox);
     const statsData = [`${lang === 'ru' ? 'ТЕКУЩИЙ СЕКТОР' : 'CURRENT SECTOR'}: ${level}`, `${lang === 'ru' ? 'РЕКОРД ДИСТАНЦИИ' : 'MAX DISTANCE'}: ${bestDistance}m`, `${lang === 'ru' ? 'ВСЕГО ПРОЙДЕНО' : 'TOTAL FLOWN'}: ${Math.floor(totalDistance)}m`, `${lang === 'ru' ? 'УНИЧТОЖЕНО ЯДЕР' : 'CORES DELETED'}: ${bossesKilled}`, `${lang === 'ru' ? 'КРЕДИТЫ' : 'CREDITS'}: ${coins}`];
-    statsData.forEach((t, i) => { scrollContainer.add(scene.add.text(50, currentY + 12 + (i * 24), t, { fontSize: '13px', fontFamily: fontUI, fill: '#aaa' })); }); currentY += 165;
+    statsData.forEach((t, i) => { scrollContainer.add(scene.add.text(50, currentY + 12 + (i * 24), t, { fontSize: '13px', fontFamily: fontUI, fill: '#aaa' })); }); currentY += 170;
     const achHeader = scene.add.text(187, currentY, lang === 'ru' ? "--- ДОСТИЖЕНИЯ ---" : "--- ACHIEVEMENTS ---", { fontSize: '14px', fontFamily: fontUI, fill: '#ff00ff' }).setOrigin(0.5); scrollContainer.add(achHeader); currentY += 35;
-    const achList = [{ key: 'flawless', ru: "БЕЗУПРЕЧНЫЙ", en: "FLAWLESS", desc: lang === 'ru' ? "Босс без урона" : "Boss: 0 damage" }, { key: 'rich', ru: "МАГНАТ", en: "TYCOON", desc: lang === 'ru' ? "Накопил 5000$" : "5000 credits" }, { key: 'marathon', ru: "МАРАФОНЕЦ", en: "MARATHON", desc: lang === 'ru' ? "5000м за вылет" : "5000m run" }];
-    achList.forEach((ach, i) => { const isDone = achievements[ach.key]; let box = scene.add.rectangle(60, currentY + 16, 32, 32, isDone ? 0xaa8800 : 0x222222).setStrokeStyle(2, isDone ? 0xffff00 : 0x444444); let t1 = scene.add.text(100, currentY + 6, lang === 'ru' ? ach.ru : ach.en, { fontSize: '14px', fontFamily: fontUI, fill: isDone ? '#ffff00' : '#666', fontWeight: 'bold' }); let t2 = scene.add.text(100, currentY + 24, ach.desc, { fontSize: '10px', fontFamily: fontUI, fill: isDone ? '#fff' : '#999' }); scrollContainer.add([box, t1, t2]); currentY += 55; });
+    const achList = [
+        { key: 'flawless', ru: "БЕЗУПРЕЧНЫЙ", en: "FLAWLESS", desc: TRANSLATIONS[lang].boss_damage },
+        { key: 'rich', ru: "МАГНАТ", en: "TYCOON", desc: TRANSLATIONS[lang].rich_credit },
+        { key: 'marathon', ru: "МАРАФОНЕЦ", en: "MARATHON", desc: TRANSLATIONS[lang].run_m },
+        { key: 'speedster', ru: "СПРИНТЕР", en: "SPEEDSTER", desc: TRANSLATIONS[lang].speed_desc },
+        { key: 'collector', ru: "КОЛЛЕКЦИОНЕР", en: "COLLECTOR", desc: TRANSLATIONS[lang].collect_desc },
+        { key: 'survivor10', ru: "ВЫЖИВШИЙ", en: "SURVIVOR", desc: TRANSLATIONS[lang].surv10_desc },
+        { key: 'bossSlayer', ru: "УБИЙЦА БОССОВ", en: "SLAYER", desc: TRANSLATIONS[lang].boss_desc }
+    ];
+    achList.forEach((ach, i) => { const isDone = achievements[ach.key]; let box = scene.add.rectangle(55, currentY + 18, 28, 28, isDone ? 0xaa8800 : 0x222222).setStrokeStyle(2, isDone ? 0xffff00 : 0x444444); let t1 = scene.add.text(90, currentY + 6, lang === 'ru' ? ach.ru : ach.en, { fontSize: '13px', fontFamily: fontUI, fill: isDone ? '#ffff00' : '#777', fontWeight: 'bold' }); let t2 = scene.add.text(90, currentY + 24, ach.desc, { fontSize: '11px', fontFamily: fontUI, fill: isDone ? '#bbb' : '#888' }); scrollContainer.add([box, t1, t2]); currentY += 42; });
     const maxScroll = Math.max(0, currentY - scrollWindowHeight + 40); let scrollY = 0;
     const applyScroll = () => { scrollY = Phaser.Math.Clamp(scrollY, -maxScroll, 0); scrollContainer.y = 170 + scrollY; };
     scene.input.on('wheel', (pointer, gameObjects, deltaX, deltaY) => { scrollY -= deltaY * 0.8; applyScroll(); });
@@ -181,41 +191,142 @@ function showHangar(scene, mainMenu) {
     const overlay = scene.add.container(0, 0).setDepth(4000);
     const bg = scene.add.graphics().fillStyle(0x000000, 0.98).fillRect(0, 0, 375, 667); overlay.add(bg);
     const fontUI = 'Arial, sans-serif';
-    const title = scene.add.text(187, 40, TRANSLATIONS[lang].hangar_title, { fontSize: '24px', fill: '#00ffff', fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5); overlay.add(title);
-    const stats = getShipStats(); const statsBox = scene.add.rectangle(187, 80, 330, 25, 0x222222).setStrokeStyle(1, 0xffff00); const statsText = scene.add.text(187, 80, stats.label, { fontSize: '11px', fill: '#ffff00', fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5); overlay.add([statsBox, statsText]);
-    const colX = 25; overlay.add(scene.add.text(colX, 120, TRANSLATIONS[lang].hull_type, { fontSize: '13px', fill: '#ff00ff', fontWeight: 'bold', fontFamily: fontUI }));
-    const shapes = [{ id: 'classic', name: TRANSLATIONS[lang].classic_box, unlocked: true }, { id: 'striker', name: TRANSLATIONS[lang].skin_striker, unlocked: upgradeLevels.skin_striker > 0 }];
-    shapes.forEach((s, i) => { if (!s.unlocked) return; const isSelected = currentShape === s.id; const btn = scene.add.text(colX + 5, 145 + (i * 35), `> ${s.name}`, { fontSize: '15px', fill: isSelected ? '#00ffff' : '#666', backgroundColor: isSelected ? '#003333' : null, padding: 5, fontFamily: fontUI }).setInteractive().on('pointerdown', () => { currentShape = s.id; saveProgress(); refreshPlayerAppearance(scene); overlay.destroy(); showHangar(scene, mainMenu); }); overlay.add(btn); });
-    overlay.add(scene.add.text(colX, 240, TRANSLATIONS[lang].visual_skin, { fontSize: '13px', fill: '#ff00ff', fontWeight: 'bold', fontFamily: fontUI }));
-    const skins = [{ id: 'classic', name: TRANSLATIONS[lang].cyan_neon, unlocked: true }, { id: 'gold', name: TRANSLATIONS[lang].skin_gold, unlocked: upgradeLevels.skin_gold > 0 }, { id: 'ghost', name: TRANSLATIONS[lang].skin_ghost, unlocked: upgradeLevels.skin_ghost > 0 }];
-    skins.forEach((sk, i) => { if (!sk.unlocked) return; const isSelected = currentSkin === sk.id; const btn = scene.add.text(colX + 5, 265 + (i * 35), `> ${sk.name}`, { fontSize: '15px', fill: isSelected ? '#00ffff' : '#666', backgroundColor: isSelected ? '#003333' : null, padding: 5, fontFamily: fontUI }).setInteractive().on('pointerdown', () => { currentSkin = sk.id; saveProgress(); refreshPlayerAppearance(scene); overlay.destroy(); showHangar(scene, mainMenu); }); overlay.add(btn); });
-    const previewSprite = scene.add.sprite(290, 210, player.texture.key).setScale(3); const glow = scene.add.circle(290, 210, 35, 0x00ffff, 0.1).setDepth(previewSprite.depth - 1); overlay.add([glow, previewSprite]);
-    const intel = getBossIntel(); const intelBox = scene.add.rectangle(187, 500, 340, 105, 0x000000, 0.7).setStrokeStyle(1, 0xff00ff);
-    const intelTitle = scene.add.text(colX + 5, 450, `${TRANSLATIONS[lang].boss_scanning}${level}`, { fontSize: '11px', fill: '#ff00ff', fontFamily: fontUI, padding: { top: 5, bottom: 5 } });
-    const bossName = scene.add.text(187, 480, `${TRANSLATIONS[lang].target}: ${intel.name}`, { fontSize: '16px', fill: '#fff', fontWeight: 'bold', fontFamily: fontUI, padding: { top: 5, bottom: 5 } }).setOrigin(0.5);
-    const bossDesc = scene.add.text(187, 508, intel.desc, { fontSize: '11px', fill: '#aaa', align: 'center', wordWrap: { width: 300 }, fontFamily: fontUI, padding: { top: 5, bottom: 5 } }).setOrigin(0.5);
-    const bossTip = scene.add.text(187, 538, `${TRANSLATIONS[lang].suggest}: ${intel.tip}`, { fontSize: '12px', fill: '#00ff00', fontWeight: 'bold', fontFamily: fontUI, padding: { top: 5, bottom: 5 } }).setOrigin(0.5);
-    overlay.add([intelBox, intelTitle, bossName, bossDesc, bossTip]);
-    const backBtn = scene.add.rectangle(187, 610, 200, 45, 0x330033).setInteractive().setStrokeStyle(1, 0xff00ff, 0.5);
-    const backLabel = scene.add.text(187, 610, TRANSLATIONS[lang].back, { fontSize: '15px', fill: '#ff00ff', fontWeight: 'bold' }).setOrigin(0.5);
+    const scrollAreaTop = 90; const scrollAreaBottom = 590; const scrollHeight = scrollAreaBottom - scrollAreaTop;
+    const scrollWindow = scene.add.container(0, 0).setDepth(4001); overlay.add(scrollWindow);
+    const contentContainer = scene.add.container(0, 0); scrollWindow.add(contentContainer);
+    const mask = scene.make.graphics().fillRect(0, scrollAreaTop, 375, scrollHeight).createGeometryMask(); scrollWindow.setMask(mask);
+    const title = scene.add.text(187, 30, TRANSLATIONS[lang].hangar_title, { fontSize: '22px', fill: '#00ffff', fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5); overlay.add(title);
+    const stats = getShipStats(); const statsBox = scene.add.rectangle(187, 58, 330, 24, 0x222222).setStrokeStyle(1, 0xffff00); const statsText = scene.add.text(187, 58, stats.label, { fontSize: '10px', fill: '#ffff00', fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5); overlay.add([statsBox, statsText]);
+    const previewSprite = scene.add.sprite(270, 240, player.texture.key).setScale(3.5); const glow = scene.add.circle(270, 240, 42, 0x00ffff, 0.15).setDepth(previewSprite.depth - 1); overlay.add([glow, previewSprite]);
+    let currentY = 0;
+    const leftX = 15;
+    contentContainer.add(scene.add.text(leftX, scrollAreaTop + currentY, TRANSLATIONS[lang].hull_type, { fontSize: '13px', fill: '#ff00ff', fontWeight: 'bold', fontFamily: fontUI })); currentY += 28;
+    const shapes = [
+        { id: 'classic', name: TRANSLATIONS[lang].classic_box, unlocked: true },
+        { id: 'striker', name: TRANSLATIONS[lang].skin_striker, unlocked: upgradeLevels.skin_striker > 0 },
+        { id: 'tank', name: TRANSLATIONS[lang].ship_tank, unlocked: upgradeLevels.ship_tank > 0 },
+        { id: 'dart', name: TRANSLATIONS[lang].ship_dart, unlocked: upgradeLevels.ship_dart > 0 },
+        { id: 'viper', name: TRANSLATIONS[lang].ship_viper, unlocked: upgradeLevels.ship_viper > 0 },
+        { id: 'phase', name: TRANSLATIONS[lang].ship_phase, unlocked: upgradeLevels.ship_phase > 0 }
+    ];
+    shapes.forEach((s) => { if (!s.unlocked) return; const isSelected = currentShape === s.id; const btn = scene.add.text(leftX + 5, scrollAreaTop + currentY, `> ${s.name}`, { fontSize: '13px', fill: isSelected ? '#00ffff' : '#888', backgroundColor: isSelected ? '#003333' : null, padding: 3, fontFamily: fontUI }).setInteractive().on('pointerdown', () => { currentShape = s.id; saveProgress(); refreshPlayerAppearance(scene); overlay.destroy(); showHangar(scene, mainMenu); }); contentContainer.add(btn); currentY += 26; });
+    currentY += 12;
+    contentContainer.add(scene.add.text(leftX, scrollAreaTop + currentY, TRANSLATIONS[lang].visual_skin, { fontSize: '13px', fill: '#ff00ff', fontWeight: 'bold', fontFamily: fontUI })); currentY += 28;
+    const skins = [
+        { id: 'classic', name: TRANSLATIONS[lang].cyan_neon, unlocked: true },
+        { id: 'gold', name: TRANSLATIONS[lang].skin_gold, unlocked: upgradeLevels.skin_gold > 0 },
+        { id: 'ghost', name: TRANSLATIONS[lang].skin_ghost, unlocked: upgradeLevels.skin_ghost > 0 },
+        { id: 'crimson', name: TRANSLATIONS[lang].skin_crimson, unlocked: upgradeLevels.skin_crimson > 0 },
+        { id: 'void_skin', name: TRANSLATIONS[lang].skin_void, unlocked: upgradeLevels.skin_void > 0 },
+        { id: 'plasma', name: TRANSLATIONS[lang].skin_plasma, unlocked: upgradeLevels.skin_plasma > 0 },
+        { id: 'solar', name: TRANSLATIONS[lang].skin_solar, unlocked: upgradeLevels.skin_solar > 0 },
+        { id: 'frost', name: TRANSLATIONS[lang].skin_frost, unlocked: upgradeLevels.skin_frost > 0 }
+    ];
+    skins.forEach((sk) => { if (!sk.unlocked) return; const isSelected = currentSkin === sk.id; const btn = scene.add.text(leftX + 5, scrollAreaTop + currentY, `> ${sk.name}`, { fontSize: '12px', fill: isSelected ? '#00ffff' : '#888', backgroundColor: isSelected ? '#003333' : null, padding: 3, fontFamily: fontUI }).setInteractive().on('pointerdown', () => { currentSkin = sk.id; saveProgress(); refreshPlayerAppearance(scene); overlay.destroy(); showHangar(scene, mainMenu); }); contentContainer.add(btn); currentY += 26; });
+    currentY += 15;
+    const intel = getBossIntel();
+    const intelBox = scene.add.rectangle(187, scrollAreaTop + currentY + 55, 340, 105, 0x000000, 0.7).setStrokeStyle(1, 0xff00ff);
+    const intelTitle = scene.add.text(leftX, scrollAreaTop + currentY + 8, `${TRANSLATIONS[lang].boss_scanning}${level}`, { fontSize: '11px', fill: '#ff00ff', fontFamily: fontUI });
+    const bossName = scene.add.text(187, scrollAreaTop + currentY + 32, `${TRANSLATIONS[lang].target}: ${intel.name}`, { fontSize: '14px', fill: '#fff', fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5);
+    const bossDesc = scene.add.text(187, scrollAreaTop + currentY + 52, intel.desc, { fontSize: '11px', fill: '#aaa', align: 'center', wordWrap: { width: 310 }, fontFamily: fontUI }).setOrigin(0.5);
+    const bossTip = scene.add.text(187, scrollAreaTop + currentY + 75, `${TRANSLATIONS[lang].suggest}: ${intel.tip}`, { fontSize: '12px', fill: '#00ff00', fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5);
+    contentContainer.add([intelBox, intelTitle, bossName, bossDesc, bossTip]);
+    const contentHeight = scrollAreaTop + currentY + 120;
+    let maxScroll = Math.max(0, contentHeight - scrollAreaBottom + 50); let scrollY = 0;
+    const applyScroll = () => { scrollY = Phaser.Math.Clamp(scrollY, -maxScroll, 0); contentContainer.y = scrollY; };
+    scene.input.on('wheel', (p, o, dx, dy) => { scrollY -= dy * 0.8; applyScroll(); });
+    scene.input.on('pointermove', (p) => { if (p.isDown && p.y > scrollAreaTop && p.y < scrollAreaBottom) { scrollY += (p.y - p.prevPosition.y); applyScroll(); } });
+    const backBtn = scene.add.rectangle(187, 635, 200, 40, 0x330033).setInteractive().setStrokeStyle(1, 0xff00ff, 0.5);
+    const backLabel = scene.add.text(187, 635, TRANSLATIONS[lang].back, { fontSize: '15px', fill: '#ff00ff', fontWeight: 'bold' }).setOrigin(0.5);
     backBtn.on('pointerdown', () => { scene.input.off('wheel'); overlay.destroy(); mainMenu.setVisible(true); startTitleGlitch(scene, mainMenu.titleRef); });
     overlay.add([backBtn, backLabel]);
 }
 
 function getShipStats() {
-    let stats = { atk: 1, spd: 1, label: "" }; const isRu = (lang === 'ru');
-    if (currentShape === 'striker') { stats.atk += 0.2; stats.label = isRu ? "УДАРНИК: +20% АТК" : "STRIKER: +20% ATK"; } else stats.label = isRu ? "БАЗОВЫЙ КОРПУС" : "STANDARD HULL";
+    let stats = { atk: 1, spd: 1, hpBonus: 0, label: "" }; const isRu = (lang === 'ru');
+    if (currentShape === 'striker') { stats.atk += 0.2; stats.label = `${TRANSLATIONS[lang].skin_striker}: +20% ${isRu ? 'АТК' : 'ATK'}`; }
+    else if (currentShape === 'tank') { stats.hpBonus = 35; stats.spd -= 0.08; stats.label = isRu ? "БРОНЕНОСЕЦ: +35 ОЗ, -8% СКР" : "IRONCLAD: +35 HP, -8% SPD"; }
+    else if (currentShape === 'dart') { stats.spd += 0.20; stats.atk -= 0.10; stats.label = isRu ? "СТРЕЛА: +20% СКР, -10% АТК" : "SWIFT: +20% SPD, -10% ATK"; }
+    else if (currentShape === 'viper') { stats.label = isRu ? "ГАДЮКА: БОКОВЫЕ ВЫСТРЕЛЫ" : "SIDESTRIKE: SIDE SHOTS"; }
+    else if (currentShape === 'phase') { stats.label = isRu ? "ФАЗОВИК: 10% УКЛОНЕНИЕ" : "PHASE: 10% DODGE"; }
+    else stats.label = isRu ? "БАЗОВЫЙ КОРПУС" : "STANDARD HULL";
     if (currentSkin === 'gold') { stats.atk += 0.1; stats.label += isRu ? " | ЗОЛОТО: +10% АТК" : " | GOLD: +10% ATK"; } else if (currentSkin === 'ghost') { stats.spd += 0.15; stats.label += isRu ? " | ПРИЗРАК: +15% СКОР" : " | GHOST: +15% SPD"; }
+    else if (currentSkin === 'crimson') { stats.label += isRu ? " | КРАСНЫЙ: +5% КРИТ" : " | CRIMSON: +5% CRIT"; }
+    else if (currentSkin === 'void_skin') { stats.label += isRu ? " | ПУСТОТА: +3% УКЛ." : " | VOID: +3% DODGE"; }
+    else if (currentSkin === 'plasma') { stats.label += isRu ? " | ПЛАЗМА: +5% ЗАР." : " | PLASMA: +5% CHARGE"; }
+    else if (currentSkin === 'solar') { stats.label += isRu ? " | СОЛНЕЧНЫЙ: +10% МОН." : " | SOLAR: +10% COINS"; }
+    else if (currentSkin === 'frost') { stats.label += isRu ? " | МОРОЗ: +1С ЗАМЕД." : " | FROST: +1S SLOW"; }
     return stats;
 }
 
 function getBossIntel() {
     const isRu = (lang === 'ru');
     if (level < 15) return { name: isRu ? "ДРОН-РАЗВЕДЧИК" : "SCOUT_DRONE", desc: isRu ? "Легкая броня. Стандартные паттерны стрельбы." : "Light armor. Standard patterns.", tip: isRu ? "ЗОЛОТО (для фарма)" : "GOLD (for farming)" };
-    else if (level < 20) return { name: isRu ? "МЕГА-ТУРЕЛЬ" : "MEGA_TURRET", desc: isRu ? "Боковые пушки. Высокая скорострельность." : "Dual side cannons. High fire rate.", tip: isRu ? "УДАРНИК (+20% АТК)" : "STRIKER (+20% ATK)" };
-    else if (level < 30) return { name: isRu ? "МАСТЕР ЩИТА" : "SHIELD_MASTER", desc: isRu ? "Орбитальная защита. Сложно попасть." : "Orbital protection. Hard to hit.", tip: isRu ? "УДАРНИК (Пробивай щиты)" : "STRIKER (Break shields)" };
+    else if (level < 20) return { name: isRu ? "МЕГА-ТУРЕЛЬ" : "MEGA_TURRET", desc: isRu ? "Боковые пушки. Высокая скорострельность." : "Dual side cannons. High fire rate.", tip: `${TRANSLATIONS[lang].skin_striker} (+20% ${isRu ? 'АТК' : 'ATK'})` };
+    else if (level < 30) return { name: isRu ? "МАСТЕР ЩИТА" : "SHIELD_MASTER", desc: isRu ? "Орбитальная защита. Сложно попасть." : "Orbital protection. Hard to hit.", tip: `${TRANSLATIONS[lang].skin_striker} (${isRu ? 'Пробивай щиты' : 'Break shields'})` };
     else if (level < 35) return { name: isRu ? "ПЕРЕГРУЗКА ЯДРА" : "CORE_OVERLOAD", desc: isRu ? "Режим ярости. Пулевой ад." : "Rage mode. Bullet hell chaos.", tip: isRu ? "МАНЕВРИРУЙ (Выживи любой ценой)" : "MANEUVER (Survive at all costs)" };
-    else return { name: isRu ? "КВАНТОВЫЙ ФАНТОМ" : "QUANTUM_PHANTOM", desc: isRu ? "Мгновенное перемещение. Нестабильная материя." : "Instant teleportation. Unstable matter.", tip: isRu ? "УЛЬТРА-АНТЕННА (Бей быстро)" : "ULTRA ANTENNA (Strike fast)" };
+    else if (level < 40) return { name: isRu ? "КВАНТОВЫЙ ФАНТОМ" : "QUANTUM_PHANTOM", desc: isRu ? "Мгновенное перемещение. Нестабильная материя." : "Instant teleportation. Unstable matter.", tip: `${TRANSLATIONS[lang].up_antenna} (${isRu ? 'Бей быстро' : 'Strike fast'})` };
+    else if (level < 50) return { name: isRu ? "СТЕНА" : "THE WALL", desc: isRu ? "Делит экран на 3 зоны. Одна безопасна." : "Divides screen into 3 zones. One is safe.", tip: `${TRANSLATIONS[lang].ship_dart} (+20% ${isRu ? 'СКР' : 'SPD'})` };
+    else if (level < 60) return { name: isRu ? "ДВА ЯДРА" : "DUAL CORE", desc: isRu ? "Два ядра вращаются вокруг центра." : "Two cores rotate around center.", tip: `${TRANSLATIONS[lang].ship_phase} (${isRu ? 'уклонение' : 'dodge'})` };
+    else if (level < 70) return { name: isRu ? "ШТОРМ" : "THE STORM", desc: isRu ? "Вращающиеся смертельные зоны." : "Rotating deadly zones.", tip: `${TRANSLATIONS[lang].ship_dart} (${isRu ? 'скорость' : 'speed'})` };
+    else return { name: isRu ? "ПУСТОТА" : "THE VOID", desc: isRu ? "Поглощай пули - стань сильнее! Слишком много - умрёшь!" : "Absorb bullets - grow stronger! Too many - you die!", tip: `${TRANSLATIONS[lang].ship_tank} (HP)` };
+}
+
+const RANKS = [
+    { id: 'rookie', xp: 0, color: '#888888', name: { en: 'ROOKIE', ru: 'НОВИЧОК' } },
+    { id: 'pilot', xp: 1000, color: '#00ff00', name: { en: 'PILOT', ru: 'ПИЛОТ' } },
+    { id: 'elite', xp: 5000, color: '#0088ff', name: { en: 'ELITE', ru: 'ЭЛИТА' } },
+    { id: 'master', xp: 15000, color: '#ff00ff', name: { en: 'MASTER', ru: 'МАСТЕР' } },
+    { id: 'legend', xp: 50000, color: '#ffaa00', name: { en: 'LEGEND', ru: 'ЛЕГЕНДА' } }
+];
+
+function getCurrentRank() {
+    let rank = RANKS[0];
+    for (let i = RANKS.length - 1; i >= 0; i--) {
+        if (rankXP >= RANKS[i].xp) { rank = RANKS[i]; break; }
+    }
+    return rank;
+}
+
+function addRankXP(amount) {
+    const oldRank = getCurrentRank();
+    rankXP += amount;
+    const newRank = getCurrentRank();
+    return { rank: newRank, leveled: oldRank.id !== newRank.id };
+}
+
+function getRankProgress() {
+    const current = getCurrentRank();
+    const currentIndex = RANKS.findIndex(r => r.id === current.id);
+    if (currentIndex >= RANKS.length - 1) return { progress: 1, next: null };
+    const nextRank = RANKS[currentIndex + 1];
+    const xpInRank = rankXP - current.xp;
+    const xpNeeded = nextRank.xp - current.xp;
+    return { progress: xpInRank / xpNeeded, next: nextRank };
+}
+
+function awardRankXP(scene, amount, source = 'kill') {
+    const oldRank = getCurrentRank();
+    rankXP += amount;
+    const newRank = getCurrentRank();
+    saveProgress();
+    if (oldRank.id !== newRank.id) {
+        showRankUp(scene, newRank);
+    }
+}
+
+function showRankUp(scene, newRank) {
+    const rankOverlay = scene.add.container(0, 0).setDepth(8000);
+    const bg = scene.add.graphics().fillStyle(0x000000, 0.9).fillRect(0, 200, 375, 180);
+    const border = scene.add.rectangle(187, 290, 320, 120, 0x222222).setStrokeStyle(4, newRank.color);
+    const titleTxt = scene.add.text(187, 255, TRANSLATIONS[lang].rank_up || 'RANK UP!', { fontSize: '16px', fill: '#ffaa00', fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5);
+    const rankTxt = scene.add.text(187, 285, newRank.name[lang], { fontSize: '32px', fill: newRank.color, fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5);
+    const descTxt = scene.add.text(187, 315, TRANSLATIONS[lang].rank_reached || 'You reached a new rank!', { fontSize: '12px', fill: '#aaaaaa', fontFamily: 'Arial' }).setOrigin(0.5);
+    rankOverlay.add([bg, border, titleTxt, rankTxt, descTxt]);
+    scene.cameras.main.shake(300, 0.015);
+    scene.cameras.main.flash(300, 255, 170, 0, 0.5);
+    if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+    scene.tweens.add({ targets: rankOverlay, alpha: 0, delay: 3000, duration: 500, onComplete: () => rankOverlay.destroy() });
 }
 
 function refreshPlayerAppearance(scene) {
@@ -223,4 +334,8 @@ function refreshPlayerAppearance(scene) {
     const newTexName = generatePlayerTexture(scene); player.setTexture(newTexName);
     const skin = SKIN_DATA[currentSkin] || SKIN_DATA.classic; if (trailEmitter) trailEmitter.setParticleTint(skin.trail);
     currentStats = getShipStats();
+    const oldMaxHp = maxPlayerHealth;
+    maxPlayerHealth = 100 + (upgradeLevels.health || 0) * 25 + currentStats.hpBonus;
+    playerHealth = playerHealth + (maxPlayerHealth - oldMaxHp);
+    if (playerHealth > maxPlayerHealth) playerHealth = maxPlayerHealth;
 }

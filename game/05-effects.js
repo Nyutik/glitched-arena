@@ -15,6 +15,7 @@ function showDamageText(scene, x, y, damage, color = '#00ff00', size = '16px') {
 function showComboEffect(scene) {
     if (!scene || !scene.cameras || !scene.cameras.main || !comboPopText || !player) return;
     combo++;
+    checkDailyQuest(scene, 'combo15');
     playSound(scene, 'sfx_combo', { volume: 0.3 });
     comboPopText.setPosition(player.x, player.y - 60).setText(`+${TRANSLATIONS[lang].combo_text} x${combo}`).setAlpha(1).setScale(1.2).setFill(combo >= 10 ? '#ff0000' : '#00ff00');
     if (combo === 10 && !isGlitchMode) {
@@ -40,7 +41,14 @@ async function triggerVictory(scene) {
     scene.shootEvent = safeRemoveTimer(scene.shootEvent); scene.bossShootEvent = safeRemoveTimer(scene.bossShootEvent); scene.turretShootEvent = safeRemoveTimer(scene.turretShootEvent); scene.minionTimer = safeRemoveTimer(scene.minionTimer); scene.phraseTimer = safeRemoveTimer(scene.phraseTimer); scene.teleportEvent = safeRemoveTimer(scene.teleportEvent); scene.itemTimer = safeRemoveTimer(scene.itemTimer); itemsTimer = safeRemoveTimer(itemsTimer); victoryTextJitter = safeRemoveTimer(victoryTextJitter);
     try { bullets?.clear(true, true); playerBullets?.clear(true, true); minionBullets?.clear(true, true); minions?.clear(true, true); obstacles?.clear(true, true); bossShields?.clear(true, true); } catch (e) { console.warn("Group clear error:", e); }
     if (bossTurretL) { bossTurretL.destroy(); bossTurretL = null; } if (bossTurretR) { bossTurretR.destroy(); bossTurretR = null; }
-    const completedLevel = level; level++; bestLevel = Math.max(bestLevel, completedLevel); bossesKilled += 1; saveProgress();
+    if (secondCore) { secondCore.destroy(); secondCore = null; } if (scene.dualCoreShootTimer) { scene.dualCoreShootTimer.remove(); scene.dualCoreShootTimer = null; }
+    const completedLevel = level; level++; bestLevel = Math.max(bestLevel, completedLevel); bossesKilled += 1; bossesSurvived += 1;
+    awardRankXP(scene, 100, 'boss'); 
+    if (bossDamageTaken === 0 && !achievements.flawless) { achievements.flawless = true; showAchievement(scene, 'flawless', TRANSLATIONS[lang].flawlesst, TRANSLATIONS[lang].boss_damage); }
+    checkAchievements(scene);
+    checkDailyQuest(scene, 'clearboss');
+    if (!isShieldActive && upgradeLevels.shield > 0) checkDailyQuest(scene, 'noshield');
+    saveProgress();
     if (hasTelegramUser()) submitScore({ level: level, best_level: bestLevel });
     const explodeCol = currentExplosionColor || 0xff0000; const hexColor = `#${explodeCol.toString(16).padStart(6, '0')}`;
     if (boss && boss.active) {
