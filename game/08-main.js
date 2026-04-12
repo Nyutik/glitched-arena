@@ -29,6 +29,10 @@ function create() {
     isPhase3 = false; isVictory = false; isShopOpen = false; isDead = false; isBossFight = false; isStarted = false; isPaused = false; isPhase2 = false;
     distance = 0; overdrive = 0; coinsThisRun = 0; playerHealth = maxPlayerHealth; isMagnetActive = false; isGlitchMode = false;
     if (this.physics?.world) this.physics.world.timeScale = 1;
+    
+    // Тёмный фон (как было)
+    this.cameras.main.setBackgroundColor('#000000');
+    
     const pTex = generatePlayerTexture(this);
     player = this.physics.add.sprite(187, 600, pTex).setDepth(10).setCollideWorldBounds(true);
     shieldAura = this.add.sprite(player.x, player.y, 'shieldaura').setDepth(11).setVisible(false);
@@ -263,11 +267,23 @@ async function syncUserData() {
     const tgUser = getTelegramUser(); if (!tgUser?.id) return;
     try {
         const response = await fetch(`${botUrl}/get_user_personal/${tgUser.id}`); const cloudData = await response.json(); if (!cloudData || cloudData.error) return;
+        console.log('[Sync] Cloud data received:', cloudData);
         let shouldPushLocalBack = false;
-        if ((cloudData.level ?? 0) > level) { level = cloudData.level || 1; runGoal = 700 + (level - 1) * 100; } else if (level > (cloudData.level ?? 0)) shouldPushLocalBack = true;
-        if ((cloudData.best_level ?? 0) > bestLevel) bestLevel = cloudData.best_level; else if (bestLevel > (cloudData.best_level ?? 0)) shouldPushLocalBack = true;
-        if ((cloudData.score ?? 0) > bestDistance) bestDistance = cloudData.score || 0; else if (bestDistance > (cloudData.score ?? 0)) shouldPushLocalBack = true;
-        if ((cloudData.coins ?? 0) > coins) coins = cloudData.coins || 0; else if (coins > (cloudData.coins ?? 0)) shouldPushLocalBack = true;
+        
+        // Safe coin handling - prevent NaN
+        const cloudCoins = typeof cloudData.coins === 'number' && !isNaN(cloudData.coins) ? cloudData.coins : 0;
+        if (cloudCoins > (coins || 0)) { coins = cloudCoins; console.log('[Sync] Coins from cloud:', coins); }
+        else if ((coins || 0) > cloudCoins) shouldPushLocalBack = true;
+        
+        const cloudLevel = typeof cloudData.level === 'number' ? cloudData.level : 0;
+        if (cloudLevel > level) { level = cloudLevel; runGoal = 700 + (level - 1) * 100; } else if (level > cloudLevel) shouldPushLocalBack = true;
+        
+        const cloudBestLevel = typeof cloudData.best_level === 'number' ? cloudData.best_level : 0;
+        if (cloudBestLevel > bestLevel) bestLevel = cloudBestLevel; else if (bestLevel > cloudBestLevel) shouldPushLocalBack = true;
+        
+        const cloudScore = typeof cloudData.score === 'number' ? cloudData.score : 0;
+        if (cloudScore > bestDistance) bestDistance = cloudScore; else if (bestDistance > cloudScore) shouldPushLocalBack = true;
+        
         if (cloudData.skin) currentSkin = cloudData.skin; if (cloudData.shape) currentShape = cloudData.shape; if (cloudData.ship_name) shipName = cloudData.ship_name;
         if (typeof cloudData.explosion_color === 'number') currentExplosionColor = cloudData.explosion_color;
         if (typeof cloudData.total_dist === 'number') totalDistance = Math.max(totalDistance, cloudData.total_dist);
@@ -279,8 +295,8 @@ async function syncUserData() {
         currentStats = getShipStats(); maxPlayerHealth = 100 + (upgradeLevels.health || 0) * 25 + currentStats.hpBonus;
         saveProgress(); updateHudTexts();
         if (player && player.active) refreshPlayerAppearance(this);
-        if (shouldPushLocalBack) { await submitScore(); console.log('Cloud updated from local', level, bestLevel, bestDistance); }
-    } catch (e) { console.error('syncUserData error', e); }
+        if (shouldPushLocalBack) { await submitScore(); console.log('[Sync] Cloud updated from local', level, bestLevel, bestDistance, coins); }
+    } catch (e) { console.error('[Sync] syncUserData error', e); }
 }
 
 async function submitScore(manualData = null) {

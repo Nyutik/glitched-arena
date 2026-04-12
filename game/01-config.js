@@ -8,13 +8,13 @@
 // ============================================
 
 const SHARE_LINK = "https://t.me/GlitchedArenaBot";
+const RENDER_URL = 'https://glitched-arena.onrender.com';
 const getBotUrl = () => {
     const hostname = window.location.hostname;
-    const protocol = window.location.protocol;
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
         return 'http://localhost:8000';
     }
-    return protocol === 'https:' ? `https://${hostname}` : `http://${hostname}`;
+    return RENDER_URL;
 };
 const botUrl = getBotUrl();
 

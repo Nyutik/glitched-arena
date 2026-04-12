@@ -51,17 +51,6 @@ function showMenu(scene) {
     const questsBtn = scene.add.text(310, 75, "📋", { fontSize: '24px', fontFamily: fontUI }).setOrigin(0.5).setInteractive();
     questsBtn.on('pointerdown', () => { closeMenu(); showDailyQuests(scene, menu); });
     
-    // Переключатель темы (иконка солнца/луны)
-    const themeIcon = isDarkMode ? "🌙" : "☀️";
-    const themeBtn = scene.add.text(275, 75, themeIcon, { fontSize: '20px', fontFamily: fontUI }).setOrigin(0.5).setInteractive();
-    themeBtn.on('pointerdown', () => { 
-        isDarkMode = !isDarkMode; 
-        const newIcon = isDarkMode ? "🌙" : "☀️";
-        themeBtn.setText(newIcon);
-        saveProgress();
-        scene.scene.restart();
-    });
-    
     const langBtn = scene.add.text(320, 30, lang.toUpperCase(), { fontSize: '14px', fill: '#ffff00', backgroundColor: '#222', padding: 8, fontFamily: fontUI }).setOrigin(0.5).setInteractive();
     langBtn.on('pointerdown', () => { lang = (lang === 'ru') ? 'en' : 'ru'; saveProgress(); if (scene.glitchTimer) scene.glitchTimer.remove(); menu.destroy(); showMenu(scene); });
     const btnStyle = { fontSize: '18px', fill: '#fff', backgroundColor: '#222', padding: 10, fontFamily: fontUI, fontWeight: 'bold' };
