@@ -191,11 +191,8 @@ function loadProgress() {
         lang = (window.Telegram.WebApp.initDataUnsafe.user.language_code === 'ru') ? 'ru' : 'en';
     }
     const saved = localStorage.getItem('GLITCHED_ARENA_MASTER_SAVE_V2');
-    console.log('[Load] saved data:', saved);
     if (saved) {
         const p = JSON.parse(saved);
-        console.log('[Load] adWatchedPendingRevive from save:', p.adWatchedPendingRevive);
-        console.log('[Load] lastRunState from save:', p.lastRunState);
         if (p.lang) lang = p.lang;
         level = p.level || 1; bestLevel = p.bestLevel || 1; bestDistance = p.bestDistance || 0;
         coins = p.coins || 0; totalDistance = p.totalDistance || 0; bossesKilled = p.bossesKilled || 0;
@@ -205,7 +202,6 @@ function loadProgress() {
         yOffset = p.yOffset !== undefined ? p.yOffset : -50; isDead = p.isDeadInSave || false;
         lastRunState = p.lastRunState || { isDead: false, pendingDeath: false };
         adWatchedPendingRevive = p.adWatchedPendingRevive !== undefined ? p.adWatchedPendingRevive : false;
-        console.log('[Load] Loaded adWatchedPendingRevive:', adWatchedPendingRevive);
         currentExplosionColor = p.currentExplosionColor || 0xff0000;
         upgradeLevels = { ...upgradeLevels, ...p.upgradeLevels };
         dailyQuests = p.dailyQuests || {};

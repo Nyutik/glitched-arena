@@ -62,10 +62,8 @@ function showMenu(scene) {
     const rulesBtn = scene.add.text(187, 535, TRANSLATIONS[lang].rules, btnStyle).setOrigin(0.5).setInteractive();
     const topBtn = scene.add.text(187, 600, TRANSLATIONS[lang].top, { fontSize: '16px', fill: '#ffff00', backgroundColor: '#333300', padding: 10, fontFamily: fontUI, fontWeight: 'bold' }).setOrigin(0.5).setInteractive();
     startBtn.on('pointerdown', () => { 
-        console.log('[Menu] startBtn clicked, pendingDeath:', lastRunState.pendingDeath, 'adWatchedPendingRevive:', adWatchedPendingRevive);
         // Сначала проверяем флаг просмотра рекламы
         if (adWatchedPendingRevive) {
-            console.log('[Menu] Ad was watched, clearing state and starting game');
             adWatchedPendingRevive = false;
             lastRunState = { isDead: false, pendingDeath: false };
             isDead = false;
