@@ -93,7 +93,7 @@ function saveProgress() {
         level, lang, upgradeLevels, bestLevel, coins, bestDistance, maxPlayerHealth,
         isShieldActive, yOffset, currentShape, currentSkin, isDeadInSave: isDead,
         totalDistance, bossesKilled, achievements, currentExplosionColor, lastRunState,
-        dailyQuests, lastDailyReset, adWatchedPendingRevive
+        dailyQuests, lastDailyReset, adWatchedPendingRevive, isDarkMode
     }));
 }
 
@@ -207,6 +207,7 @@ function loadProgress() {
         dailyQuests = p.dailyQuests || {};
         lastDailyReset = p.lastDailyReset || null;
         rankXP = p.rankXP || 0;
+        isDarkMode = p.isDarkMode || false;
         runGoal = 700 + (level - 1) * 100;
     }
     initDailyQuests();

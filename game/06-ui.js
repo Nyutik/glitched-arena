@@ -50,6 +50,18 @@ function showMenu(scene) {
     profileBtn.on('pointerdown', () => { closeMenu(); showProfile(scene, menu); });
     const questsBtn = scene.add.text(310, 75, "📋", { fontSize: '24px', fontFamily: fontUI }).setOrigin(0.5).setInteractive();
     questsBtn.on('pointerdown', () => { closeMenu(); showDailyQuests(scene, menu); });
+    
+    // Переключатель темы (иконка солнца/луны)
+    const themeIcon = isDarkMode ? "🌙" : "☀️";
+    const themeBtn = scene.add.text(275, 75, themeIcon, { fontSize: '20px', fontFamily: fontUI }).setOrigin(0.5).setInteractive();
+    themeBtn.on('pointerdown', () => { 
+        isDarkMode = !isDarkMode; 
+        const newIcon = isDarkMode ? "🌙" : "☀️";
+        themeBtn.setText(newIcon);
+        saveProgress();
+        scene.scene.restart();
+    });
+    
     const langBtn = scene.add.text(320, 30, lang.toUpperCase(), { fontSize: '14px', fill: '#ffff00', backgroundColor: '#222', padding: 8, fontFamily: fontUI }).setOrigin(0.5).setInteractive();
     langBtn.on('pointerdown', () => { lang = (lang === 'ru') ? 'en' : 'ru'; saveProgress(); if (scene.glitchTimer) scene.glitchTimer.remove(); menu.destroy(); showMenu(scene); });
     const btnStyle = { fontSize: '18px', fill: '#fff', backgroundColor: '#222', padding: 10, fontFamily: fontUI, fontWeight: 'bold' };
@@ -173,6 +185,28 @@ function showRules(scene, mainMenu) {
     const strategyText = TRANSLATIONS[lang].strategy_tip;
     const strategyBoxH = 55;
     const shopBox = scene.add.rectangle(187, scrollAreaTop + currentY + strategyBoxH/2, 310, strategyBoxH, 0x00ffff, 0.05).setStrokeStyle(1, 0x00ffff); const shopTxt = scene.add.text(187, scrollAreaTop + currentY + strategyBoxH/2, strategyText, { fontSize: '11px', fill: '#00ffff', align: 'center', fontFamily: fontUI, wordWrap: { width: 280 } }).setOrigin(0.5); contentContainer.add([shopBox, shopTxt]); currentY += strategyBoxH + 15;
+    
+    // --- ОБУЧЕНИЕ (РУКА) — внизу контента ---
+    const handGlow = scene.add.circle(187, scrollAreaTop + currentY + 80, 16, 0x00ffff, 0.15);
+    const hand = scene.add.circle(187, scrollAreaTop + currentY + 80, 10, 0x00ffff, 0.8);
+    scene.tweens.add({ 
+        targets: [hand, handGlow], 
+        x: { from: 130, to: 244 }, 
+        duration: 1200, 
+        yoyo: true, 
+        repeat: -1, 
+        ease: 'Sine.easeInOut' 
+    });
+
+    const handTxt = scene.add.text(187, scrollAreaTop + currentY + 97, TRANSLATIONS[lang].slide, { 
+        fontSize: '12px', 
+        fill: '#00ffff', 
+        fontFamily: fontUI, 
+        fontWeight: 'bold' 
+    }).setOrigin(0.5);
+
+    contentContainer.add([handGlow, hand, handTxt]); currentY += 110;
+    
     const contentHeight = scrollAreaTop + currentY + 50;
     let maxScroll = Math.max(0, contentHeight - scrollAreaBottom + 30); let scrollY = 0;
     const applyScroll = () => { scrollY = Phaser.Math.Clamp(scrollY, -maxScroll, 0); contentContainer.y = scrollY; };
