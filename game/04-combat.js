@@ -129,11 +129,11 @@ function triggerDeath(scene) {
     btn(360, level <= 3 ? TRANSLATIONS[lang].revive_label : TRANSLATIONS[lang].watch_ad_label, '#444400', () => {
         if (level <= 3) { processRevive(scene); return; }
         const currentAds = window.adController;
-        if (!currentAds) { console.log("Adsgram missing - silent bypass"); processRevive(scene); return; }
+        if (!currentAds) { console.log("Adsgram missing - silent bypass"); showConfirmRevive(scene); return; }
         currentAds.show().then((result) => {
-            if (result && result.done) processRevive(scene);
+            if (result && result.done) showConfirmRevive(scene);
             else alert(lang === 'ru' ? "Нужно досмотреть до конца!" : "Watch till the end!");
-        }).catch((err) => { console.log("Adsgram failure - silent bypass:", err); processRevive(scene); });
+        }).catch((err) => { console.log("Adsgram failure - silent bypass:", err); showConfirmRevive(scene); });
     });
     btn(440, TRANSLATIONS[lang].hard_reboot_label, '#440000', () => {
         level = 1; coins = 0; upgradeLevels = { fire: 0, ultra: 0, speed: 0, health: 0, shield: 0 };
@@ -146,6 +146,61 @@ function triggerDeath(scene) {
 function processRevive(scene) {
     lastRunState.pendingDeath = false; isDead = false; isVictory = false;
     playerHealth = maxPlayerHealth; saveProgress(); shouldAutoStart = true; scene.scene.restart();
+}
+
+function showConfirmRevive(scene) {
+    adWatchedPendingRevive = true; // отметка что реклама просмотрена
+    saveProgress();
+    
+    const overlay = scene.add.container(0, 0).setDepth(6000);
+    const bg = scene.add.graphics().fillStyle(0x000000, 0.95).fillRect(0, 0, 375, 667);
+    bg.setInteractive(new Phaser.Geom.Rectangle(0, 0, 375, 667), Phaser.Geom.Rectangle.Contains);
+    overlay.add(bg);
+    
+    const panel = scene.add.rectangle(187, 300, 300, 200, 0x111122).setStrokeStyle(3, 0x00ffff);
+    overlay.add(panel);
+    
+    const titleText = scene.add.text(187, 230, lang === 'ru' ? 'ГОТОВ К ПОЛЕТУ?' : 'READY TO FLY?', { 
+        fontSize: '24px', fill: '#00ffff', fontWeight: 'bold', fontFamily: 'Arial' 
+    }).setOrigin(0.5);
+    overlay.add(titleText);
+    
+    const descText = scene.add.text(187, 275, lang === 'ru' 
+        ? 'Нажмите, когда будете готовы\nпродолжить прохождение'
+        : 'Press when ready to\ncontinue the run', { 
+        fontSize: '14px', fill: '#aaaaaa', fontFamily: 'Arial', align: 'center', lineSpacing: 4 
+    }).setOrigin(0.5);
+    overlay.add(descText);
+    
+    const readyBtn = scene.add.rectangle(187, 360, 220, 50, 0x004444).setInteractive().setStrokeStyle(2, 0x00ffff);
+    const readyText = scene.add.text(187, 360, lang === 'ru' ? '>> ЗАПУСК <<' : '>> LAUNCH <<', { 
+        fontSize: '20px', fill: '#00ffff', fontWeight: 'bold', fontFamily: 'Arial' 
+    }).setOrigin(0.5);
+    overlay.add([readyBtn, readyText]);
+    
+    const backBtn = scene.add.rectangle(187, 430, 180, 40, 0x222222).setInteractive().setStrokeStyle(1, 0xff6666);
+    const backText = scene.add.text(187, 430, lang === 'ru' ? 'В МЕНЮ' : 'MENU', { 
+        fontSize: '16px', fill: '#ff6666', fontFamily: 'Arial' 
+    }).setOrigin(0.5);
+    overlay.add([backBtn, backText]);
+    
+    readyBtn.on('pointerdown', () => {
+        overlay.destroy();
+        processRevive(scene);
+    });
+    
+    backBtn.on('pointerdown', () => {
+        overlay.destroy();
+        lastRunState = { isDead: false, pendingDeath: false };
+        isDead = false; isPhase2 = false; isPhase3 = false;
+        isStarted = false; isVictory = false; isBossFight = false; isPaused = false;
+        saveProgress();
+        scene.scene.restart();
+    });
+    
+    if (window.Telegram?.WebApp) {
+        Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+    }
 }
 
 function playerShoot() {

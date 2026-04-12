@@ -23,6 +23,7 @@ let shipName = "RAZOR-01";
 let currentExplosionColor = 0xff0000;
 let currentShopTab = 'upgrades';
 let lastRunState = { isDead: false, pendingDeath: false };
+let adWatchedPendingRevive = false; // реклама просмотрена, но воскрешение не завершено
 let totalDistance = 0, bossesKilled = 0;
 let achievements = { 
     flawless: false, rich: false, marathon: false,

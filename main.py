@@ -280,6 +280,16 @@ async def got_payment(message: types.Message):
         print(f"Ошибка оплаты: {e}")
 
 
+@dp.message(Command("start"))
+async def cmd_start(message: types.Message):
+    args = message.text.split()
+    if len(args) > 1 and args[1].startswith("game_"):
+        game_id = args[1].replace("game_", "")
+        await message.answer(f"🎮 Запуск игры! ID: {game_id}")
+    else:
+        await message.answer("🎮 Добро пожаловать в Glitched Arena!\n\nИспользуйте бота чтобы открыть приложение.")
+
+
 @app.get("/get_user_personal/{tg_id}")
 async def get_user_personal(tg_id: int):
     try:

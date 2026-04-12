@@ -8,9 +8,15 @@
 // ============================================
 
 const SHARE_LINK = "https://t.me/GlitchedArenaBot";
-const botUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:8000'
-    : 'https://glitched-arena.onrender.com';
+const getBotUrl = () => {
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return 'http://localhost:8000';
+    }
+    return protocol === 'https:' ? `https://${hostname}` : `http://${hostname}`;
+};
+const botUrl = getBotUrl();
 
 const ASSETS = {
     BGM: 'assets/Cyberpunk 2.mp3',

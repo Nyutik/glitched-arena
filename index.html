@@ -24,6 +24,7 @@
 <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser-arcade-physics.min.js"></script>
+<script async src="https://tganalytics.xyz/index.js" onload="initAnalytics()" type="text/javascript"></script>
 <script src="game/01-config.js"></script>
 <script src="game/02-state.js"></script>
 <script src="game/03-utils.js"></script>
@@ -34,6 +35,16 @@
 <script src="game/08-main.js"></script>
 
 <script>
+    function initAnalytics() {
+        if (window.telegramAnalytics) {
+            window.telegramAnalytics.init({
+                token: 'YOUR_ANALYTICS_TOKEN',
+                appName: 'glitched_arena',
+            });
+            console.log("✅ Telegram Analytics ready");
+        }
+    }
+    
     window.addEventListener('load', () => {
         if (window.Adsgram) {
             window.adController = window.Adsgram.init({ blockId: "25945" });
