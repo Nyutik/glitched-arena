@@ -78,7 +78,7 @@ function showShop(scene, mainMenu, fromVictory = false) {
     } else if (currentShopTab === 'bundles') {
         createBtn(sY, "bundle_starter", "bundle_starter_desc", 100, 'bundle_starter', () => { upgradeLevels.skin_gold = 1; upgradeLevels.up_antenna = 1; upgradeLevels.up_speed = 1; currentSkin = 'gold'; refreshPlayerAppearance(scene); saveProgress(); }); createBtn(sY+step, "bundle_warrior", "bundle_warrior_desc", 250, 'bundle_warrior', () => { upgradeLevels.skin_crimson = 1; upgradeLevels.up_cannons = 1; upgradeLevels.up_hull = 1; currentSkin = 'crimson'; maxPlayerHealth += 25; playerHealth = maxPlayerHealth; refreshPlayerAppearance(scene); saveProgress(); }); createBtn(sY+step*2, "bundle_legend", "bundle_legend_desc", 500, 'bundle_legend', () => { upgradeLevels.skin_rainbow = 1; upgradeLevels.skin_void_premium = 1; upgradeLevels.up_omega = 1; currentSkin = 'rainbow'; refreshPlayerAppearance(scene); saveProgress(); }); maxScroll = step * 2;
     }
-    const itemCount = (currentShopTab === 'upgrades' ? 12 : (currentShopTab === 'fx' ? 16 : 3)); const contentHeight = sY + (step * itemCount);
+    const itemCount = (currentShopTab === 'upgrades' ? 16 : (currentShopTab === 'fx' ? 16 : 3)); const contentHeight = sY + (step * itemCount);
     const paddingBottom = isVictory ? 100 : 100; maxScroll = Math.max(0, contentHeight - scrollHeight + paddingBottom);
     scene.input.on('wheel', (p, obj, dx, dy) => { scrollY = Phaser.Math.Clamp(scrollY - dy * 0.8, -maxScroll, 0); contentContainer.y = scrollY; });
     scene.input.on('pointermove', (p) => { if (p.isDown && p.y > 110 && p.y < scrollAreaBottom) { scrollY = Phaser.Math.Clamp(scrollY + (p.y - p.prevPosition.y), -maxScroll, 0); contentContainer.y = scrollY; } });
