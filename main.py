@@ -3,6 +3,7 @@ import asyncio
 from datetime import datetime
 from typing import List, Optional
 from aiogram import Bot, Dispatcher, types, F
+from aiogram.filters import Command
 from aiogram.types import LabeledPrice, PreCheckoutQuery
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -56,8 +57,10 @@ async def get_invoice(item_type: str, user_id: int, username: str):
     prices_map = {
         "skin_gold": 200, "skin_ghost": 200, "skin_crimson": 300, "skin_void": 300,
         "skin_plasma": 300, "skin_solar": 300, "skin_frost": 300,
+        "skin_rainbow": 500, "skin_void_premium": 800, "skin_crystal": 600,
         "skin_striker": 1500, "ship_tank": 1200, "ship_dart": 1000, "ship_viper": 1500, "ship_phase": 1800,
-        "omega": 100, "buy_coins": 50, "fx_blue": 100, "fx_pink": 100
+        "bundle_starter": 300, "bundle_warrior": 800, "bundle_legend": 2000,
+        "omega": 100, "buy_coins": 50, "fx_blue": 100, "fx_pink": 100, "fx_gold": 150, "fx_green": 150, "fx_red": 150
     }
     amount = prices_map.get(item_type, 100)
 
