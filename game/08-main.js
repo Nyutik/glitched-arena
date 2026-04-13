@@ -280,7 +280,12 @@ function togglePause() {
 function generatePlayerTexture(scene) {
     let g = scene.make.graphics({ x: 0, y: 0, add: false });
     const skin = SKIN_DATA[currentSkin] || SKIN_DATA.classic;
-    g.fillStyle(skin.body, skin.alpha || 1);
+    let bodyColor = skin.body;
+    if (currentSkin === 'rainbow') {
+        const t = Math.floor(Date.now() / 200) % rainbowColors.length;
+        bodyColor = rainbowColors[t];
+    }
+    g.fillStyle(bodyColor, skin.alpha || 1);
     if (currentShape === 'striker') { g.fillTriangle(16, 2, 0, 38, 32, 38); g.fillRect(0, 30, 4, 10); g.fillRect(28, 30, 4, 10); g.fillStyle(skin.eyes, 1); g.fillRect(12, 25, 2, 4); g.fillRect(18, 25, 2, 4); }
     else if (currentShape === 'tank') { g.fillRoundedRect(2, 6, 28, 24, 8); g.fillRect(-2, 12, 6, 16); g.fillRect(28, 12, 6, 16); g.fillStyle(skin.eyes, 1); g.fillRect(10, 14, 3, 3); g.fillRect(19, 14, 3, 3); g.lineStyle(2, 0xff8800, 0.8); g.strokeRoundedRect(2, 6, 28, 24, 8); }
     else if (currentShape === 'dart') { g.fillTriangle(16, 0, 4, 36, 28, 36); g.fillStyle(skin.eyes, 1); g.fillRect(14, 24, 2, 3); g.fillRect(18, 24, 2, 3); g.lineStyle(2, skin.trail, 0.5); g.lineBetween(16, 8, 16, 0); }

@@ -118,7 +118,6 @@ function triggerDeath(scene) {
     cleanupScreenFx(scene);
     isMagnetActive = false; isGlitchMode = false; coinsThisRun = 0;
     scoreText.setText(`${TRANSLATIONS[lang].credits}: ${coins}`);
-    const rainbowColors = [0xff0000, 0xff7700, 0xffff00, 0x00ff00, 0x00ffff, 0x0077ff, 0xff00ff];
     for(let i = 0; i < 25; i++) {
         let expCol = currentExplosionColor;
         if (currentExplosionColor === 0xffff00) expCol = rainbowColors[i % rainbowColors.length];
@@ -230,7 +229,6 @@ function showConfirmRevive(scene) {
     }
 }
 
-const rainbowColors = [0xff0000, 0xff7700, 0xffff00, 0x00ff00, 0x00ffff, 0x0077ff, 0xff00ff];
 let rainbowBulletIndex = 0;
 
 function playerShoot() {
