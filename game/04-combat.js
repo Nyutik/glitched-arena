@@ -108,11 +108,14 @@ function triggerDeath(scene) {
         scene.time.delayedCall(1500, () => glitchText.setText(''));
         if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
         return;
-    }
     if (upgradeLevels.helper_autobomb > 0 && isBossFight && boss && boss.active) {
-        let bombDmg = bossHealth * 0.5;
+        let bombDmg = bossHealth * 0.8;
         bossHealth -= bombDmg;
         showDamageText(scene, boss.x, boss.y, Math.floor(bombDmg), '#ff00ff', '22px');
+        scene.cameras.main.flash(300, 255, 0, 255, 0.5);
+        if (bullets) bullets.clear(true, true);
+        if (bossShields) bossShields.clear(true, true);
+    }
         scene.cameras.main.shake(300, 0.03);
     }
     cleanupScreenFx(scene);

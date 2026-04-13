@@ -50,12 +50,19 @@ async function triggerVictory(scene) {
     if (!isShieldActive && upgradeLevels.shield > 0) checkDailyQuest(scene, 'noshield');
     saveProgress();
     if (hasTelegramUser()) submitScore({ level: level, best_level: bestLevel });
-    const explodeCol = currentExplosionColor || 0xff0000; const hexColor = `#${explodeCol.toString(16).padStart(6, '0')}`;
+    let explodeCol = currentExplosionColor || 0xff0000;
+    if (currentExplosionColor === -1) explodeCol = rainbowColors[Phaser.Math.Between(0, rainbowColors.length - 1)];
+    const hexColor = `#${explodeCol.toString(16).padStart(6, '0')}`;
     if (boss && boss.active) {
         scene.tweens.add({ targets: boss, scale: 0.1, alpha: 0.5, duration: 600, ease: 'Back.easeIn', onComplete: () => {
             scene.cameras.main.flash(800, 255, 255, 255, 0.5); scene.cameras.main.shake(1000, 0.04);
             if (boss) boss.setVisible(false);
-            for (let i = 0; i < 12; i++) { let ray = scene.add.rectangle(boss.x, boss.y, 2, 1000, explodeCol).setOrigin(0.5, 0.5).setAlpha(0.8).setDepth(6000); ray.angle = i * 30; scene.tweens.add({ targets: ray, width: 50, alpha: 0, duration: 1500, ease: 'Cubic.easeOut', onComplete: () => ray.destroy() }); }
+            for (let i = 0; i < 12; i++) {
+                let rayCol = currentExplosionColor === -1 ? rainbowColors[i % rainbowColors.length] : explodeCol;
+                let ray = scene.add.rectangle(boss.x, boss.y, 2, 1000, rayCol).setOrigin(0.5, 0.5).setAlpha(0.8).setDepth(6000); 
+                ray.angle = i * 30; 
+                scene.tweens.add({ targets: ray, width: 50, alpha: 0, duration: 1500, ease: 'Cubic.easeOut', onComplete: () => ray.destroy() }); 
+            }
             for (let i = 0; i < 4; i++) { let wave = scene.add.circle(boss.x, boss.y, 10, explodeCol, 0.4).setDepth(5500).setStrokeStyle(4, 0xffffff); scene.tweens.add({ targets: wave, radius: 800, alpha: 0, duration: 1000 + (i * 200), onComplete: () => wave.destroy() }); }
             for (let i = 0; i < 40; i++) { let chunk = scene.add.rectangle(boss.x, boss.y, 8, 8, i % 2 === 0 ? explodeCol : 0xffffff).setDepth(5000); scene.physics.add.existing(chunk); let angle = Math.random() * Math.PI * 2; let speed = Phaser.Math.Between(400, 1000); chunk.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed); scene.tweens.add({ targets: chunk, alpha: 0, scale: 0, duration: 2000, onComplete: () => chunk.destroy() }); }
             let vText = scene.add.text(187, 333, TRANSLATIONS[lang].core_destroyed, { fontFamily: 'Courier New', fontSize: '32px', fill: '#ffffff', fontWeight: 'bold', stroke: hexColor, strokeThickness: 12, align: 'center', wordWrap: { width: 340 } }).setOrigin(0.5).setDepth(10000);

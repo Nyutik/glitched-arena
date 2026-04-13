@@ -269,6 +269,38 @@ function startRun(scene) {
     if (upgradeLevels.up_enhanced > 0 && level >= 50) shootDelay = Math.max(50, shootDelay - 30);
     scene.shootEvent = scene.time.addEvent({ delay: shootDelay, callback: playerShoot, callbackScope: scene, loop: true });
     scene.itemTimer = scene.time.addEvent({ delay: 800, callback: spawnItem, callbackScope: scene, loop: true });
+
+    if (scene.rainbowTimer) scene.rainbowTimer.remove();
+    scene.rainbowIndex = 0;
+    scene.rainbowTimer = scene.time.addEvent({ delay: 100, callback: () => {
+        if (currentSkin === 'rainbow' && trailEmitter && trailEmitter.active) {
+            scene.rainbowIndex = (scene.rainbowIndex + 1) % rainbowColors.length;
+            trailEmitter.setParticleTint(rainbowColors[scene.rainbowIndex]);
+        }
+    }, loop: true });
+
+    if (scene.healTimer) scene.healTimer.remove();
+    if (upgradeLevels.helper_autoheal > 0) {
+        scene.healTimer = scene.time.addEvent({ delay: 2500, callback: () => {
+            if (isStarted && !isDead && player && player.active && playerHealth < maxPlayerHealth) {
+                playerHealth = Math.min(maxPlayerHealth, playerHealth + 10);
+                updateHudTexts();
+            }
+        }, loop: true });
+    }
+
+    if (scene.droneTimer) scene.droneTimer.remove();
+    if (upgradeLevels.helper_drone > 0) {
+        scene.droneTimer = scene.time.addEvent({ delay: 800, callback: () => {
+            if (isStarted && !isDead && player && player.active) {
+                const skin = SKIN_DATA[currentSkin] || SKIN_DATA.classic;
+                let b1 = playerBullets.create(player.x - 15, player.y - 20, 'pixel');
+                let b2 = playerBullets.create(player.x + 15, player.y - 20, 'pixel');
+                b1.setVelocityY(-750).setTint(0xffaa00).setAlpha(0.8).setScale(1.2);
+                b2.setVelocityY(-750).setTint(0xffaa00).setAlpha(0.8).setScale(1.2);
+            }
+        }, loop: true });
+    }
 }
 
 function togglePause() {
@@ -336,9 +368,10 @@ async function syncUserData() {
 
 async function submitScore(manualData = null) {
     const tgUser = getTelegramUser(); if (!tgUser?.id) return false;
+    const initData = window.Telegram?.WebApp?.initData || '';
     try {
         const payload = { telegram_id: tgUser.id, username: tgUser.first_name || tgUser.username || 'PILOT', score: Math.floor(bestDistance), level: manualData ? manualData.level : level, best_level: manualData ? manualData.best_level : bestLevel, explosion_color: currentExplosionColor, skin: currentSkin, shape: currentShape, coins, upgrades: upgradeLevels, achievements, total_dist: Math.floor(totalDistance), bosses_killed: bossesKilled, ship_name: shipName || 'RAZOR-01', rank_xp: rankXP, daily_quests: dailyQuests };
-        const response = await fetch(`${botUrl}/submit_score`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        const response = await fetch(`${botUrl}/submit_score`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': initData }, body: JSON.stringify(payload) });
         if (response.ok) { console.log('✅ Синхронизация успешна:', await response.json()); return true; }
         return false;
     } catch (e) { console.error('❌ Ошибка submitScore:', e); return false; }

@@ -288,12 +288,15 @@ async def got_payment(message: types.Message):
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🎮 GLITCHED ARENA", web_app=WebAppInfo(url="https://glitched-arena.onrender.com/"))]
+    ])
     args = message.text.split()
     if len(args) > 1 and args[1].startswith("game_"):
         game_id = args[1].replace("game_", "")
-        await message.answer(f"🎮 Запуск игры! ID: {game_id}")
+        await message.answer(f"🎮 Запуск игры! ID: {game_id}", reply_markup=kb)
     else:
-        await message.answer("🎮 Добро пожаловать в Glitched Arena!\n\nИспользуйте бота чтобы открыть приложение.")
+        await message.answer("🎮 Добро пожаловать в Glitched Arena!\n\nИспользуйте кнопку ниже, чтобы открыть приложение.", reply_markup=kb)
 
 
 @app.get("/get_user_personal/{tg_id}")
@@ -312,6 +315,18 @@ async def get_user_personal(tg_id: int):
     except Exception as e:
         return {"error": str(e)}
 
+
+# --- ПОДКЛЮЧЕНИЕ ФРОНТЕНДА ---
+app.mount("/", StaticFiles(directory=".", html=True), name="static")
+
+async def main():
+    port = int(os.getenv("PORT", 8000))
+    config = uvicorn.Config(app, host="0.0.0.0", port=port)
+    server = uvicorn.Server(config)
+    await asyncio.gather(server.serve(), dp.start_polling(bot))
+
+if __name__ == "__main__":
+    asyncio.run(main())
 
 # --- ПОДКЛЮЧЕНИЕ ФРОНТЕНДА ---
 app.mount("/", StaticFiles(directory=".", html=True), name="static")

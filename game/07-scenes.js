@@ -177,7 +177,8 @@ async function showLeaderboard(scene, mainMenu) {
         });
         const amIInTop = data.some(e => e.telegram_id == myId);
         if (!amIInTop && getTelegramUser()?.id) {
-            const myRes = await fetch(`${botUrl}/get_user_personal/${myId}`); const myP = await myRes.json();
+            const initData = window.Telegram?.WebApp?.initData || '';
+            const myRes = await fetch(`${botUrl}/get_user_personal/${myId}`, { headers: { 'X-Telegram-Init-Data': initData } }); const myP = await myRes.json();
             if (myP && !myP.error) {
                 const yDots = 125 + data.length * 45; listContainer.add(scene.add.text(187, yDots, '. . .', { fontSize: '20px', fontFamily: fontUI, fill: '#555' }).setOrigin(0.5));
                 const yMe = yDots + 40; const centerY = yMe + 8; listContainer.add(scene.add.rectangle(187, centerY, 350, 38, 0x00ffff, 0.2).setOrigin(0.5));
