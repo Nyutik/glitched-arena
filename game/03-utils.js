@@ -164,7 +164,9 @@ function showQuestComplete(scene, questName, reward) {
     const questOverlay = scene.add.container(0, 0).setDepth(7000);
     const bg = scene.add.graphics().fillStyle(0x000000, 0.85).fillRect(0, 0, 375, 667);
     const border = scene.add.rectangle(187, 333, 280, 100, 0x222222).setStrokeStyle(3, 0x00ff00);
-    const titleTxt = scene.add.text(187, 290, "QUEST COMPLETE!", { fontSize: '18px', fill: '#00ff00', fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5);
+    const titleKey = lang === 'ru' ? 'quest_complete' : 'quest_complete';
+const titleText = TRANSLATIONS[lang][titleKey] || (lang === 'ru' ? 'ЗАДАНИЕ ВЫПОЛНЕНО!' : 'QUEST COMPLETE!');
+const titleTxt = scene.add.text(187, 290, titleText, { fontSize: '18px', fill: '#00ff00', fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5);
     const questTxt = scene.add.text(187, 320, questName, { fontSize: '14px', fill: '#ffffff', fontFamily: 'Arial' }).setOrigin(0.5);
     const rewardTxt = scene.add.text(187, 350, `+${reward} 💰`, { fontSize: '20px', fill: '#ffff00', fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5);
     const okBtn = scene.add.text(187, 390, "[ OK ]", { fontSize: '16px', fill: '#00ffff', fontFamily: 'Arial' }).setOrigin(0.5).setInteractive();

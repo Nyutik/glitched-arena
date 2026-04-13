@@ -152,6 +152,7 @@ const TRANSLATIONS = {
         quest_noshield: "Reach boss without shield", quest_noshield_desc: "Reward: +200 Credits",
         quest_combo15: "Collect combo x15", quest_combo15_desc: "Reward: +100 Credits",
         quest_clearboss: "Defeat any boss", quest_clearboss_desc: "Reward: +250 Credits",
+        quest_complete: "QUEST COMPLETE!",
         change_name: "[ CHANGE NAME ]", ship_name: "Enter ship name:"
     },
     ru: {
@@ -262,6 +263,7 @@ const TRANSLATIONS = {
         quest_noshield: "Доберись до босса без щита", quest_noshield_desc: "Награда: +200 💰",
         quest_combo15: "Собери комбо х15", quest_combo15_desc: "Награда: +100 💰",
         quest_clearboss: "Убей любого босса", quest_clearboss_desc: "Награда: +250 💰",
+        quest_complete: "ЗАДАНИЕ ВЫПОЛНЕНО!",
         change_name: "[ ИЗМЕНИТЬ ИМЯ ]", ship_name: "Введите имя корабля:"
     }
 };
