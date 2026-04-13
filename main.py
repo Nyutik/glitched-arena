@@ -63,6 +63,7 @@ async def get_invoice(item_type: str, user_id: int, username: str):
         "omega": 100, "buy_coins": 50, "fx_blue": 100, "fx_pink": 100, "fx_gold": 150, "fx_green": 150, "fx_red": 150
     }
     amount = prices_map.get(item_type, 100)
+    print(f"[Invoice] item={item_type}, amount={amount}")
 
     # Теперь в полезную нагрузку пишем ID, а не имя!
     payload = f"{item_type}:{user_id}"
