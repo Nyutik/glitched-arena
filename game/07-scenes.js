@@ -352,4 +352,3 @@ function refreshPlayerAppearance(scene) {
     playerHealth = playerHealth + (maxPlayerHealth - oldMaxHp);
     if (playerHealth > maxPlayerHealth) playerHealth = maxPlayerHealth;
 }
-}
