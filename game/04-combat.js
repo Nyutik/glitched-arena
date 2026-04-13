@@ -118,8 +118,11 @@ function triggerDeath(scene) {
     cleanupScreenFx(scene);
     isMagnetActive = false; isGlitchMode = false; coinsThisRun = 0;
     scoreText.setText(`${TRANSLATIONS[lang].credits}: ${coins}`);
+    const rainbowColors = [0xff0000, 0xff7700, 0xffff00, 0x00ff00, 0x00ffff, 0x0077ff, 0xff00ff];
     for(let i = 0; i < 25; i++) {
-        let frag = scene.add.rectangle(player.x, player.y, 5, 5, currentExplosionColor).setDepth(20);
+        let expCol = currentExplosionColor;
+        if (currentExplosionColor === 0xffff00) expCol = rainbowColors[i % rainbowColors.length];
+        let frag = scene.add.rectangle(player.x, player.y, 5, 5, expCol).setDepth(20);
         scene.physics.add.existing(frag);
         frag.body.setVelocity(Phaser.Math.Between(-400, 400), Phaser.Math.Between(-400, 400));
         scene.tweens.add({ targets: frag, alpha: 0, scale: 0, duration: 1000, onComplete: () => frag.destroy() });
