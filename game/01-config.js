@@ -25,6 +25,8 @@ const ASSETS = {
     SFX_NUKE: 'assets/Star_Wars-Siren.mp3'
 };
 
+const rainbowColors = [0xff0000, 0xff7700, 0xffff00, 0x00ff00, 0x00ffff, 0x0077ff, 0xff00ff];
+
 const SKIN_DATA = {
     classic: { body: 0x00ffff, eyes: 0xffffff, trail: 0x00ffff, bullet: 0x00ffff, alpha: 1 },
     phantom: { body: 0x9900ff, eyes: 0x00ffff, trail: 0x9900ff, bullet: 0x9900ff, alpha: 1 },

@@ -344,8 +344,6 @@ async function submitScore(manualData = null) {
     } catch (e) { console.error('❌ Ошибка submitScore:', e); return false; }
 }
 
-const rainbowColors = [0xff0000, 0xff7700, 0xffff00, 0x00ff00, 0x00ffff, 0x0077ff, 0xff00ff];
-
 // === ЗАПУСК ИГРЫ ===
 loadProgress();
 const config = { type: Phaser.AUTO, parent: 'game-container', backgroundColor: '#000000', scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: 375, height: 667 }, render: { pixelArt: false, antialias: true, roundPixels: true }, physics: { default: 'arcade', arcade: { gravity: { y: 0 } } }, scene: { preload, create, update } };
