@@ -124,7 +124,7 @@ function create() {
     }, loop: true });
     if (upgradeLevels.helper_autoheal > 0) {
         this.healTimer = this.time.addEvent({ delay: 10000, callback: () => {
-            if (isStarted && !isDead && playerHealth < maxPlayerHealth) {
+            if (isStarted && !isDead && player && player.active && playerHealth < maxPlayerHealth) {
                 playerHealth = Math.min(maxPlayerHealth, playerHealth + 5);
                 updateHudTexts();
                 if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.impactOccurred('light');
@@ -133,7 +133,7 @@ function create() {
     }
     if (upgradeLevels.helper_drone > 0) {
         this.droneTimer = this.time.addEvent({ delay: 3000, callback: () => {
-            if (isStarted && !isDead && player.active) {
+            if (isStarted && !isDead && player && player.active) {
                 const skin = SKIN_DATA[currentSkin] || SKIN_DATA.classic;
                 let droneBullet = playerBullets.create(player.x, player.y - 30, 'pixel');
                 droneBullet.setVelocityY(-750).setTint(skin.bullet).setAlpha(0.7);
