@@ -343,7 +343,9 @@ function refreshPlayerAppearance(scene) {
     const skin = SKIN_DATA[currentSkin] || SKIN_DATA.classic; if (trailEmitter) trailEmitter.setParticleTint(skin.trail);
     currentStats = getShipStats();
     const oldMaxHp = maxPlayerHealth;
-    maxPlayerHealth = 100 + (upgradeLevels.health || 0) * 25 + currentStats.hpBonus;
+    let healthBonus = upgradeLevels.health || 0;
+    if (upgradeLevels.up_enhanced > 0 && level >= 50) healthBonus *= 2;
+    maxPlayerHealth = 100 + healthBonus * 25 + currentStats.hpBonus;
     playerHealth = playerHealth + (maxPlayerHealth - oldMaxHp);
     if (playerHealth > maxPlayerHealth) playerHealth = maxPlayerHealth;
 }

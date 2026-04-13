@@ -115,6 +115,24 @@ function create() {
     this.physics.add.overlap(player, minions, (p, m) => { m.destroy(); handleDamage(this, 20); });
     this.physics.add.overlap(bossShields, playerBullets, (s, b) => { b.destroy(); s.setAlpha(1); this.time.delayedCall(100, () => s.setAlpha(0.4)); });
     comboPopText = this.add.text(0, 0, '', { fontFamily: fontUI, fontSize: '18px', fill: '#00ff00', fontWeight: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(100).setAlpha(0);
+    if (upgradeLevels.helper_autoheal > 0) {
+        this.healTimer = this.time.addEvent({ delay: 10000, callback: () => {
+            if (isStarted && !isDead && playerHealth < maxPlayerHealth) {
+                playerHealth = Math.min(maxPlayerHealth, playerHealth + 5);
+                updateHudTexts();
+                if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.impactOccurred('light');
+            }
+        }, loop: true });
+    }
+    if (upgradeLevels.helper_drone > 0) {
+        this.droneTimer = this.time.addEvent({ delay: 3000, callback: () => {
+            if (isStarted && !isDead && player.active) {
+                const skin = SKIN_DATA[currentSkin] || SKIN_DATA.classic;
+                let droneBullet = playerBullets.create(player.x, player.y - 30, 'pixel');
+                droneBullet.setVelocityY(-750).setTint(skin.bullet).setAlpha(0.7);
+            }
+        }, loop: true });
+    }
     syncUserData.call(this); updateHudTexts();
     if (!localStorage.getItem('GLITCHED_ARENA_INTRO_DONE')) showGaryIntro(this);
     if (shouldAutoStart) startRun(this); else showMenu(this);
@@ -212,7 +230,10 @@ function update(time, delta) {
 function startRun(scene) {
     isStarted = true; isVictory = false; isDead = false; isPaused = false; isBossFight = false; isShopOpen = false; shouldAutoStart = false;
     clearBattleTexts(scene); cleanupScreenFx(scene); lastObstaclePattern = null;
-    currentStats = getShipStats(); maxPlayerHealth = 100 + (upgradeLevels.health || 0) * 25 + currentStats.hpBonus; playerHealth = maxPlayerHealth;
+    currentStats = getShipStats(); 
+    let healthBonus = upgradeLevels.health || 0;
+    if (upgradeLevels.up_enhanced > 0 && level >= 50) healthBonus *= 2;
+    maxPlayerHealth = 100 + healthBonus * 25 + currentStats.hpBonus; playerHealth = maxPlayerHealth;
     distance = 0; overdrive = 0; coinsThisRun = 0; viperShotCounter = 0;
     bossDamageTaken = 0; coinsCollectedThisRun = 0; overdriveUsedToKill = false;
     if (wallZoneGraphics) { wallZoneGraphics.destroy(); wallZoneGraphics = null; }
@@ -237,7 +258,9 @@ function startRun(scene) {
     scene.input.on('pointerdown', p => { if (!isStarted || isShopOpen || isDead || isPaused || !player?.active) return; if (p.y < 90) return; scene.isFirstMove = true; player.x = Phaser.Math.Clamp(p.x, 20, 355); player.y = Phaser.Math.Clamp(p.y + yOffset, 80, 620); if (shieldAura) shieldAura.setPosition(player.x, player.y); if (overdrive >= 100 && !isVictory && isBossFight) useOverdrive.call(scene); });
     scene.input.on('pointermove', p => { if (!isStarted || isShopOpen || isDead || isPaused || !player?.active) return; if (scene.isFirstMove) { player.x = Phaser.Math.Clamp(p.x, 20, 355); player.y = Phaser.Math.Clamp(p.y + yOffset, 80, 620); if (shieldAura) shieldAura.setPosition(player.x, player.y); } });
     scene.obstacleTimer = scene.time.addEvent({ delay: Math.max(460, 1220 - level * 28), callback: spawnObstacle, callbackScope: scene, loop: true });
-    scene.shootEvent = scene.time.addEvent({ delay: 150 - (upgradeLevels.fire * 20), callback: playerShoot, callbackScope: scene, loop: true });
+    let shootDelay = 150 - (upgradeLevels.fire * 20);
+    if (upgradeLevels.up_enhanced > 0 && level >= 50) shootDelay = Math.max(50, shootDelay - 30);
+    scene.shootEvent = scene.time.addEvent({ delay: shootDelay, callback: playerShoot, callbackScope: scene, loop: true });
     scene.itemTimer = scene.time.addEvent({ delay: 800, callback: spawnItem, callbackScope: scene, loop: true });
 }
 

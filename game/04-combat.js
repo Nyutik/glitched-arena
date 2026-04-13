@@ -231,11 +231,13 @@ function playerShoot() {
     if (isShopOpen || isDead || !isStarted || isPaused) return;
     const skin = SKIN_DATA[currentSkin] || SKIN_DATA.classic;
     const bColor = skin.bullet;
+    const isDoubleDMG = upgradeLevels.up_doubleDMG > 0 || (upgradeLevels.up_enhanced > 0 && level >= 50);
+    const bulletSpeed = isDoubleDMG ? -900 : -750;
     if(upgradeLevels.fire > 0) {
-        playerBullets.create(player.x-18, player.y, 'pixel').setVelocityY(-750).setTint(bColor);
-        playerBullets.create(player.x+18, player.y, 'pixel').setVelocityY(-750).setTint(bColor);
+        playerBullets.create(player.x-18, player.y, 'pixel').setVelocityY(bulletSpeed).setTint(bColor);
+        playerBullets.create(player.x+18, player.y, 'pixel').setVelocityY(bulletSpeed).setTint(bColor);
     }
-    playerBullets.create(player.x, player.y-20, 'pixel').setVelocityY(-750).setTint(bColor);
+    playerBullets.create(player.x, player.y-20, 'pixel').setVelocityY(bulletSpeed).setTint(bColor);
     if (currentShape === 'viper' && upgradeLevels.ship_viper > 0) {
         viperShotCounter++;
         if (viperShotCounter >= 5) {
