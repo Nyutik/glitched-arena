@@ -55,12 +55,13 @@ function showShop(scene, mainMenu, fromVictory = false) {
         const btnBg = scene.add.rectangle(187, y, 330, 48, btnColor).setInteractive();
         if (isLocked) btnBg.setStrokeStyle(2, 0xff0000, 0.8); else if (isEquipped) btnBg.setStrokeStyle(2, 0x00ffff, 1); else if (isOwned && (isCustom || type.startsWith('helper_'))) btnBg.setStrokeStyle(2, 0x00ff00, 1); else if (isStarItem && !isMaxed) btnBg.setStrokeStyle(2, 0xffaa00, 1);
         const namet = TRANSLATIONS[lang][nameKey]; let priceTag = "";
-        if (isLocked) priceTag = `[SEC 40+]`; else if (isEquipped) priceTag = `[${lang === 'ru' ? 'АКТИВНО' : 'EQUIPPED'}]`; else if (isCustom && isOwned) priceTag = `[${lang === 'ru' ? 'ВЫБРАТЬ' : 'SELECT'}]`; else if (type.startsWith('helper_') && isOwned) priceTag = `[${lang === 'ru' ? 'АКТИВНО' : 'ACTIVE'}]`; else if (isMaxed) priceTag = `[${TRANSLATIONS[lang].maxed}]`; else priceTag = `- ${cost} ${isStarItem ? '⭐' : '💰'}`;
+        if (isLocked) priceTag = `[SEC 40+]`; else if (type.startsWith('helper_') && isOwned) priceTag = `[${lang === 'ru' ? 'АКТИВНО' : 'ACTIVE'}]`; else if (isEquipped) priceTag = `[${lang === 'ru' ? 'АКТИВНО' : 'EQUIPPED'}]`; else if (isCustom && isOwned) priceTag = `[${lang === 'ru' ? 'ВЫБРАТЬ' : 'SELECT'}]`; else if (isMaxed) priceTag = `[${TRANSLATIONS[lang].maxed}]`; else priceTag = `- ${cost} ${isStarItem ? '⭐' : '💰'}`;
         const btnText = scene.add.text(187, y - 10, `${namet}${!isCustom && maxLvl > 1 ? ` [${curLvl}/${maxLvl}]` : ""} ${priceTag}`, { fontSize: '13px', fontFamily: fontUI, fill: isLocked ? '#777' : '#fff', fontWeight: 'bold' }).setOrigin(0.5);
         const descText = scene.add.text(187, y + 10, TRANSLATIONS[lang][descKey], { fontSize: '10px', fontFamily: fontUI, fill: isLocked ? '#444' : '#aaa', align: 'center', wordWrap: { width: 310 } }).setOrigin(0.5);
         btnBg.on('pointerdown', () => {
             if (isLocked) { scene.cameras.main.shake(100, 0.01); return; }
             if (isMaxed) return;
+            if (type.startsWith('helper_') && isOwned && cost > 0) { return; }
             if (isEquipped) { if (type.startsWith('fx_') && action) action(); saveProgress(); overlay.destroy(); showShop(scene, mainMenu, fromVictory); return; }
             if (isCustom && isOwned) { if (action) action(); saveProgress(); overlay.destroy(); showShop(scene, mainMenu, fromVictory); return; }
             showConfirm(namet, cost, isStarItem, () => {
