@@ -115,6 +115,13 @@ function create() {
     this.physics.add.overlap(player, minions, (p, m) => { m.destroy(); handleDamage(this, 20); });
     this.physics.add.overlap(bossShields, playerBullets, (s, b) => { b.destroy(); s.setAlpha(1); this.time.delayedCall(100, () => s.setAlpha(0.4)); });
     comboPopText = this.add.text(0, 0, '', { fontFamily: fontUI, fontSize: '18px', fill: '#00ff00', fontWeight: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(100).setAlpha(0);
+    this.rainbowIndex = 0;
+    this.time.addEvent({ delay: 100, callback: () => {
+        if (currentSkin === 'rainbow' && trailEmitter && trailEmitter.active) {
+            this.rainbowIndex = (this.rainbowIndex + 1) % rainbowColors.length;
+            trailEmitter.setParticleTint(rainbowColors[this.rainbowIndex]);
+        }
+    }, loop: true });
     if (upgradeLevels.helper_autoheal > 0) {
         this.healTimer = this.time.addEvent({ delay: 10000, callback: () => {
             if (isStarted && !isDead && playerHealth < maxPlayerHealth) {
@@ -331,6 +338,8 @@ async function submitScore(manualData = null) {
         return false;
     } catch (e) { console.error('❌ Ошибка submitScore:', e); return false; }
 }
+
+const rainbowColors = [0xff0000, 0xff7700, 0xffff00, 0x00ff00, 0x00ffff, 0x0077ff, 0xff00ff];
 
 // === ЗАПУСК ИГРЫ ===
 loadProgress();
