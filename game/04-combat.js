@@ -120,7 +120,7 @@ function triggerDeath(scene) {
     scoreText.setText(`${TRANSLATIONS[lang].credits}: ${coins}`);
     for(let i = 0; i < 25; i++) {
         let expCol = currentExplosionColor;
-        if (currentExplosionColor === 0xffff00) expCol = rainbowColors[i % rainbowColors.length];
+        if (currentExplosionColor === -1 || currentExplosionColor === 0xffff00) expCol = rainbowColors[i % rainbowColors.length];
         let frag = scene.add.rectangle(player.x, player.y, 5, 5, expCol).setDepth(20);
         scene.physics.add.existing(frag);
         frag.body.setVelocity(Phaser.Math.Between(-400, 400), Phaser.Math.Between(-400, 400));
