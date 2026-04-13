@@ -60,7 +60,9 @@ async def get_invoice(item_type: str, user_id: int, username: str):
         "skin_rainbow": 350, "skin_void_premium": 400, "skin_crystal": 350,
         "skin_striker": 1500, "ship_tank": 1200, "ship_dart": 1000, "ship_viper": 1500, "ship_phase": 1800,
         "bundle_starter": 100, "bundle_warrior": 250, "bundle_legend": 500,
-        "omega": 100, "buy_coins": 50, "fx_blue": 100, "fx_pink": 100, "fx_gold": 150, "fx_green": 150, "fx_red": 150
+        "omega": 100, "buy_coins": 50, "fx_blue": 100, "fx_pink": 100, "fx_gold": 150, "fx_green": 150, "fx_red": 150,
+        "helper_drone": 500, "helper_autoshield": 400, "helper_autobomb": 600, "helper_autoheal": 350,
+        "up_extralife": 800, "up_doubleDMG": 700, "up_enhanced": 1500
     }
     amount = prices_map.get(item_type, 100)
     print(f"[Invoice] item={item_type}, amount={amount}")

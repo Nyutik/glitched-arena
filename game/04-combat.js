@@ -59,6 +59,14 @@ function checkAchievements(scene) {
 function handleDamage(scene, dmg) {
     if (isDead || isVictory || !isStarted) return;
     combo = 0;
+    if (upgradeLevels.helper_autoshield > 0 && !isShieldActive && upgradeLevels.helper_autoshield_used !== true) {
+        upgradeLevels.helper_autoshield_used = true;
+        isShieldActive = true;
+        saveProgress();
+        scene.cameras.main.flash(200, 0, 255, 255);
+        if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+        return;
+    }
     let isCrit = playerHealth < 20;
     let dColor = isCrit ? '#ff0055' : '#ff0000';
     let dSize = isCrit ? '26px' : '18px';
@@ -91,6 +99,22 @@ function handleDamage(scene, dmg) {
 
 function triggerDeath(scene) {
     if (isDead || isVictory) return;
+    if (upgradeLevels.up_extralife > 0 && (upgradeLevels.up_extralife_used || 0) < Math.min(5, upgradeLevels.up_extralife)) {
+        upgradeLevels.up_extralife_used = (upgradeLevels.up_extralife_used || 0) + 1;
+        playerHealth = maxPlayerHealth;
+        isDead = false;
+        saveProgress();
+        glitchText.setText(lang === 'ru' ? 'ВОСКРЕС!' : 'RESURRECT!').setFill('#00ff00');
+        scene.time.delayedCall(1500, () => glitchText.setText(''));
+        if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+        return;
+    }
+    if (upgradeLevels.helper_autobomb > 0 && isBossFight && boss && boss.active) {
+        let bombDmg = bossHealth * 0.5;
+        bossHealth -= bombDmg;
+        showDamageText(scene, boss.x, boss.y, Math.floor(bombDmg), '#ff00ff', '22px');
+        scene.cameras.main.shake(300, 0.03);
+    }
     cleanupScreenFx(scene);
     isMagnetActive = false; isGlitchMode = false; coinsThisRun = 0;
     scoreText.setText(`${TRANSLATIONS[lang].credits}: ${coins}`);
