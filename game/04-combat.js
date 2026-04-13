@@ -230,10 +230,17 @@ function showConfirmRevive(scene) {
     }
 }
 
+const rainbowColors = [0xff0000, 0xff7700, 0xffff00, 0x00ff00, 0x00ffff, 0x0077ff, 0xff00ff];
+let rainbowBulletIndex = 0;
+
 function playerShoot() {
     if (isShopOpen || isDead || !isStarted || isPaused) return;
     const skin = SKIN_DATA[currentSkin] || SKIN_DATA.classic;
-    const bColor = skin.bullet;
+    let bColor = skin.bullet;
+    if (currentSkin === 'rainbow') {
+        bColor = rainbowColors[rainbowBulletIndex % rainbowColors.length];
+        rainbowBulletIndex++;
+    }
     const isDoubleDMG = upgradeLevels.up_doubleDMG > 0 || (upgradeLevels.up_enhanced > 0 && level >= 50);
     const bulletSpeed = isDoubleDMG ? -900 : -750;
     if(upgradeLevels.fire > 0) {

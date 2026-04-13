@@ -36,7 +36,7 @@ const SKIN_DATA = {
     plasma:  { body: 0x00ccff, eyes: 0xff00ff, trail: 0x00ffff, bullet: 0x00ffff, alpha: 1, passive: 'ultraCharge' },
     solar:   { body: 0xffaa00, eyes: 0xffff00, trail: 0xff8800, bullet: 0xffaa00, alpha: 1, passive: 'minionCoins' },
     frost:   { body: 0x88ddff, eyes: 0xffffff, trail: 0xaaddff, bullet: 0x88ccff, alpha: 1, passive: 'slowmoDuration' },
-    rainbow:  { body: 0xff0000, eyes: 0xffffff, trail: 0xff00ff, bullet: 0xffff00, alpha: 1, rainbow: true },
+    rainbow:  { body: 0xff0000, eyes: 0xffffff, trail: 0xff0000, bullet: 0xff0000, alpha: 1, rainbow: true },
     void_premium: { body: 0x220044, eyes: 0xff00ff, trail: 0x4400ff, bullet: 0x8800ff, alpha: 0.85, passive: 'voidShield' },
     crystal:  { body: 0x00ffaa, eyes: 0xffffff, trail: 0x88ffff, bullet: 0x00ffaa, alpha: 1, passive: 'crystalReflect' }
 };
