@@ -109,8 +109,10 @@ function create() {
         handleDamage(this, dmg); 
     });
     this.physics.add.overlap(boss, playerBullets, hitBoss, null, this);
+    this.physics.add.overlap(boss, playerMissiles, hitBoss, null, this);
     this.physics.add.overlap(player, items, collectItem, null, this);
     this.physics.add.overlap(minions, playerBullets, (minion, bullet) => { let mx = minion.x; let my = minion.y; minion.destroy(); bullet.destroy(); coinsThisRun += 5; updateHudTexts(); minionExplode(this, mx, my); checkDailyQuest(this, 'kill50'); awardRankXP(this, 5, 'kill'); });
+    this.physics.add.overlap(minions, playerMissiles, (minion, m) => { let mx = minion.x; let my = minion.y; minion.destroy(); m.destroy(); coinsThisRun += 5; updateHudTexts(); minionExplode(this, mx, my); checkDailyQuest(this, 'kill50'); awardRankXP(this, 5, 'kill'); });
     this.physics.add.overlap(player, minionBullets, (p, b) => { b.destroy(); handleDamage(this, 10); });
     this.physics.add.overlap(player, minions, (p, m) => { m.destroy(); handleDamage(this, 20); });
     this.physics.add.overlap(bossShields, playerBullets, (s, b) => { b.destroy(); s.setAlpha(1); this.time.delayedCall(100, () => s.setAlpha(0.4)); });
@@ -151,6 +153,23 @@ function update(time, delta) {
     const fontUI = 'Arial, sans-serif';
     bullets.children.each(b => { if (b && (b.y > 750 || b.y < -100)) b.destroy(); });
     playerBullets.children.each(b => { if (b && b.y < -100) b.destroy(); });
+    playerMissiles.children.each(m => { 
+        if (m && m.active) {
+            let target = null;
+            if (isBossFight && boss && boss.active) target = boss;
+            else if (minions.getLength() > 0) target = minions.getFirstAlive();
+            
+            if (target) {
+                const angle = Phaser.Math.Angle.Between(m.x, m.y, target.x, target.y);
+                const currentAngle = m.body.velocity.angle();
+                const newAngle = Phaser.Math.Angle.RotateTo(currentAngle, angle, 0.1);
+                const speed = 400;
+                m.body.setVelocity(Math.cos(newAngle) * speed, Math.sin(newAngle) * speed);
+                m.rotation = newAngle + Math.PI/2;
+            }
+            if (m.y < -100 || m.y > 750 || m.x < -100 || m.x > 475) m.destroy();
+        }
+    });
     items.children.each(i => { if (i && i.active) { if (isMagnetActive && i.getData('type') === 'coin') { let angle = Phaser.Math.Angle.Between(i.x, i.y, player.x, player.y); i.body.setVelocity(Math.cos(angle) * 600, Math.sin(angle) * 600); } if (i.y > 750) i.destroy(); } });
     obstacles.children.each(o => { if (o && o.active) { if (o.getData('isDrone')) { let speedX = (player.x - o.x) * 2.5; o.body.setVelocityX(speedX); o.setAlpha(0.7 + Math.sin(time * 0.01) * 0.3); } if (!o.getData('missed') && Math.abs(o.x - player.x) < 75 && Math.abs(o.y - player.y) < 30) { o.setData('missed', true); showComboEffect(this); } if (o.y > 750) o.destroy(); } }, this);
     minions.children.each(m => { if (m && m.active) { m.getData('state') === 'hunting' ? m.body.setVelocity((player.x - m.x) * 3, 100) : m.body.setVelocity(0, 50); if (m.y > 750) m.destroy(); } });
@@ -246,9 +265,9 @@ function startRun(scene) {
     if (wallZoneGraphics) { wallZoneGraphics.destroy(); wallZoneGraphics = null; }
     if (secondCore) { secondCore.destroy(); secondCore = null; }
     if (stormZoneGraphics) { stormZoneGraphics.destroy(); stormZoneGraphics = null; }
-    if (this.stormZoneTimer) { this.stormZoneTimer.remove(); this.stormZoneTimer = null; } bossHealth = 400 * (1 + (level >= 30 ? (30 * 0.45 + (level - 30) * 0.22) : level * 0.45)); isMagnetActive = false; isGlitchMode = false; scene.isFirstMove = false;
+    if (this.stormZoneTimer) { this.stormZoneTimer.remove(); this.stormZoneTimer = null; } bossHealth = 400 * (1 + (level >= 30 ? (30 * 0.45 + (level - 30) * 0.22) : level * 0.45)); isMagnetActive = false; isGlitchMode = false; scene.isFirstMove = false; isSlowMoActive = false; slowMoCooldown = 0; lastEmpTime = 0;
     if (scene.physics?.world) { scene.physics.resume(); scene.physics.world.timeScale = 1; }
-    if (scene.time) scene.time.paused = false;
+    if (scene.time) { scene.time.paused = false; scene.time.timeScale = 1; }
     scene.obstacleTimer?.remove(); scene.shootEvent?.remove(); scene.itemTimer?.remove(); scene.bossShootEvent?.remove(); scene.turretShootEvent?.remove(); scene.minionTimer?.remove(); scene.phraseTimer?.remove(); scene.teleportEvent?.remove();
     obstacles?.clear(true, true); bullets?.clear(true, true); playerBullets?.clear(true, true); items?.clear(true, true); minions?.clear(true, true); minionBullets?.clear(true, true); bossShields?.clear(true, true);
     if (bossTurretL) { bossTurretL.destroy(); bossTurretL = null; } if (bossTurretR) { bossTurretR.destroy(); bossTurretR = null; } if (bossTurretLTrail) { bossTurretLTrail.destroy(); bossTurretLTrail = null; } if (bossTurretRTrail) { bossTurretRTrail.destroy(); bossTurretRTrail = null; }
@@ -298,6 +317,16 @@ function startRun(scene) {
                 let b2 = playerBullets.create(player.x + 15, player.y - 20, 'pixel');
                 b1.setVelocityY(-750).setTint(0xffaa00).setAlpha(0.8).setScale(1.2);
                 b2.setVelocityY(-750).setTint(0xffaa00).setAlpha(0.8).setScale(1.2);
+            }
+        }, loop: true });
+    }
+
+    if (scene.missileTimer) scene.missileTimer.remove();
+    if (upgradeLevels.helper_missile > 0) {
+        scene.missileTimer = scene.time.addEvent({ delay: 1500, callback: () => {
+            if (isStarted && !isDead && player && player.active) {
+                let m = playerMissiles.create(player.x, player.y, 'pixel');
+                m.setVelocityY(-300).setTint(0xff00ff).setScale(2);
             }
         }, loop: true });
     }

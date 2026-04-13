@@ -87,6 +87,20 @@ function handleDamage(scene, dmg) {
         return;
     }
     playerHealth -= dmg;
+    if (playerHealth > 0 && playerHealth < maxPlayerHealth * 0.3 && !isSlowMoActive && Date.now() - slowMoCooldown > 45000) {
+        isSlowMoActive = true;
+        scene.physics.world.timeScale = 2.5;
+        scene.time.timeScale = 0.5;
+        scene.cameras.main.flash(300, 255, 0, 0, 0.5);
+        if (glitchText) glitchText.setText("MATRIX AVOIDANCE!").setFill('#ff0000');
+        scene.time.delayedCall(2500, () => {
+            isSlowMoActive = false;
+            slowMoCooldown = Date.now();
+            scene.physics.world.timeScale = 1;
+            scene.time.timeScale = 1;
+            if (glitchText && glitchText.text === "MATRIX AVOIDANCE!") glitchText.setText("");
+        }, [], scene);
+    }
     scene.cameras.main.flash(200, 255, 0, 0, 0.5);
     scene.cameras.main.shake(200, 0.02);
     if (playerHealth < maxPlayerHealth * 0.4) {
@@ -138,6 +152,8 @@ function triggerDeath(scene) {
     if (secondCore) { secondCore.destroy(); secondCore = null; } if (scene?.dualCoreShootTimer) { scene.dualCoreShootTimer.remove(); scene.dualCoreShootTimer = null; }
     saveProgress();
     if (glitchText) glitchText.setText("").setBackgroundColor(null);
+    scene.physics.world.timeScale = 1;
+    scene.time.timeScale = 1;
     scene.physics.pause();
     if (scene.obstacleTimer) scene.obstacleTimer.remove();
     if (scene.shootEvent) scene.shootEvent.remove();
