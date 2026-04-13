@@ -327,17 +327,11 @@ function awardRankXP(scene, amount, source = 'kill') {
 }
 
 function showRankUp(scene, newRank) {
-    const rankOverlay = scene.add.container(0, 0).setDepth(8000);
-    const bg = scene.add.graphics().fillStyle(0x000000, 0.9).fillRect(0, 200, 375, 180);
-    const border = scene.add.rectangle(187, 290, 320, 120, 0x222222).setStrokeStyle(4, newRank.color);
-    const titleTxt = scene.add.text(187, 255, TRANSLATIONS[lang].rank_up || 'RANK UP!', { fontSize: '16px', fill: '#ffaa00', fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5);
-    const rankTxt = scene.add.text(187, 285, newRank.name[lang], { fontSize: '32px', fill: newRank.color, fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5);
-    const descTxt = scene.add.text(187, 315, TRANSLATIONS[lang].rank_reached || 'You reached a new rank!', { fontSize: '12px', fill: '#aaaaaa', fontFamily: 'Arial' }).setOrigin(0.5);
-    rankOverlay.add([bg, border, titleTxt, rankTxt, descTxt]);
-    scene.cameras.main.shake(300, 0.015);
-    scene.cameras.main.flash(300, 255, 170, 0, 0.5);
+    const rankBg = scene.add.text(187, 100, '', { fontSize: '16px', fill: newRank.color, backgroundColor: '#000000aa', padding: { x: 12, y: 8 }, fontFamily: 'Arial' }).setOrigin(0.5).setDepth(500);
+    rankBg.setText(`⭐ ${TRANSLATIONS[lang].rank_up || 'RANK UP!'} ${newRank.name[lang]} ⭐`);
+    scene.tweens.add({ targets: rankBg, y: 70, alpha: 0, delay: 2500, duration: 500, onComplete: () => rankBg.destroy() });
+    scene.cameras.main.shake(150, 0.008);
     if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-    scene.tweens.add({ targets: rankOverlay, alpha: 0, delay: 3000, duration: 500, onComplete: () => rankOverlay.destroy() });
 }
 
 function refreshPlayerAppearance(scene) {

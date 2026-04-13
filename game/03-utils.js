@@ -161,20 +161,12 @@ function checkDailyQuest(scene, questId) {
 }
 
 function showQuestComplete(scene, questName, reward) {
-    const questOverlay = scene.add.container(0, 0).setDepth(7000);
-    const bg = scene.add.graphics().fillStyle(0x000000, 0.85).fillRect(0, 0, 375, 667);
-    const border = scene.add.rectangle(187, 333, 280, 100, 0x222222).setStrokeStyle(3, 0x00ff00);
+    const questBg = scene.add.text(187, 80, '', { fontSize: '14px', fill: '#00ff00', backgroundColor: '#000000aa', padding: { x: 10, y: 6 }, fontFamily: 'Arial' }).setOrigin(0.5).setDepth(500);
     const titleKey = lang === 'ru' ? 'quest_complete' : 'quest_complete';
-const titleText = TRANSLATIONS[lang][titleKey] || (lang === 'ru' ? 'ЗАДАНИЕ ВЫПОЛНЕНО!' : 'QUEST COMPLETE!');
-const titleTxt = scene.add.text(187, 290, titleText, { fontSize: '18px', fill: '#00ff00', fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5);
-    const questTxt = scene.add.text(187, 320, questName, { fontSize: '14px', fill: '#ffffff', fontFamily: 'Arial' }).setOrigin(0.5);
-    const rewardTxt = scene.add.text(187, 350, `+${reward} 💰`, { fontSize: '20px', fill: '#ffff00', fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5);
-    const okBtn = scene.add.text(187, 390, "[ OK ]", { fontSize: '16px', fill: '#00ffff', fontFamily: 'Arial' }).setOrigin(0.5).setInteractive();
-    okBtn.on('pointerdown', () => questOverlay.destroy());
-    questOverlay.add([bg, border, titleTxt, questTxt, rewardTxt, okBtn]);
-    scene.cameras.main.shake(100, 0.005);
+    const titleText = TRANSLATIONS[lang][titleKey] || (lang === 'ru' ? 'ЗАДАНИЕ ВЫПОЛНЕНО!' : 'QUEST COMPLETE!');
+    questBg.setText(`${titleText} +${reward} 💰`);
+    scene.tweens.add({ targets: questBg, y: 60, alpha: 0, delay: 2500, duration: 500, onComplete: () => questBg.destroy() });
     if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-    scene.time.delayedCall(3000, () => { if (questOverlay) questOverlay.destroy(); });
 }
 
 function saveProgress() {
