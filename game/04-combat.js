@@ -474,7 +474,7 @@ function hitBoss(b, bullet) {
     if (isVictory) return;
     if (bullet) bullet.destroy();
     let dmg = 10 * currentStats.atk;
-    if (level >= 15) dmg += (level * 0.6); // Auto-scaling damage for high sectors
+    if (level >= 15) dmg += ((level - 14) * 0.25); // Auto-scaling damage for high sectors
     if (level >= 40 && isInSafeZone()) dmg *= 1.5;
     if (level >= 50 && level < 60) dmg *= 0.7;
     if (level >= 60) dmg *= 1.2;
