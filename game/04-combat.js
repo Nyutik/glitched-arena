@@ -475,7 +475,8 @@ function hitBoss(b, bullet) {
     if (bullet) bullet.destroy();
     let dmg = 10 * currentStats.atk;
     if (level >= 40 && isInSafeZone()) dmg *= 1.5;
-    if (level >= 50) dmg *= 0.7;
+    if (level >= 50 && level < 60) dmg *= 0.7;
+    if (level >= 60) dmg *= 1.2;
     if (level >= 70 && absorbedBullets > 0) {
         const absorbBonus = Math.min(absorbedBullets * 0.05, 0.5);
         dmg *= (1 + absorbBonus);
