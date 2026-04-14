@@ -44,13 +44,18 @@
             console.log("✅ Telegram Analytics ready");
         }
     }
-    
+
     window.addEventListener('load', () => {
-        if (window.Adsgram) {
-            window.adController = window.Adsgram.init({ blockId: "25945" });
-            console.log("✅ Adsgram ready:", window.adController);
+        if (window.Adsgram && window.Telegram?.WebApp?.initData) {
+            try {
+                window.adController = window.Adsgram.init({ blockId: "25945" });
+                console.log("✅ Adsgram ready:", window.adController);
+            } catch (e) {
+                console.log("Adsgram init error:", e);
+                window.adController = null;
+            }
         } else {
-            console.warn("❌ Adsgram SDK not found!");
+            console.warn("❌ Adsgram SDK not found or not in Telegram!");
             window.adController = null;
         }
     });

@@ -209,7 +209,11 @@ function loadProgress() {
 
 // Adsgram init
 window.addEventListener('load', () => {
-    if (window.Adsgram) {
-        adController = window.Adsgram.init({ blockId: "25945" });
+    if (window.Adsgram && window.Telegram?.WebApp?.initData) {
+        try {
+            adController = window.Adsgram.init({ blockId: "25945" });
+        } catch (e) {
+            console.log("Adsgram init error (probably not in Telegram):", e);
+        }
     }
 });

@@ -51,12 +51,14 @@ function showShop(scene, mainMenu, fromVictory = false) {
         let isOwned = (upgradeLevels[type] > 0); let isMaxed = (!isCustom && curLvl >= maxLvl);
         const isStarItem = ['skin_gold', 'skin_ghost', 'omega', 'buy_coins', 'fx_blue', 'fx_pink', 'fx_rainbow', 'fx_gold', 'fx_green', 'fx_red', 'skin_rainbow', 'skin_void_premium', 'skin_crystal', 'bundle_starter', 'bundle_warrior', 'bundle_legend'].includes(type);
         const isLocked = (type === 'omega' && level < 40 && !upgradeLevels.omega) || (['up_extralife', 'up_doubleDMG', 'up_enhanced', 'helper_mercenary'].includes(type) && level < 50);
-        let btnColor = isEquipped ? 0x006666 : (isOwned && (isCustom || type.startsWith('helper_')) ? 0x004400 : (isLocked ? 0x1a1a1a : (isStarItem ? 0x443300 : (isMaxed ? 0x002200 : 0x222222))));
+        let btnColor = isEquipped ? 0x006666 : (isLocked ? 0x1a1a1a : (isStarItem ? 0x443300 : (isMaxed ? 0x002200 : 0x222222)));
         const btnBg = scene.add.rectangle(187, y, 330, 48, btnColor).setInteractive();
-        if (isLocked) btnBg.setStrokeStyle(2, 0xff0000, 0.8); else if (isOwned && (isCustom || type.startsWith('helper_'))) btnBg.setStrokeStyle(2, 0x00ff00, 1); else if (isEquipped) btnBg.setStrokeStyle(2, 0x00ffff, 1); else if (isStarItem && !isMaxed) btnBg.setStrokeStyle(2, 0xffaa00, 1);
+        const isOwnedHelper = isOwned && (isCustom || type.startsWith('helper_'));
+        if (isLocked) btnBg.setStrokeStyle(2, 0xff0000, 0.8); else if (isEquipped) btnBg.setStrokeStyle(2, 0x00ffff, 1); else if (isOwnedHelper || isMaxed) btnBg.setStrokeStyle(2, 0x00ff00, 1); else if (isStarItem && !isMaxed) btnBg.setStrokeStyle(2, 0xffaa00, 1);
         const namet = TRANSLATIONS[lang][nameKey]; let priceTag = "";
         if (isLocked) priceTag = `[SEC 40+]`; else if (type.startsWith('helper_') && isOwned) priceTag = `[${lang === 'ru' ? 'АКТИВНО' : 'ACTIVE'}]`; else if (isEquipped) priceTag = `[${lang === 'ru' ? 'АКТИВНО' : 'EQUIPPED'}]`; else if (isCustom && isOwned) priceTag = `[${lang === 'ru' ? 'ВЫБРАТЬ' : 'SELECT'}]`; else if (isMaxed) priceTag = `[${TRANSLATIONS[lang].maxed}]`; else priceTag = `- ${cost} ${isStarItem ? '⭐' : '💰'}`;
-        const btnText = scene.add.text(187, y - 10, `${namet}${!isCustom && maxLvl > 1 ? ` [${curLvl}/${maxLvl}]` : ""} ${priceTag}`, { fontSize: '13px', fontFamily: fontUI, fill: isLocked ? '#777' : '#fff', fontWeight: 'bold' }).setOrigin(0.5);
+        const textFill = isLocked ? '#777' : (isEquipped ? '#00ffff' : ((isOwnedHelper || isMaxed) ? '#00ff00' : '#fff'));
+        const btnText = scene.add.text(187, y - 10, `${namet}${!isCustom && maxLvl > 1 ? ` [${curLvl}/${maxLvl}]` : ""} ${priceTag}`, { fontSize: '13px', fontFamily: fontUI, fill: textFill, fontWeight: 'bold' }).setOrigin(0.5);
         const descText = scene.add.text(187, y + 10, TRANSLATIONS[lang][descKey], { fontSize: '10px', fontFamily: fontUI, fill: isLocked ? '#444' : '#aaa', align: 'center', wordWrap: { width: 310 } }).setOrigin(0.5);
         btnBg.on('pointerdown', () => {
             if (isLocked) { scene.cameras.main.shake(100, 0.01); return; }
@@ -73,7 +75,7 @@ function showShop(scene, mainMenu, fromVictory = false) {
     };
     let sY = 30, step = 58;
     if (currentShopTab === 'upgrades') {
-        createBtn(sY, "up_antenna", "desc_antenna", 400, 'ultra'); createBtn(sY+step, "up_cannons", "desc_cannons", 800, 'fire'); createBtn(sY+step*2, "up_speed", "desc_speed", 300, 'speed'); createBtn(sY+step*3, "up_hull", "desc_hull", 500, 'health', () => { maxPlayerHealth += 25; playerHealth = maxPlayerHealth; }); createBtn(sY+step*4, "up_shield", "desc_shield", 150, 'shield'); createBtn(sY+step*5, "skin_striker", "desc_striker", 1500, 'skin_striker', () => { currentShape = 'striker'; refreshPlayerAppearance(scene); }); createBtn(sY+step*6, "ship_tank", "desc_tank", 1200, 'ship_tank', () => { currentShape = 'tank'; refreshPlayerAppearance(scene); }); createBtn(sY+step*7, "ship_dart", "desc_dart", 1000, 'ship_dart', () => { currentShape = 'dart'; refreshPlayerAppearance(scene); }); createBtn(sY+step*8, "ship_viper", "desc_viper", 1500, 'ship_viper', () => { currentShape = 'viper'; refreshPlayerAppearance(scene); }); createBtn(sY+step*9, "ship_phase", "desc_phase", 1800, 'ship_phase', () => { currentShape = 'phase'; refreshPlayerAppearance(scene); }); createBtn(sY+step*10, "up_omega", "desc_omega", 100, 'omega', () => { upgradeLevels.omega = 1; }); createBtn(sY+step*11, "up_coins", "desc_coins", 50, 'buy_coins'); createBtn(sY+step*12, "helper_drone", "desc_helper_drone", 500, 'helper_drone', () => { upgradeLevels.helper_drone = 1; }); createBtn(sY+step*13, "helper_autoshield", "desc_helper_autoshield", 400, 'helper_autoshield', () => { upgradeLevels.helper_autoshield = 1; }); createBtn(sY+step*14, "helper_autobomb", "desc_helper_autobomb", 600, 'helper_autobomb', () => { upgradeLevels.helper_autobomb = 1; }); createBtn(sY+step*15, "helper_autoheal", "desc_helper_autoheal", 350, 'helper_autoheal', () => { upgradeLevels.helper_autoheal = 1; }); createBtn(sY+step*16, "helper_mercenary", "desc_helper_mercenary", 200, 'helper_mercenary', () => { upgradeLevels.helper_mercenary = 1; }); maxScroll = step * 16;
+        createBtn(sY, "up_antenna", "desc_antenna", 400, 'ultra'); createBtn(sY+step, "up_cannons", "desc_cannons", 800, 'fire'); createBtn(sY+step*2, "up_speed", "desc_speed", 300, 'speed'); createBtn(sY+step*3, "up_hull", "desc_hull", 500, 'health', () => { maxPlayerHealth += 25; playerHealth = maxPlayerHealth; }); createBtn(sY+step*4, "up_shield", "desc_shield", 150, 'shield'); createBtn(sY+step*5, "skin_striker", "desc_striker", 1500, 'skin_striker', () => { currentShape = 'striker'; refreshPlayerAppearance(scene); }); createBtn(sY+step*6, "ship_tank", "desc_tank", 1200, 'ship_tank', () => { currentShape = 'tank'; refreshPlayerAppearance(scene); }); createBtn(sY+step*7, "ship_dart", "desc_dart", 1000, 'ship_dart', () => { currentShape = 'dart'; refreshPlayerAppearance(scene); }); createBtn(sY+step*8, "ship_viper", "desc_viper", 1500, 'ship_viper', () => { currentShape = 'viper'; refreshPlayerAppearance(scene); }); createBtn(sY+step*9, "ship_phase", "desc_phase", 1800, 'ship_phase', () => { currentShape = 'phase'; refreshPlayerAppearance(scene); }); createBtn(sY+step*10, "up_omega", "desc_omega", 100, 'omega', () => { upgradeLevels.omega = 1; }); createBtn(sY+step*11, "up_coins", "desc_coins", 50, 'buy_coins'); createBtn(sY+step*12, "helper_drone", "desc_helper_drone", 500, 'helper_drone', () => { upgradeLevels.helper_drone = 1; }); createBtn(sY+step*13, "helper_autoshield", "desc_helper_autoshield", 400, 'helper_autoshield', () => { upgradeLevels.helper_autoshield = 1; }); createBtn(sY+step*14, "helper_autobomb", "desc_helper_autobomb", 600, 'helper_autobomb', () => { upgradeLevels.helper_autobomb = 1; }); createBtn(sY+step*15, "helper_autoheal", "desc_helper_autoheal", 350, 'helper_autoheal', () => { upgradeLevels.helper_autoheal = 1; }); createBtn(sY+step*16, "helper_mercenary", "desc_helper_mercenary", 500, 'helper_mercenary', () => { upgradeLevels.helper_mercenary = 1; }); maxScroll = step * 16;
     } else if (currentShopTab === 'fx') {
         createBtn(sY, "skin_gold", "desc_gold", 200, 'skin_gold', () => { currentSkin = 'gold'; refreshPlayerAppearance(scene); }); createBtn(sY+step, "skin_ghost", "desc_ghost", 200, 'skin_ghost', () => { currentSkin = 'ghost'; refreshPlayerAppearance(scene); }); createBtn(sY+step*2, "skin_crimson", "desc_crimson", 300, 'skin_crimson', () => { currentSkin = 'crimson'; refreshPlayerAppearance(scene); }); createBtn(sY+step*3, "skin_void", "desc_void", 300, 'skin_void', () => { currentSkin = 'void_skin'; refreshPlayerAppearance(scene); }); createBtn(sY+step*4, "skin_plasma", "desc_plasma", 300, 'skin_plasma', () => { currentSkin = 'plasma'; refreshPlayerAppearance(scene); }); createBtn(sY+step*5, "skin_solar", "desc_solar", 300, 'skin_solar', () => { currentSkin = 'solar'; refreshPlayerAppearance(scene); }); createBtn(sY+step*6, "skin_frost", "desc_frost", 300, 'skin_frost', () => { currentSkin = 'frost'; refreshPlayerAppearance(scene); }); createBtn(sY+step*7, "skin_rainbow", "desc_rainbow", 350, 'skin_rainbow', () => { currentSkin = 'rainbow'; refreshPlayerAppearance(scene); }); createBtn(sY+step*8, "void_premium", "desc_void_premium", 400, 'skin_void_premium', () => { currentSkin = 'void_premium'; refreshPlayerAppearance(scene); }); createBtn(sY+step*9, "crystal", "desc_crystal", 350, 'skin_crystal', () => { currentSkin = 'crystal'; refreshPlayerAppearance(scene); }); createBtn(sY+step*10, "fx_blue_exp", "desc_blue_exp", 100, 'fx_blue', () => { currentExplosionColor = 0x00ffff; }); createBtn(sY+step*11, "fx_pink_exp", "desc_pink_exp", 100, 'fx_pink', () => { currentExplosionColor = 0xff00ff; }); createBtn(sY+step*12, "fx_rainbow_exp", "desc_rainbow_exp", 150, 'fx_rainbow', () => { currentExplosionColor = -1; }); createBtn(sY+step*13, "fx_gold_exp", "desc_gold_exp", 150, 'fx_gold', () => { currentExplosionColor = 0xffaa00; }); createBtn(sY+step*14, "fx_green_exp", "desc_green_exp", 150, 'fx_green', () => { currentExplosionColor = 0x00ff00; }); createBtn(sY+step*15, "fx_red_exp", "desc_red_exp", 150, 'fx_red', () => { currentExplosionColor = 0xff0000; }); maxScroll = step * 15;
     } else if (currentShopTab === 'bundles') {
@@ -83,14 +85,40 @@ function showShop(scene, mainMenu, fromVictory = false) {
     const paddingBottom = isVictory ? 100 : 100; maxScroll = Math.max(0, contentHeight - scrollHeight + paddingBottom);
     scene.input.on('wheel', (p, obj, dx, dy) => { scrollY = Phaser.Math.Clamp(scrollY - dy * 0.8, -maxScroll, 0); contentContainer.y = scrollY; });
     scene.input.on('pointermove', (p) => { if (p.isDown && p.y > 110 && p.y < scrollAreaBottom) { scrollY = Phaser.Math.Clamp(scrollY + (p.y - p.prevPosition.y), -maxScroll, 0); contentContainer.y = scrollY; } });
-    const footerY = 625; const btnWidth = 165;
-    const backBg = scene.add.rectangle(100, footerY, btnWidth, 45, 0x330033).setInteractive().setStrokeStyle(1, 0xff00ff, 0.5);
-    const backTxt = scene.add.text(100, footerY, TRANSLATIONS[lang].back, { fontSize: '13px', fill: '#ff00ff', fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5);
+    const footerY = 625; const btnWidth = 110;
+    const backBg = scene.add.rectangle(65, footerY, btnWidth, 45, 0x330033).setInteractive().setStrokeStyle(1, 0xff00ff, 0.5);
+    const backTxt = scene.add.text(65, footerY, TRANSLATIONS[lang].back, { fontSize: '11px', fill: '#ff00ff', fontWeight: 'bold', fontFamily: fontUI, align: 'center', wordWrap: { width: 100 } }).setOrigin(0.5);
+    
+    const adBg = scene.add.rectangle(187, footerY, btnWidth, 45, 0x333300).setInteractive().setStrokeStyle(1, 0xffff00, 0.5);
+    const adTxt = scene.add.text(187, footerY, lang === 'ru' ? 'РЕКЛАМА\n+250 💰' : 'WATCH AD\n+250 💰', { fontSize: '11px', fontFamily: fontUI, fill: '#ffff00', fontWeight: 'bold', align: 'center' }).setOrigin(0.5);
+    
     const invColor = upgradeLevels.shareClaimed ? 0x222222 : 0x004400;
-    const invBg = scene.add.rectangle(275, footerY, btnWidth, 45, invColor).setInteractive().setStrokeStyle(1, 0x00ff88, 0.5);
-    const invTxt = scene.add.text(275, footerY, upgradeLevels.shareClaimed ? "✓" : `👥 ${lang === 'ru' ? '+500' : '+500'}`, { fontSize: '14px', fontFamily: fontUI, fill: upgradeLevels.shareClaimed ? '#777' : '#00ff88', fontWeight: 'bold' }).setOrigin(0.5);
-    overlay.add([backBg, backTxt, invBg, invTxt]);
+    const invBg = scene.add.rectangle(310, footerY, btnWidth, 45, invColor).setInteractive().setStrokeStyle(1, 0x00ff88, 0.5);
+    const invTxt = scene.add.text(310, footerY, upgradeLevels.shareClaimed ? "✓" : `👥 ${lang === 'ru' ? '+500' : '+500'}`, { fontSize: '12px', fontFamily: fontUI, fill: upgradeLevels.shareClaimed ? '#777' : '#00ff88', fontWeight: 'bold' }).setOrigin(0.5);
+    
+    overlay.add([backBg, backTxt, adBg, adTxt, invBg, invTxt]);
+    
     backBg.on('pointerdown', () => { saveProgress(); isVictory = false; isStarted = false; isDead = false; isBossFight = false; scene.input.off('wheel'); overlay.destroy(); if (mainMenu) { mainMenu.setVisible(true); if (typeof startTitleGlitch === 'function') startTitleGlitch(scene, mainMenu.titleRef); } else showMenu(scene); });
+    
+    adBg.on('pointerdown', () => {
+        const currentAds = window.adController;
+        if (!currentAds) { console.log("Adsgram missing"); scene.cameras.main.shake(100, 0.01); return; }
+        adBg.disableInteractive();
+        currentAds.show().then((result) => {
+            adBg.setInteractive();
+            if (result && result.done) {
+                coins += 250;
+                saveProgress();
+                creds.setText(`${TRANSLATIONS[lang].credits}: ${coins}`);
+                scene.cameras.main.flash(200, 255, 255, 0, 0.5);
+                if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+            }
+        }).catch(e => {
+            adBg.setInteractive();
+            console.log("Adsgram error", e);
+        });
+    });
+
     invBg.on('pointerdown', () => { const shareText = encodeURIComponent(TRANSLATIONS[lang].share_invite.replace("%lvl%", level).replace("%dist%", bestDistance)); const fullLink = `https://t.me/share/url?url=${encodeURIComponent(SHARE_LINK)}&text=${shareText}`; if (window.Telegram?.WebApp) { Telegram.WebApp.openTelegramLink(fullLink); if (!upgradeLevels.shareClaimed) { coins += 500; upgradeLevels.shareClaimed = true; saveProgress(); creds.setText(`${TRANSLATIONS[lang].credits}: ${coins}`); invBg.setFillStyle(0x222222); invTxt.setText("✓").setFill("#777"); } } else window.open(fullLink, '_blank'); });
     if (fromVictory) {
         const nextSector = level; const nextLabel = `${TRANSLATIONS[lang].deploy_btn} ${nextSector}`;
