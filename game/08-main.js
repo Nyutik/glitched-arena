@@ -97,7 +97,7 @@ function create() {
         b.destroy(); 
         let dmg = 15;
         if (level >= 40 && !isInSafeZone()) dmg = 25;
-        if (level >= 60 && isInStormZone()) dmg = 30;
+        if (level >= 60 && isInStormZone()) dmg = 20;
         if (level >= 70 && absorbedBullets > 0) {
             const extraDmg = Math.min(absorbedBullets * 2, 30);
             dmg += extraDmg;
@@ -216,7 +216,7 @@ function update(time, delta) {
             }
         }
         if (level >= 60) {
-            stormAngle += 0.02;
+            stormAngle += 0.01;
             if (!this.stormZoneTimer) {
                 this.stormZoneTimer = this.time.addEvent({ delay: 100, callback: () => {
                     if (!isBossFight || isVictory || isDead || !boss) return;
