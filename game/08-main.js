@@ -23,7 +23,19 @@ function preload() {
 }
 
 function create() {
-    if (window.Telegram?.WebApp) { window.Telegram.WebApp.expand(); window.Telegram.WebApp.ready(); }
+    if (window.Telegram?.WebApp) { 
+        const tg = window.Telegram.WebApp;
+        tg.expand(); 
+        tg.ready();
+        
+        try {
+            if (tg.setHeaderColor) tg.setHeaderColor('#000000');
+            if (tg.setBackgroundColor) tg.setBackgroundColor('#000000');
+            if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();
+        } catch(e) {
+            console.log("Telegram WebApp API feature not supported:", e);
+        }
+    }
     if (window.adController) adController = window.adController;
     currentStats = getShipStats();
     isPhase3 = false; isVictory = false; isShopOpen = false; isDead = false; isBossFight = false; isStarted = false; isPaused = false; isPhase2 = false;
