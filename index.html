@@ -24,6 +24,17 @@
 <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/phaser@3.60.0/dist/phaser-arcade-physics.min.js"></script>
+<script>
+    function initAnalytics() {
+        if (window.telegramAnalytics) {
+            window.telegramAnalytics.init({
+                token: 'eyJhcHBfbmFtZSI6ImdsaXRjaGVkX2FyZW5hIiwiYXBwX3VybCI6Imh0dHBzOi8vdC5tZS9HbGl0Y2hlZEFyZW5hQm90IiwiYXBwX2RvbWFpbiI6Imh0dHBzOi8vZ2xpdGNoZWQtYXJlbmEub25yZW5kZXIuY29tLyJ9!IqJQ9QHQmHVXR4dcIlbB8vPPYJ5oG4BmKJ8oVYMaa=',
+                appName: 'glitched_arena',
+            });
+            console.log("✅ Telegram Analytics ready");
+        }
+    }
+</script>
 <script async src="https://tganalytics.xyz/index.js" onload="initAnalytics()" type="text/javascript"></script>
 <script src="game/01-config.js"></script>
 <script src="game/02-state.js"></script>
@@ -35,16 +46,6 @@
 <script src="game/08-main.js"></script>
 
 <script>
-    function initAnalytics() {
-        if (window.telegramAnalytics) {
-            window.telegramAnalytics.init({
-                token: 'eyJhcHBfbmFtZSI6ImdsaXRjaGVkX2FyZW5hIiwiYXBwX3VybCI6Imh0dHBzOi8vdC5tZS9HbGl0Y2hlZEFyZW5hQm90IiwiYXBwX2RvbWFpbiI6Imh0dHBzOi8vZ2xpdGNoZWQtYXJlbmEub25yZW5kZXIuY29tLyJ9!IqJQ9QHQmHVXR4dcIlbB8vPPYJ5oG4BmKJ8oVYMaa=',
-                appName: 'glitched_arena',
-            });
-            console.log("✅ Telegram Analytics ready");
-        }
-    }
-
     window.addEventListener('load', () => {
         if (window.Adsgram && window.Telegram?.WebApp?.initData) {
             try {
