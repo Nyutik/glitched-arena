@@ -390,7 +390,7 @@ function startBossFight(scene) {
     if (level >= 60) {
         boss.setTint(0x00ffff).setScale(1.3);
         glitchText.setText("!! THE STORM APPROACHES !!").setFill("#00ffff").setBackgroundColor("#004444");
-        bossHealth *= 1.3;
+        bossHealth *= 1.05;
         stormAngle = 0;
         stormZoneCount = 3;
     }

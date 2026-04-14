@@ -18,7 +18,42 @@ let isDarkMode = true;
 // Прогресс и статистика
 let maxPlayerHealth = 100;
 let coinsThisRun = 0;
-let level = 1, coins = 0, distance = 0, runGoal = 700, bestLevel = 1, bestDistance = 0;
+let level = 1, distance = 0, runGoal = 700, bestLevel = 1;
+
+let _coins = 0;
+let _coinsShadow = 13;
+Object.defineProperty(window, 'coins', {
+    get: function() {
+        if (_coins * 7 + 13 !== _coinsShadow) {
+            console.warn("CHEAT DETECTED: coins memory modified");
+            _coins = 0;
+            _coinsShadow = 13;
+        }
+        return _coins;
+    },
+    set: function(val) {
+        _coins = val;
+        _coinsShadow = val * 7 + 13;
+    }
+});
+
+let _bestDistance = 0;
+let _bestDistanceShadow = 5;
+Object.defineProperty(window, 'bestDistance', {
+    get: function() {
+        if (_bestDistance * 3 + 5 !== _bestDistanceShadow) {
+            console.warn("CHEAT DETECTED: bestDistance memory modified");
+            _bestDistance = 0;
+            _bestDistanceShadow = 5;
+        }
+        return _bestDistance;
+    },
+    set: function(val) {
+        _bestDistance = val;
+        _bestDistanceShadow = val * 3 + 5;
+    }
+});
+
 let combo = 0;
 let shipName = "RAZOR-01";
 let currentExplosionColor = 0xff0000;
