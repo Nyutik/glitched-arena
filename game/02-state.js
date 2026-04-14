@@ -83,7 +83,7 @@ let yOffset = -50;
 let currentStats = { atk: 1, spd: 1, label: "STANDARD" };
 let currentShape = 'classic';
 let currentSkin = 'classic';
-let lang = 'ru';
+let lang = 'en';
 
 // Игровые объекты (будут инициализированы в create)
 let player, boss, obstacles, bullets, playerBullets, playerMissiles;
