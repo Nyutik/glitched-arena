@@ -348,18 +348,24 @@ function startRun(scene) {
     if (upgradeLevels.helper_mercenary > 0) {
         upgradeLevels.helper_mercenary = 0; // Наёмник работает 1 игру
         saveProgress();
-        scene.mercenarySprite = scene.add.sprite(187, 600, 'pixel').setTint(0xff0000).setScale(1.8).setDepth(4);
+        scene.mercenarySprite = scene.add.sprite(187, 600, 'pixel').setTint(0xff3333).setScale(2.5).setDepth(15);
+        scene.tweens.add({ targets: scene.mercenarySprite, angle: 360, duration: 2000, repeat: -1, ease: 'Linear' });
         
-        scene.mercenaryTimer = scene.time.addEvent({ delay: 400, callback: () => {
+        scene.mercenaryTimer = scene.time.addEvent({ delay: 350, callback: () => {
             if (isStarted && !isDead && player && player.active) {
                 if (scene.mercenarySprite) {
                     scene.mercenarySprite.setVisible(true);
-                    scene.mercenarySprite.x = player.x + 35 + Math.sin(scene.time.now * 0.005) * 8;
-                    scene.mercenarySprite.y = player.y + 15 + Math.cos(scene.time.now * 0.004) * 5;
+                    scene.mercenarySprite.x = Phaser.Math.Linear(scene.mercenarySprite.x, player.x + 45 + Math.sin(scene.time.now * 0.003) * 15, 0.2);
+                    scene.mercenarySprite.y = Phaser.Math.Linear(scene.mercenarySprite.y, player.y + 10 + Math.cos(scene.time.now * 0.004) * 10, 0.2);
+                    
+                    if (Math.random() < 0.3) {
+                        let t = scene.add.rectangle(scene.mercenarySprite.x, scene.mercenarySprite.y, 10, 10, 0xff0000).setAlpha(0.6).setDepth(14);
+                        scene.tweens.add({ targets: t, scale: 0, alpha: 0, duration: 400, onComplete: () => t.destroy() });
+                    }
                 }
                 if (isBossFight && boss && boss.active) {
                     let b = playerBullets.create(scene.mercenarySprite.x, scene.mercenarySprite.y - 10, 'pixel');
-                    b.setVelocityY(-900).setTint(0xff0000).setScale(2.5);
+                    b.setVelocityY(-900).setTint(0xff3333).setScale(2.5);
                 }
             } else if (scene.mercenarySprite) {
                 scene.mercenarySprite.setVisible(false);
@@ -420,7 +426,7 @@ async function syncUserData() {
         if (typeof cloudData.explosion_color === 'number') currentExplosionColor = cloudData.explosion_color;
         if (typeof cloudData.total_dist === 'number') totalDistance = Math.max(totalDistance, cloudData.total_dist);
         if (typeof cloudData.bosses_killed === 'number') bossesKilled = Math.max(bossesKilled, cloudData.bosses_killed);
-        if (cloudData.upgrades && typeof cloudData.upgrades === 'object') { for (const key in cloudData.upgrades) upgradeLevels[key] = Math.max(upgradeLevels[key] || 0, cloudData.upgrades[key] || 0); }
+        if (cloudData.upgrades && typeof cloudData.upgrades === 'object') { for (const key in cloudData.upgrades) { if (key === 'helper_mercenary') continue; upgradeLevels[key] = Math.max(upgradeLevels[key] || 0, cloudData.upgrades[key] || 0); } }
         if (cloudData.achievements && typeof cloudData.achievements === 'object') { for (const key in cloudData.achievements) if (cloudData.achievements[key]) achievements[key] = true; }
         if (typeof cloudData.rank_xp === 'number') rankXP = Math.max(rankXP || 0, cloudData.rank_xp);
         if (cloudData.daily_quests && typeof cloudData.daily_quests === 'object') { for (const key in cloudData.daily_quests) if (!dailyQuests[key] || cloudData.daily_quests[key].completed) dailyQuests[key] = cloudData.daily_quests[key]; }
