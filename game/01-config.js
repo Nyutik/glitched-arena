@@ -243,6 +243,7 @@ const TRANSLATIONS = {
         helper_autoshield: "АВТО-ЩИТ", desc_helper_autoshield: "Блокирует 1 удар за сектор",
         helper_autobomb: "ПОСМЕРТНЫЙ ВЗРЫВ", desc_helper_autobomb: "Уничтожает снаряды, 80% урона боссу",
         helper_autoheal: "АВТО-РЕМОНТ", desc_helper_autoheal: "Лечит 10 HP каждые 2.5сек",
+        helper_mercenary: "НАЁМНИК (1 ВЫЛЕТ)", desc_helper_mercenary: "Мощный дрон-помощник на 1 игру",
         up_extralife: "ЭКСТРА-ЖИЗНЬ", desc_up_extralife: "+1 возрождение за сектор (макс 5)",
         up_doubleDMG: "ПЕРЕГРУЗКА", desc_up_doubleDMG: "2x урон на 30сек после смерти",
         up_enhanced: "ТИТАНОВЫЙ АПГРЕЙД", desc_up_enhanced: "2x эффект апгрейдов, сект. 50+",

@@ -330,6 +330,30 @@ function startRun(scene) {
             }
         }, loop: true });
     }
+
+    if (scene.mercenaryTimer) scene.mercenaryTimer.remove();
+    if (scene.mercenarySprite) { scene.mercenarySprite.destroy(); scene.mercenarySprite = null; }
+    if (upgradeLevels.helper_mercenary > 0) {
+        upgradeLevels.helper_mercenary = 0; // Наёмник работает 1 игру
+        saveProgress();
+        scene.mercenarySprite = scene.add.sprite(187, 600, 'pixel').setTint(0xff0000).setScale(1.8).setDepth(4);
+        
+        scene.mercenaryTimer = scene.time.addEvent({ delay: 400, callback: () => {
+            if (isStarted && !isDead && player && player.active) {
+                if (scene.mercenarySprite) {
+                    scene.mercenarySprite.setVisible(true);
+                    scene.mercenarySprite.x = player.x + 35 + Math.sin(scene.time.now * 0.005) * 8;
+                    scene.mercenarySprite.y = player.y + 15 + Math.cos(scene.time.now * 0.004) * 5;
+                }
+                if (isBossFight && boss && boss.active) {
+                    let b = playerBullets.create(scene.mercenarySprite.x, scene.mercenarySprite.y - 10, 'pixel');
+                    b.setVelocityY(-900).setTint(0xff0000).setScale(2.5);
+                }
+            } else if (scene.mercenarySprite) {
+                scene.mercenarySprite.setVisible(false);
+            }
+        }, loop: true });
+    }
 }
 
 function togglePause() {
