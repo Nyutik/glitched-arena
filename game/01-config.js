@@ -121,6 +121,7 @@ const TRANSLATIONS = {
         bundle_warrior: "WARRIOR PACK", bundle_warrior_desc: "Crimson Skin + Double Cannons + Hull Upgrade",
         bundle_legend: "LEGEND PACK", bundle_legend_desc: "Rainbow + Void Lord + Omega Core",
         helper_drone: "COMBAT DRONE", desc_helper_drone: "Auto-fires 2 bullets every 0.8s",
+        helper_missile: "MISSILE DRONE", desc_helper_missile: "Homing missiles every 1.5s",
         helper_autoshield: "AUTO-SHIELD", desc_helper_autoshield: "Blocks 1 hit per sector",
         helper_autobomb: "POST-DEATH BOMB", desc_helper_autobomb: "Clears bullets, deals 80% boss DMG",
         helper_autoheal: "AUTO-REPAIR", desc_helper_autoheal: "Heals 10 HP every 2.5s",
