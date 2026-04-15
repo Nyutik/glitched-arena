@@ -162,9 +162,9 @@ function checkDailyQuest(scene, questId) {
 
 function showQuestComplete(scene, questName, reward) {
     const questBg = scene.add.text(187, 80, '', { fontSize: '14px', fill: '#00ff00', backgroundColor: '#000000aa', padding: { x: 10, y: 6 }, fontFamily: 'Arial' }).setOrigin(0.5).setDepth(500);
-    const titleKey = lang === 'ru' ? 'quest_complete' : 'quest_complete';
-    const titleText = TRANSLATIONS[lang][titleKey] || (lang === 'ru' ? 'ЗАДАНИЕ ВЫПОЛНЕНО!' : 'QUEST COMPLETE!');
-    questBg.setText(`${titleText} +${reward} 💰`);
+    const titleText = (lang === 'ru' ? 'ЗАДАНИЕ ВЫПОЛНЕНО!' : 'QUEST COMPLETE!');
+    const rewardAmount = typeof reward === 'number' ? reward : 0;
+    questBg.setText(`${titleText} +${rewardAmount} 💰`);
     scene.tweens.add({ targets: questBg, y: 60, alpha: 0, delay: 2500, duration: 500, onComplete: () => questBg.destroy() });
     if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
 }
