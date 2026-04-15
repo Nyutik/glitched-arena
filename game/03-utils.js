@@ -99,16 +99,27 @@ function saveProgress() {
 
 // --- ЕЖЕДНЕВНЫЕ ЗАДАНИЯ ---
 
+function getNextMidnight() {
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    return tomorrow.getTime();
+}
+
 function initDailyQuests() {
-    const today = new Date().toDateString();
-    if (lastDailyReset !== today) {
+    const now = Date.now();
+    const lastReset = lastDailyReset || 0;
+    const nextMidnight = getNextMidnight();
+    
+    if (now >= nextMidnight || now >= lastReset + 24 * 60 * 60 * 1000) {
         dailyQuests = {
             kill50: { target: 50, current: 0, reward: 150, completed: false },
             noshield: { completed: false, started: false },
             combo15: { completed: false },
             clearboss: { completed: false }
         };
-        lastDailyReset = today;
+        lastDailyReset = now;
         saveProgress();
     } else {
         if (dailyQuests.noShield && !dailyQuests.noshield) {
@@ -199,7 +210,7 @@ function loadProgress() {
         currentExplosionColor = p.currentExplosionColor || 0xff0000;
         upgradeLevels = { ...upgradeLevels, ...p.upgradeLevels };
         dailyQuests = p.dailyQuests || {};
-        lastDailyReset = p.lastDailyReset || null;
+        lastDailyReset = p.lastDailyReset || 0;
         rankXP = p.rankXP || 0;
         isDarkMode = p.isDarkMode || false;
         runGoal = 700 + (level - 1) * 100;
