@@ -124,6 +124,7 @@ const TRANSLATIONS = {
         helper_autoshield: "AUTO-SHIELD", desc_helper_autoshield: "Blocks 1 hit per sector",
         helper_autobomb: "POST-DEATH BOMB", desc_helper_autobomb: "Clears bullets, deals 80% boss DMG",
         helper_autoheal: "AUTO-REPAIR", desc_helper_autoheal: "Heals 10 HP every 2.5s",
+        helper_mercenary: "MERCENARY (1 RUN)", desc_helper_mercenary: "Powerful helper drone for 1 run",
         up_extralife: "EXTRA LIFE", desc_up_extralife: "+1 revive per sector (max 5)",
         up_doubleDMG: "OVERDRIVE", desc_up_doubleDMG: "2x damage for 30s after death",
         up_enhanced: "TITAN UPGRADE", desc_up_enhanced: "2x upgrade effects, sec 50+",
