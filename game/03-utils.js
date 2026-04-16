@@ -202,12 +202,20 @@ function saveProgress() {
 }
 
 function loadProgress() {
-    console.log('[Load] loadProgress started');
-    if (window.Telegram?.WebApp?.initDataUnsafe?.user?.language_code) {
-        lang = (window.Telegram.WebApp.initDataUnsafe.user.language_code === 'ru') ? 'ru' : 'en';
+    console.log('=== loadProgress START ===');
+    try {
+        localStorage.setItem('__test__', '1');
+        localStorage.removeItem('__test__');
+        console.log('[Load] localStorage OK');
+    } catch(e) {
+        console.log('[Load] localStorage blocked:', e);
     }
-    const saved = localStorage.getItem('GLITCHED_ARENA_MASTER_SAVE_V2');
-    if (saved) {
+    try {
+        if (window.Telegram?.WebApp?.initDataUnsafe?.user?.language_code) {
+            lang = (window.Telegram.WebApp.initDataUnsafe.user.language_code === 'ru') ? 'ru' : 'en';
+        }
+        const saved = localStorage.getItem('GLITCHED_ARENA_MASTER_SAVE_V2');
+        if (saved) {
         const p = JSON.parse(saved);
         if (p.lang) lang = p.lang;
         level = p.level || 1; bestLevel = p.bestLevel || 1; bestDistance = p.bestDistance || 0;
