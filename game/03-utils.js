@@ -114,6 +114,7 @@ function getNextMidnight() {
 }
 
 function initDailyQuests() {
+    console.log('=== initDailyQuests called ===');
     const now = Date.now();
     const todayMidnight = getTodayMidnight();
     const lastReset = lastDailyReset || 0;

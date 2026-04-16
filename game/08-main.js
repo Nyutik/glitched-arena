@@ -402,9 +402,11 @@ function generatePlayerTexture(scene) {
 }
 
 async function syncUserData() {
-    const tgUser = getTelegramUser(); if (!tgUser?.id) return;
+    const tgUser = getTelegramUser(); if (!tgUser?.id) { console.log('[Sync] No Telegram user'); return; }
+    console.log('[Sync] Syncing for user:', tgUser.id);
     try {
-        const response = await fetch(`${botUrl}/get_user_personal/${tgUser.id}`); const cloudData = await response.json(); if (!cloudData || cloudData.error) return;
+        const response = await fetch(`${botUrl}/get_user_personal/${tgUser.id}`); const cloudData = await response.json(); 
+        if (!cloudData || cloudData.error) { console.log('[Sync] No cloud data:', cloudData?.error); return; }
         console.log('[Sync] Cloud data received:', cloudData);
         let shouldPushLocalBack = false;
         
