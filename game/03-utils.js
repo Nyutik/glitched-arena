@@ -202,6 +202,7 @@ function saveProgress() {
 }
 
 function loadProgress() {
+    console.log('[Load] loadProgress started');
     if (window.Telegram?.WebApp?.initDataUnsafe?.user?.language_code) {
         lang = (window.Telegram.WebApp.initDataUnsafe.user.language_code === 'ru') ? 'ru' : 'en';
     }
