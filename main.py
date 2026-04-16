@@ -49,6 +49,7 @@ class ScoreData(BaseModel):
     achievements: Optional[dict] = {}
     rank_xp: Optional[int] = 0
     daily_quests: Optional[dict] = {}
+    last_daily_reset: Optional[int] = 0
 
 # --- API ЭНДПОИНТЫ ---
 
@@ -149,6 +150,7 @@ async def submit_score(data: ScoreData):
             "ship_name": data.ship_name or old.get("ship_name") or "RAZOR-01",
             "rank_xp": max(safe_int(data.rank_xp), safe_int(old.get("rank_xp"))),
             "daily_quests": data.daily_quests or old.get("daily_quests") or {},
+            "last_daily_reset": data.last_daily_reset if data.last_daily_reset else old.get("last_daily_reset", 0),
             "score_date": current_date
         }
 
