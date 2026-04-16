@@ -99,6 +99,12 @@ function saveProgress() {
 
 // --- ЕЖЕДНЕВНЫЕ ЗАДАНИЯ ---
 
+function getTodayMidnight() {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    return today.getTime();
+}
+
 function getNextMidnight() {
     const now = new Date();
     const tomorrow = new Date(now);
@@ -109,10 +115,11 @@ function getNextMidnight() {
 
 function initDailyQuests() {
     const now = Date.now();
+    const todayMidnight = getTodayMidnight();
     const lastReset = lastDailyReset || 0;
     const nextMidnight = getNextMidnight();
     
-    if (now >= nextMidnight || now >= lastReset + 24 * 60 * 60 * 1000) {
+    if (lastReset < todayMidnight && now >= todayMidnight) {
         dailyQuests = {
             kill50: { target: 50, current: 0, reward: 150, completed: false },
             noshield: { completed: false, started: false },
