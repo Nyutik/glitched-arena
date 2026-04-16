@@ -124,7 +124,6 @@ function initDailyQuests() {
     if (lastReset < todayMidnight && now >= todayMidnight) {
         console.log('[DailyQuests] RESETTING QUESTS at midnight!');
         dailyQuests = {
-        dailyQuests = {
             kill50: { target: 50, current: 0, reward: 150, completed: false },
             noshield: { completed: false, started: false },
             combo15: { completed: false },

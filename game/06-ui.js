@@ -32,6 +32,7 @@ function shareDuel(status = 'win') {
 }
 
 function showMenu(scene) {
+    console.log('[Menu] showMenu called');
     initDailyQuests();
     clearBattleTexts(scene); cleanupScreenFx(scene);
     ensureBgm(scene); isStarted = false; isVictory = false; isDead = false; isBossFight = false; isPaused = false; isShopOpen = false;
