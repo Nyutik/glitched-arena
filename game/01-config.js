@@ -8,7 +8,7 @@
 // ============================================
 
 const SHARE_LINK = "https://t.me/GlitchedArenaBot";
-const RENDER_URL = 'https://glitched-arena.onrender.com';
+const RENDER_URL = 'https://glitched-arena.myftp.org';
 const getBotUrl = () => {
     const hostname = window.location.hostname;
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
