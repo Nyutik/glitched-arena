@@ -236,7 +236,7 @@ function loadProgress() {
                 isDarkMode = p.isDarkMode || false;
                 runGoal = 700 + (level - 1) * 100;
             } catch(e) { console.log('[Load] JSON parse error:', e); }
-        }
+        }  // close if (saved)
         initDailyQuests();
     } catch(e) { console.log('[Load] Error:', e); }
 }
