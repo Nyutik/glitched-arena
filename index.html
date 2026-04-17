@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="telegram-mini-app-sdk-token" content="eyJhcHBfbmFtZSI6ImdsaXRjaGVkX2FyZW5hX3YyIiwiYXBwX3VybCI6Imh0dHBzOi8vdC5tZS9HbGl0Y2hlZEFyZW5hQm90IiwiYXBwX2RvbWFpbiI6Imh0dHBzOi8vZ2xpdGNoZWQtYXJlbmEubXlmdHAub3JnIn0=!BpG91zmXKO3Q2+AYUsPuuQdhmEfbr3GPmjjWmlWsCIg=">
     <title>Glitched Arena</title>
     <link rel="icon" href="data:,">
     <style>
@@ -28,10 +29,10 @@
     function initAnalytics() {
         if (window.telegramAnalytics) {
             window.telegramAnalytics.init({
-                token: 'eyJhcHBfbmFtZSI6ImdsaXRjaGVkX2FyZW5hX2FwcCIsImFwcF91cmwiOiJodHRwczovL3QubWUvR2xpdGNoZWRBcmVuYUJvdCIsImFwcF9kb21haW4iOiJodHRwczovL2dsaXRjaGVkLWFyZW5hLm9ucmVuZGVyLmNvbSJ9!tsoB33k8/TrHlGAO0pN/SM8kxIcqyoBXllMJY1/r4Wc=',
-                appName: 'glitched_arena_app',
+                token: 'eyJhcHBfbmFtZSI6ImdsaXRjaGVkX2FyZW5hX3YyIiwiYXBwX3VybCI6Imh0dHBzOi8vdC5tZS9HbGl0Y2hlZEFyZW5hQm90IiwiYXBwX2RvbWFpbiI6Imh0dHBzOi8vZ2xpdGNoZWQtYXJlbmEubXlmdHAub3JnIn0=!BpG91zmXKO3Q2+AYUsPuuQdhmEfbr3GPmjjWmlWsCIg=',
+                appName: 'glitched_arena_v2',
             });
-            console.log("✅ Telegram Analytics ready");
+            console.log("✅ Telegram Analytics ready (v2)");
         }
     }
 </script>
@@ -49,8 +50,8 @@
     window.addEventListener('load', () => {
         if (window.Adsgram && window.Telegram?.WebApp?.initData) {
             try {
-                window.adController = window.Adsgram.init({ blockId: "27812" });
-                console.log("✅ Adsgram ready:", window.adController);
+                window.adController = window.Adsgram.init({ blockId: "27996" });
+                console.log("✅ Adsgram ready (27996):", window.adController);
             } catch (e) {
                 console.log("Adsgram init error:", e);
                 window.adController = null;
