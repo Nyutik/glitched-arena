@@ -265,7 +265,7 @@ function showQuestComplete(scene, questName, reward) {
 window.addEventListener('load', () => {
     if (window.Adsgram && window.Telegram?.WebApp?.initData) {
         try {
-            adController = window.Adsgram.init({ blockId: "27812" });
+            adController = window.Adsgram.init({ blockId: "27996" });
         } catch (e) {
             console.log("Adsgram init error (probably not in Telegram):", e);
         }
