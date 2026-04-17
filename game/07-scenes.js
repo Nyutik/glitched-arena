@@ -31,6 +31,8 @@ function showShop(scene, mainMenu, fromVictory = false) {
     const contentContainer = scene.add.container(0, 0); scrollWindow.add(contentContainer);
     const mask = scene.make.graphics().fillRect(10, scrollAreaTop, 355, scrollHeight).createGeometryMask(); scrollWindow.setMask(mask);
     let scrollY = 0, maxScroll = 0;
+    let dragStartX = 0, dragStartY = 0;
+
     const showConfirm = (title, cost, isStars, onConfirm) => {
         const confirmOverlay = scene.add.container(0, 0).setDepth(6000);
         const cBg = scene.add.graphics().fillStyle(0x000000, 0.9).fillRect(0, 0, 375, 667); cBg.setInteractive(new Phaser.Geom.Rectangle(0, 0, 375, 667), Phaser.Geom.Rectangle.Contains);
@@ -51,40 +53,137 @@ function showShop(scene, mainMenu, fromVictory = false) {
         let isOwned = (upgradeLevels[type] > 0); let isMaxed = (!isCustom && curLvl >= maxLvl);
         const isStarItem = ['skin_gold', 'skin_ghost', 'omega', 'buy_coins', 'fx_blue', 'fx_pink', 'fx_rainbow', 'fx_gold', 'fx_green', 'fx_red', 'skin_rainbow', 'skin_void_premium', 'skin_crystal', 'bundle_starter', 'bundle_warrior', 'bundle_legend'].includes(type);
         const isLocked = (type === 'omega' && level < 40 && !upgradeLevels.omega) || (['up_extralife', 'up_doubleDMG', 'up_enhanced', 'helper_mercenary'].includes(type) && level < 50);
-        let btnColor = isEquipped ? 0x006666 : (isLocked ? 0x1a1a1a : (isStarItem ? 0x443300 : (isMaxed ? 0x002200 : 0x222222)));
-        const btnBg = scene.add.rectangle(187, y, 330, 48, btnColor).setInteractive();
-        const isOwnedHelper = isOwned && (isCustom || type.startsWith('helper_'));
-        if (isLocked) btnBg.setStrokeStyle(2, 0xff0000, 0.8); else if (isEquipped) btnBg.setStrokeStyle(2, 0x00ffff, 1); else if (isOwnedHelper || isMaxed) btnBg.setStrokeStyle(2, 0x00ff00, 1); else if (isStarItem && !isMaxed) btnBg.setStrokeStyle(2, 0xffaa00, 1);
+        
+        let btnColor = isEquipped ? 0x004444 : (isLocked ? 0x111111 : (isStarItem ? 0x221100 : (isMaxed ? 0x001100 : 0x111111)));
+        const btnBg = scene.add.rectangle(187, y, 330, 52, btnColor).setInteractive();
+        
+        // Элитные рамки для Stars
+        if (isLocked) btnBg.setStrokeStyle(1, 0x444444, 0.5); 
+        else if (isEquipped) btnBg.setStrokeStyle(2, 0x00ffff, 1); 
+        else if (isStarItem) {
+            btnBg.setStrokeStyle(2, 0xffaa00, 1);
+            scene.tweens.add({ targets: btnBg, alpha: 0.7, duration: 800, yoyo: true, repeat: -1 });
+        }
+        else btnBg.setStrokeStyle(1, 0x00ffff, 0.3);
+
         const namet = TRANSLATIONS[lang][nameKey]; let priceTag = "";
-        if (isLocked) priceTag = `[SEC 40+]`; else if (type.startsWith('helper_') && isOwned) priceTag = `[${lang === 'ru' ? 'АКТИВНО' : 'ACTIVE'}]`; else if (isEquipped) priceTag = `[${lang === 'ru' ? 'АКТИВНО' : 'EQUIPPED'}]`; else if (isCustom && isOwned) priceTag = `[${lang === 'ru' ? 'ВЫБРАТЬ' : 'SELECT'}]`; else if (isMaxed) priceTag = `[${TRANSLATIONS[lang].maxed}]`; else priceTag = `- ${cost} ${isStarItem ? '⭐' : '💰'}`;
-        const textFill = isLocked ? '#777' : (isEquipped ? '#00ffff' : ((isOwnedHelper || isMaxed) ? '#00ff00' : '#fff'));
+        if (isLocked) priceTag = `[${lang === 'ru' ? 'СЕКТОР' : 'SEC'} 40+]`; 
+        else if (type.startsWith('helper_') && isOwned) priceTag = `[${lang === 'ru' ? 'АКТИВЕН' : 'ACTIVE'}]`; 
+        else if (isEquipped) priceTag = `[${lang === 'ru' ? 'ВЫБРАНО' : 'EQUIPPED'}]`; 
+        else if (isCustom && isOwned) priceTag = `[${lang === 'ru' ? 'ВЫБРАТЬ' : 'SELECT'}]`; 
+        else if (isMaxed) priceTag = `[${TRANSLATIONS[lang].maxed}]`; 
+        else priceTag = `- ${cost} ${isStarItem ? '⭐' : '💰'}`;
+
+        const textFill = isLocked ? '#555' : (isEquipped ? '#00ffff' : (isStarItem ? '#ffaa00' : '#fff'));
         const btnText = scene.add.text(187, y - 10, `${namet}${!isCustom && maxLvl > 1 ? ` [${curLvl}/${maxLvl}]` : ""} ${priceTag}`, { fontSize: '13px', fontFamily: fontUI, fill: textFill, fontWeight: 'bold' }).setOrigin(0.5);
-        const descText = scene.add.text(187, y + 10, TRANSLATIONS[lang][descKey], { fontSize: '10px', fontFamily: fontUI, fill: isLocked ? '#444' : '#aaa', align: 'center', wordWrap: { width: 310 } }).setOrigin(0.5);
-        btnBg.on('pointerdown', () => {
+        const descText = scene.add.text(187, y + 12, TRANSLATIONS[lang][descKey], { fontSize: '10px', fontFamily: fontUI, fill: isLocked ? '#333' : '#999', align: 'center', wordWrap: { width: 310 } }).setOrigin(0.5);
+        
+        btnBg.on('pointerdown', p => { dragStartX = p.x; dragStartY = p.y; });
+        btnBg.on('pointerup', p => {
+            const dist = Phaser.Math.Distance.Between(dragStartX, dragStartY, p.x, p.y);
+            if (dist > 15) return; // Это был скролл, а не тап
+
             if (isLocked) { scene.cameras.main.shake(100, 0.01); return; }
             if (isMaxed) return;
-            if (type.startsWith('helper_') && isOwned && cost > 0) { return; }
-            if (isEquipped) { if (type.startsWith('fx_') && action) action(); saveProgress(); overlay.destroy(); showShop(scene, mainMenu, fromVictory); return; }
-            if (isCustom && isOwned) { if (action) action(); saveProgress(); overlay.destroy(); showShop(scene, mainMenu, fromVictory); return; }
+            if (type.startsWith('helper_') && isOwned && cost > 0) return;
+            if (isEquipped || (isCustom && isOwned)) { if (action) action(); saveProgress(); overlay.destroy(); showShop(scene, mainMenu, fromVictory); return; }
+            
             showConfirm(namet, cost, isStarItem, () => {
-                if (isStarItem) { if (cost === 0) { upgradeLevels[type] = 1; saveProgress(); submitScore().catch(e => console.error('Sync error:', e)); overlay.destroy(); showShop(scene, mainMenu, fromVictory); return; } const user = window.Telegram?.WebApp?.initDataUnsafe?.user; fetch(`${botUrl}/get_invoice?item_type=${type}&user_id=${user?.id}&username=${user?.first_name}`).then(r => r.json()).then(data => { if (data.url) { window.Telegram.WebApp.openInvoice(data.url, (status) => { if (status === 'paid') { if (type === 'buy_coins') coins += 5000; else upgradeLevels[type] = 1; if (action) action(); saveProgress(); submitScore().catch(e => console.error('Sync error:', e)); overlay.destroy(); showShop(scene, mainMenu, fromVictory); } }); } }); }
-                else if (coins >= cost) { coins -= cost; if (type === 'shield') { isShieldActive = true; upgradeLevels.shield = 1; } else upgradeLevels[type] = (upgradeLevels[type] || 0) + 1; if (action) action(); saveProgress(); submitScore().catch(e => console.error('Sync error:', e)); overlay.destroy(); showShop(scene, mainMenu, fromVictory); } else scene.cameras.main.shake(200, 0.01);
+                if (isStarItem) {
+                    if (cost === 0) { upgradeLevels[type] = 1; saveProgress(); overlay.destroy(); showShop(scene, mainMenu, fromVictory); return; }
+                    const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
+                    fetch(`${botUrl}/get_invoice?item_type=${type}&user_id=${user?.id}&username=${user?.first_name}`).then(r => r.json()).then(data => {
+                        if (data.url) window.Telegram.WebApp.openInvoice(data.url, status => {
+                            if (status === 'paid') {
+                                if (type === 'buy_coins') coins += 5000; else upgradeLevels[type] = 1;
+                                if (action) action(); saveProgress(); submitScore().catch(e => {}); overlay.destroy(); showShop(scene, mainMenu, fromVictory);
+                            }
+                        });
+                    });
+                } else if (coins >= cost) {
+                    coins -= cost; 
+                    if (type === 'shield') { isShieldActive = true; upgradeLevels.shield = 1; } 
+                    else upgradeLevels[type] = (upgradeLevels[type] || 0) + 1;
+                    if (action) action(); saveProgress(); submitScore().catch(e => {}); overlay.destroy(); showShop(scene, mainMenu, fromVictory);
+                } else scene.cameras.main.shake(200, 0.01);
             });
         });
         contentContainer.add([btnBg, btnText, descText]);
     };
-    let sY = 30, step = 58;
+
+    const addHeader = (y, text) => {
+        const hText = scene.add.text(187, y, text, { fontSize: '11px', fontFamily: fontUI, fill: '#ff00ff', fontWeight: 'bold' }).setOrigin(0.5);
+        const lineL = scene.add.rectangle(75, y, 100, 1, 0xff00ff, 0.3);
+        const lineR = scene.add.rectangle(300, y, 100, 1, 0xff00ff, 0.3);
+        contentContainer.add([hText, lineL, lineR]);
+    };
+
+    let sY = 20, step = 60;
     if (currentShopTab === 'upgrades') {
-        createBtn(sY, "up_antenna", "desc_antenna", 400, 'ultra'); createBtn(sY+step, "up_cannons", "desc_cannons", 800, 'fire'); createBtn(sY+step*2, "up_speed", "desc_speed", 300, 'speed'); createBtn(sY+step*3, "up_hull", "desc_hull", 500, 'health', () => { maxPlayerHealth += 25; playerHealth = maxPlayerHealth; }); createBtn(sY+step*4, "up_shield", "desc_shield", 150, 'shield'); createBtn(sY+step*5, "skin_striker", "desc_striker", 1500, 'skin_striker', () => { currentShape = 'striker'; refreshPlayerAppearance(scene); }); createBtn(sY+step*6, "ship_tank", "desc_tank", 1200, 'ship_tank', () => { currentShape = 'tank'; refreshPlayerAppearance(scene); }); createBtn(sY+step*7, "ship_dart", "desc_dart", 1000, 'ship_dart', () => { currentShape = 'dart'; refreshPlayerAppearance(scene); }); createBtn(sY+step*8, "ship_viper", "desc_viper", 1500, 'ship_viper', () => { currentShape = 'viper'; refreshPlayerAppearance(scene); }); createBtn(sY+step*9, "ship_phase", "desc_phase", 1800, 'ship_phase', () => { currentShape = 'phase'; refreshPlayerAppearance(scene); }); createBtn(sY+step*10, "up_omega", "desc_omega", 100, 'omega', () => { upgradeLevels.omega = 1; }); createBtn(sY+step*11, "up_coins", "desc_coins", 50, 'buy_coins'); createBtn(sY+step*12, "helper_drone", "desc_helper_drone", 500, 'helper_drone', () => { upgradeLevels.helper_drone = 1; }); createBtn(sY+step*13, "helper_autoshield", "desc_helper_autoshield", 400, 'helper_autoshield', () => { upgradeLevels.helper_autoshield = 1; }); createBtn(sY+step*14, "helper_autobomb", "desc_helper_autobomb", 600, 'helper_autobomb', () => { upgradeLevels.helper_autobomb = 1; }); createBtn(sY+step*15, "helper_autoheal", "desc_helper_autoheal", 350, 'helper_autoheal', () => { upgradeLevels.helper_autoheal = 1; }); createBtn(sY+step*16, "helper_mercenary", "desc_helper_mercenary", 500, 'helper_mercenary', () => { upgradeLevels.helper_mercenary = 1; }); maxScroll = step * 16;
+        addHeader(sY, lang === 'ru' ? "--- СИСТЕМЫ КОРАБЛЯ ---" : "--- SHIP SYSTEMS ---"); sY += 40;
+        createBtn(sY, "up_antenna", "desc_antenna", 400, 'ultra'); 
+        createBtn(sY+step, "up_cannons", "desc_cannons", 800, 'fire'); 
+        createBtn(sY+step*2, "up_speed", "desc_speed", 300, 'speed'); 
+        createBtn(sY+step*3, "up_hull", "desc_hull", 500, 'health', () => { maxPlayerHealth += 25; playerHealth = maxPlayerHealth; }); 
+        createBtn(sY+step*4, "up_shield", "desc_shield", 150, 'shield');
+        
+        sY += step*5 + 20;
+        addHeader(sY, lang === 'ru' ? "--- ДРОНЫ И ПОМОЩНИКИ ---" : "--- DRONES & HELPERS ---"); sY += 40;
+        createBtn(sY, "helper_drone", "desc_helper_drone", 500, 'helper_drone', () => { upgradeLevels.helper_drone = 1; });
+        createBtn(sY+step, "helper_autoshield", "desc_helper_autoshield", 400, 'helper_autoshield', () => { upgradeLevels.helper_autoshield = 1; });
+        createBtn(sY+step*2, "helper_autobomb", "desc_helper_autobomb", 600, 'helper_autobomb', () => { upgradeLevels.helper_autobomb = 1; });
+        createBtn(sY+step*3, "helper_autoheal", "desc_helper_autoheal", 350, 'helper_autoheal', () => { upgradeLevels.helper_autoheal = 1; });
+        createBtn(sY+step*4, "helper_mercenary", "desc_helper_mercenary", 500, 'helper_mercenary', () => { upgradeLevels.helper_mercenary = 1; });
+        
+        sY += step*5 + 20;
+        addHeader(sY, lang === 'ru' ? "--- ЭЛИТНЫЕ КОРПУСА ---" : "--- ELITE HULLS ---"); sY += 40;
+        createBtn(sY, "skin_striker", "desc_striker", 1500, 'skin_striker', () => { currentShape = 'striker'; refreshPlayerAppearance(scene); });
+        createBtn(sY+step, "ship_tank", "desc_tank", 1200, 'ship_tank', () => { currentShape = 'tank'; refreshPlayerAppearance(scene); });
+        createBtn(sY+step*2, "ship_dart", "desc_dart", 1000, 'ship_dart', () => { currentShape = 'dart'; refreshPlayerAppearance(scene); });
+        createBtn(sY+step*3, "ship_viper", "desc_viper", 1500, 'ship_viper', () => { currentShape = 'viper'; refreshPlayerAppearance(scene); });
+        createBtn(sY+step*4, "ship_phase", "desc_phase", 1800, 'ship_phase', () => { currentShape = 'phase'; refreshPlayerAppearance(scene); });
+        
+        sY += step*5 + 20;
+        addHeader(sY, lang === 'ru' ? "--- ЯДРО И ВАЛЮТА ---" : "--- CORE & CURRENCY ---"); sY += 40;
+        createBtn(sY, "up_omega", "desc_omega", 100, 'omega', () => { upgradeLevels.omega = 1; });
+        createBtn(sY+step, "up_coins", "desc_coins", 50, 'buy_coins');
+        maxScroll = sY + step * 2;
     } else if (currentShopTab === 'fx') {
-        createBtn(sY, "skin_gold", "desc_gold", 200, 'skin_gold', () => { currentSkin = 'gold'; refreshPlayerAppearance(scene); }); createBtn(sY+step, "skin_ghost", "desc_ghost", 200, 'skin_ghost', () => { currentSkin = 'ghost'; refreshPlayerAppearance(scene); }); createBtn(sY+step*2, "skin_crimson", "desc_crimson", 300, 'skin_crimson', () => { currentSkin = 'crimson'; refreshPlayerAppearance(scene); }); createBtn(sY+step*3, "skin_void", "desc_void", 300, 'skin_void', () => { currentSkin = 'void_skin'; refreshPlayerAppearance(scene); }); createBtn(sY+step*4, "skin_plasma", "desc_plasma", 300, 'skin_plasma', () => { currentSkin = 'plasma'; refreshPlayerAppearance(scene); }); createBtn(sY+step*5, "skin_solar", "desc_solar", 300, 'skin_solar', () => { currentSkin = 'solar'; refreshPlayerAppearance(scene); }); createBtn(sY+step*6, "skin_frost", "desc_frost", 300, 'skin_frost', () => { currentSkin = 'frost'; refreshPlayerAppearance(scene); }); createBtn(sY+step*7, "skin_rainbow", "desc_rainbow", 350, 'skin_rainbow', () => { currentSkin = 'rainbow'; refreshPlayerAppearance(scene); }); createBtn(sY+step*8, "void_premium", "desc_void_premium", 400, 'skin_void_premium', () => { currentSkin = 'void_premium'; refreshPlayerAppearance(scene); }); createBtn(sY+step*9, "crystal", "desc_crystal", 350, 'skin_crystal', () => { currentSkin = 'crystal'; refreshPlayerAppearance(scene); }); createBtn(sY+step*10, "fx_blue_exp", "desc_blue_exp", 100, 'fx_blue', () => { currentExplosionColor = 0x00ffff; }); createBtn(sY+step*11, "fx_pink_exp", "desc_pink_exp", 100, 'fx_pink', () => { currentExplosionColor = 0xff00ff; }); createBtn(sY+step*12, "fx_rainbow_exp", "desc_rainbow_exp", 150, 'fx_rainbow', () => { currentExplosionColor = -1; }); createBtn(sY+step*13, "fx_gold_exp", "desc_gold_exp", 150, 'fx_gold', () => { currentExplosionColor = 0xffaa00; }); createBtn(sY+step*14, "fx_green_exp", "desc_green_exp", 150, 'fx_green', () => { currentExplosionColor = 0x00ff00; }); createBtn(sY+step*15, "fx_red_exp", "desc_red_exp", 150, 'fx_red', () => { currentExplosionColor = 0xff0000; }); maxScroll = step * 15;
+        addHeader(sY, lang === 'ru' ? "--- СКИНЫ ПИЛОТА ---" : "--- PILOT SKINS ---"); sY += 40;
+        createBtn(sY, "skin_gold", "desc_gold", 200, 'skin_gold', () => { currentSkin = 'gold'; refreshPlayerAppearance(scene); }); 
+        createBtn(sY+step, "skin_ghost", "desc_ghost", 200, 'skin_ghost', () => { currentSkin = 'ghost'; refreshPlayerAppearance(scene); }); 
+        createBtn(sY+step*2, "skin_crimson", "desc_crimson", 300, 'skin_crimson', () => { currentSkin = 'crimson'; refreshPlayerAppearance(scene); }); 
+        createBtn(sY+step*3, "skin_void", "desc_void", 300, 'skin_void', () => { currentSkin = 'void_skin'; refreshPlayerAppearance(scene); }); 
+        createBtn(sY+step*4, "skin_plasma", "desc_plasma", 300, 'skin_plasma', () => { currentSkin = 'plasma'; refreshPlayerAppearance(scene); }); 
+        createBtn(sY+step*5, "skin_solar", "desc_solar", 300, 'skin_solar', () => { currentSkin = 'solar'; refreshPlayerAppearance(scene); }); 
+        createBtn(sY+step*6, "skin_frost", "desc_frost", 300, 'skin_frost', () => { currentSkin = 'frost'; refreshPlayerAppearance(scene); }); 
+        createBtn(sY+step*7, "skin_rainbow", "desc_rainbow", 350, 'skin_rainbow', () => { currentSkin = 'rainbow'; refreshPlayerAppearance(scene); }); 
+        createBtn(sY+step*8, "void_premium", "desc_void_premium", 400, 'skin_void_premium', () => { currentSkin = 'void_premium'; refreshPlayerAppearance(scene); }); 
+        createBtn(sY+step*9, "crystal", "desc_crystal", 350, 'skin_crystal', () => { currentSkin = 'crystal'; refreshPlayerAppearance(scene); }); 
+        
+        sY += step*10 + 20;
+        addHeader(sY, lang === 'ru' ? "--- ЭФФЕКТЫ ВЗРЫВА ---" : "--- EXPLOSION FX ---"); sY += 40;
+        createBtn(sY, "fx_blue_exp", "desc_blue_exp", 100, 'fx_blue', () => { currentExplosionColor = 0x00ffff; }); 
+        createBtn(sY+step, "fx_pink_exp", "desc_pink_exp", 100, 'fx_pink', () => { currentExplosionColor = 0xff00ff; }); 
+        createBtn(sY+step*2, "fx_rainbow_exp", "desc_rainbow_exp", 150, 'fx_rainbow', () => { currentExplosionColor = -1; }); 
+        createBtn(sY+step*3, "fx_gold_exp", "desc_gold_exp", 150, 'fx_gold', () => { currentExplosionColor = 0xffaa00; }); 
+        createBtn(sY+step*4, "fx_green_exp", "desc_green_exp", 150, 'fx_green', () => { currentExplosionColor = 0x00ff00; }); 
+        createBtn(sY+step*5, "fx_red_exp", "desc_red_exp", 150, 'fx_red', () => { currentExplosionColor = 0xff0000; }); 
+        maxScroll = sY + step * 6;
     } else if (currentShopTab === 'bundles') {
-        createBtn(sY, "bundle_starter", "bundle_starter_desc", 100, 'bundle_starter', () => { upgradeLevels.skin_gold = 1; upgradeLevels.up_antenna = 1; upgradeLevels.up_speed = 1; currentSkin = 'gold'; refreshPlayerAppearance(scene); saveProgress(); }); createBtn(sY+step, "bundle_warrior", "bundle_warrior_desc", 250, 'bundle_warrior', () => { upgradeLevels.skin_crimson = 1; upgradeLevels.up_cannons = 1; upgradeLevels.up_hull = 1; currentSkin = 'crimson'; maxPlayerHealth += 25; playerHealth = maxPlayerHealth; refreshPlayerAppearance(scene); saveProgress(); }); createBtn(sY+step*2, "bundle_legend", "bundle_legend_desc", 500, 'bundle_legend', () => { upgradeLevels.skin_rainbow = 1; upgradeLevels.skin_void_premium = 1; upgradeLevels.up_omega = 1; currentSkin = 'rainbow'; refreshPlayerAppearance(scene); saveProgress(); }); maxScroll = step * 2;
+        addHeader(sY, lang === 'ru' ? "--- ВЫГОДНЫЕ ПАКЕТЫ ---" : "--- BEST DEALS ---"); sY += 40;
+        createBtn(sY, "bundle_starter", "bundle_starter_desc", 100, 'bundle_starter', () => { upgradeLevels.skin_gold = 1; upgradeLevels.up_antenna = 1; upgradeLevels.up_speed = 1; currentSkin = 'gold'; refreshPlayerAppearance(scene); saveProgress(); }); 
+        createBtn(sY+step, "bundle_warrior", "bundle_warrior_desc", 250, 'bundle_warrior', () => { upgradeLevels.skin_crimson = 1; upgradeLevels.up_cannons = 1; upgradeLevels.up_hull = 1; currentSkin = 'crimson'; maxPlayerHealth += 25; playerHealth = maxPlayerHealth; refreshPlayerAppearance(scene); saveProgress(); }); 
+        createBtn(sY+step*2, "bundle_legend", "bundle_legend_desc", 500, 'bundle_legend', () => { upgradeLevels.skin_rainbow = 1; upgradeLevels.skin_void_premium = 1; upgradeLevels.up_omega = 1; currentSkin = 'rainbow'; refreshPlayerAppearance(scene); saveProgress(); }); 
+        maxScroll = sY + step * 3;
     }
-    const itemCount = (currentShopTab === 'upgrades' ? 19 : (currentShopTab === 'fx' ? 16 : 3)); const contentHeight = sY + (step * itemCount);
-    const paddingBottom = isVictory ? 100 : 100; maxScroll = Math.max(0, contentHeight - scrollHeight + paddingBottom);
+
+    const paddingBottom = 150; 
+    maxScroll = Math.max(0, maxScroll - scrollHeight + paddingBottom);
+    
     scene.input.on('wheel', (p, obj, dx, dy) => { scrollY = Phaser.Math.Clamp(scrollY - dy * 0.8, -maxScroll, 0); contentContainer.y = scrollY; });
     scene.input.on('pointermove', (p) => { if (p.isDown && p.y > 110 && p.y < scrollAreaBottom) { scrollY = Phaser.Math.Clamp(scrollY + (p.y - p.prevPosition.y), -maxScroll, 0); contentContainer.y = scrollY; } });
+    
     const footerY = 625; const btnWidth = 110;
     const backBg = scene.add.rectangle(65, footerY, btnWidth, 45, 0x330033).setInteractive().setStrokeStyle(1, 0xff00ff, 0.5);
     const backTxt = scene.add.text(65, footerY, TRANSLATIONS[lang].back, { fontSize: '11px', fill: '#ff00ff', fontWeight: 'bold', fontFamily: fontUI, align: 'center', wordWrap: { width: 100 } }).setOrigin(0.5);
@@ -94,7 +193,7 @@ function showShop(scene, mainMenu, fromVictory = false) {
     
     const invColor = upgradeLevels.shareClaimed ? 0x222222 : 0x004400;
     const invBg = scene.add.rectangle(310, footerY, btnWidth, 45, invColor).setInteractive().setStrokeStyle(1, 0x00ff88, 0.5);
-    const invTxt = scene.add.text(310, footerY, upgradeLevels.shareClaimed ? "✓" : `👥 ${lang === 'ru' ? '+500' : '+500'}`, { fontSize: '12px', fontFamily: fontUI, fill: upgradeLevels.shareClaimed ? '#777' : '#00ff88', fontWeight: 'bold' }).setOrigin(0.5);
+    const invTxt = scene.add.text(310, footerY, upgradeLevels.shareClaimed ? "✓" : `👥 ${lang === 'ru' ? '+1500' : '+1500'}`, { fontSize: '12px', fontFamily: fontUI, fill: upgradeLevels.shareClaimed ? '#777' : '#00ff88', fontWeight: 'bold' }).setOrigin(0.5);
     
     overlay.add([backBg, backTxt, adBg, adTxt, invBg, invTxt]);
     

@@ -177,27 +177,32 @@ function showRules(scene, mainMenu) {
     const strategyBoxH = 55;
     const shopBox = scene.add.rectangle(187, scrollAreaTop + currentY + strategyBoxH/2, 310, strategyBoxH, 0x00ffff, 0.05).setStrokeStyle(1, 0x00ffff); const shopTxt = scene.add.text(187, scrollAreaTop + currentY + strategyBoxH/2, strategyText, { fontSize: '11px', fill: '#00ffff', align: 'center', fontFamily: fontUI, wordWrap: { width: 280 } }).setOrigin(0.5); contentContainer.add([shopBox, shopTxt]); currentY += strategyBoxH + 15;
     
+    const hTitle = scene.add.text(187, scrollAreaTop + currentY, lang === 'ru' ? "--- ПРОГРАММА ПРИВИЛЕГИЙ ---" : "--- PILOT PRIVILEGES ---", { fontSize: '14px', fill: '#ffff00', fontWeight: 'bold' }).setOrigin(0.5); contentContainer.add(hTitle); currentY += 30;
+    const bonusText = (lang === 'ru' 
+        ? "• РЕФЕРАЛЫ: +1500 💰 за каждого друга!\n• ЛОГИН: Заходи 7 дней подряд - получи 3000 💰\n• СКИНЫ: Редкие скины дают бонусы к АТК и СКР" 
+        : "• REFERRALS: +1500 💰 per invited friend!\n• LOGIN: Enter 7 days in a row for 3000 💰\n• SKINS: Rare skins grant ATK & SPD buffs");
+    const bonusTxt = scene.add.text(187, scrollAreaTop + currentY, bonusText, { fontSize: '11px', fill: '#ffffff', fontFamily: fontUI, align: 'left', lineSpacing: 5 }).setOrigin(0.5); contentContainer.add(bonusTxt); currentY += 60;
+
     // --- ОБУЧЕНИЕ (РУКА) — внизу контента ---
-    const handGlow = scene.add.circle(187, scrollAreaTop + currentY + 80, 16, 0x00ffff, 0.15);
-    const hand = scene.add.circle(187, scrollAreaTop + currentY + 80, 10, 0x00ffff, 0.8);
-    scene.tweens.add({ 
-        targets: [hand, handGlow], 
-        x: { from: 130, to: 244 }, 
-        duration: 1200, 
-        yoyo: true, 
-        repeat: -1, 
-        ease: 'Sine.easeInOut' 
+    const handGlow = scene.add.circle(187, scrollAreaTop + currentY + 30, 16, 0x00ffff, 0.15);
+    const hand = scene.add.circle(187, scrollAreaTop + currentY + 30, 10, 0x00ffff, 0.8);
+    scene.tweens.add({
+        targets: [hand, handGlow],
+        x: { from: 130, to: 244 },
+        duration: 1200,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
     });
 
-    const handTxt = scene.add.text(187, scrollAreaTop + currentY + 97, TRANSLATIONS[lang].slide, { 
-        fontSize: '12px', 
-        fill: '#00ffff', 
-        fontFamily: fontUI, 
-        fontWeight: 'bold' 
+    const handTxt = scene.add.text(187, scrollAreaTop + currentY + 47, TRANSLATIONS[lang].slide, {
+        fontSize: '12px',
+        fill: '#00ffff',
+        fontFamily: fontUI,
+        fontWeight: 'bold'
     }).setOrigin(0.5);
 
-    contentContainer.add([handGlow, hand, handTxt]); currentY += 110;
-    
+    contentContainer.add([handGlow, hand, handTxt]); currentY += 80;    
     const contentHeight = scrollAreaTop + currentY + 50;
     let maxScroll = Math.max(0, contentHeight - scrollAreaBottom + 30); let scrollY = 0;
     const applyScroll = () => { scrollY = Phaser.Math.Clamp(scrollY, -maxScroll, 0); contentContainer.y = scrollY; };
