@@ -217,25 +217,28 @@ function loadProgress() {
         }
         const saved = localStorage.getItem('GLITCHED_ARENA_MASTER_SAVE_V2');
         if (saved) {
-        const p = JSON.parse(saved);
-        if (p.lang) lang = p.lang;
-        level = p.level || 1; bestLevel = p.bestLevel || 1; bestDistance = p.bestDistance || 0;
-        coins = p.coins || 0; totalDistance = p.totalDistance || 0; bossesKilled = p.bossesKilled || 0;
-        achievements = { ...achievements, ...p.achievements };
-        maxPlayerHealth = p.maxPlayerHealth || 100; isShieldActive = p.isShieldActive || false;
-        currentShape = p.currentShape || 'classic'; currentSkin = p.currentSkin || 'classic';
-        yOffset = p.yOffset !== undefined ? p.yOffset : -50; isDead = p.isDeadInSave || false;
-        lastRunState = p.lastRunState || { isDead: false, pendingDeath: false };
-        adWatchedPendingRevive = p.adWatchedPendingRevive !== undefined ? p.adWatchedPendingRevive : false;
-        currentExplosionColor = p.currentExplosionColor || 0xff0000;
-        upgradeLevels = { ...upgradeLevels, ...p.upgradeLevels };
-        dailyQuests = p.dailyQuests || {};
-        lastDailyReset = p.lastDailyReset || 0;
-        rankXP = p.rankXP || 0;
-        isDarkMode = p.isDarkMode || false;
-        runGoal = 700 + (level - 1) * 100;
-    }
-    initDailyQuests();
+            try {
+                const p = JSON.parse(saved);
+                if (p.lang) lang = p.lang;
+                level = p.level || 1; bestLevel = p.bestLevel || 1; bestDistance = p.bestDistance || 0;
+                coins = p.coins || 0; totalDistance = p.totalDistance || 0; bossesKilled = p.bossesKilled || 0;
+                achievements = { ...achievements, ...p.achievements };
+                maxPlayerHealth = p.maxPlayerHealth || 100; isShieldActive = p.isShieldActive || false;
+                currentShape = p.currentShape || 'classic'; currentSkin = p.currentSkin || 'classic';
+                yOffset = p.yOffset !== undefined ? p.yOffset : -50; isDead = p.isDeadInSave || false;
+                lastRunState = p.lastRunState || { isDead: false, pendingDeath: false };
+                adWatchedPendingRevive = p.adWatchedPendingRevive !== undefined ? p.adWatchedPendingRevive : false;
+                currentExplosionColor = p.currentExplosionColor || 0xff0000;
+                upgradeLevels = { ...upgradeLevels, ...p.upgradeLevels };
+                dailyQuests = p.dailyQuests || {};
+                lastDailyReset = p.lastDailyReset || 0;
+                rankXP = p.rankXP || 0;
+                isDarkMode = p.isDarkMode || false;
+                runGoal = 700 + (level - 1) * 100;
+            } catch(e) { console.log('[Load] JSON parse error:', e); }
+        }
+        initDailyQuests();
+    } catch(e) { console.log('[Load] Error:', e); }
 }
 
 // Adsgram init
