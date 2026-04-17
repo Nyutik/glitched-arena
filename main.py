@@ -263,7 +263,7 @@ async def cmd_start(message: types.Message):
                     await bot.send_message(referrer_id, f"⚡ Новый пилот в твоей эскадрилье! +1500 💰 за приглашение {username}.")
             except Exception as e: print(f"Error rewarding referrer: {e}")
 
-    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🎮 GLITCHED ARENA", web_app=WebAppInfo(url="https://glitched-arena.onrender.com/"))]])
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🎮 GLITCHED ARENA", web_app=WebAppInfo(url="https://glitched-arena.myftp.org"))]])
     welcome_msg = f"Привет, {username}! 🚀\n\nДобро пожаловать в Glitched Arena!\n🦾 Прокачивай корабль\n👾 Уничтожай боссов\nТвой стартовый бонус: 500 💰"
     if not is_new_user: welcome_msg = f"С возвращением, {username}! Твои системы готовы к бою. 🦾"
     await message.answer(welcome_msg, reply_markup=kb)
