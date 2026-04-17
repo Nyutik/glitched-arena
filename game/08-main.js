@@ -58,6 +58,15 @@ function create() {
     this.input.on('pointermove', p => { if (!isStarted || isShopOpen || isDead || isPaused || !player?.active) return; if (this.isFirstMove) { player.x = Phaser.Math.Clamp(p.x, 20, 355); player.y = Phaser.Math.Clamp(p.y + yOffset, 80, 620); if (shieldAura) shieldAura.setPosition(player.x, player.y); } });
     const skin = SKINDATA[currentSkin] || SKINDATA.classic;
     trailEmitter = this.add.particles(0, 0, 'pixel', { speed: 60, scale: { start: 0.6, end: 0 }, alpha: { start: 0.4, end: 0 }, lifespan: 600, blendMode: 'ADD', follow: player, tint: skin.trail });
+    
+    // Оптимизированный эмиттер для хвостов пуль
+    bulletTrailEmitter = this.add.particles(0, 0, 'pixel', {
+        scale: { start: 0.4, end: 0 },
+        alpha: { start: 0.3, end: 0 },
+        lifespan: 100,
+        blendMode: 'ADD',
+        emitting: false
+    });
     boss = this.physics.add.sprite(187, -200, 'boss').setDepth(5).setImmovable(true).setVisible(false).clearTint();
     bossTrail = this.add.particles(0, 0, 'pixel', { speed: 40, scale: { start: 0.9, end: 0 }, alpha: { start: 0.5, end: 0 }, lifespan: 700, blendMode: 'ADD', tint: 0xff00ff, follow: boss }); bossTrail.setParticleTint(0xff00ff); bossTrail.setVisible(false);
     const fontUI = 'Arial, sans-serif';
@@ -257,7 +266,22 @@ function update(time, delta) {
     }
     overdriveBar.clear().fillStyle(0x333333).fillRect(87, 645, 200, 8).fillStyle(0xffff00).fillRect(87, 645, (overdrive/100) * 200, 8);
     if (overdrive >= 100) { overdriveBar.setX(Math.sin(time * 0.1) * 3); if (!this.ovrText) { this.ovrText = this.add.text(player.x, player.y - 65, TRANSLATIONS[lang].tap_ultra, { fontFamily: fontUI, fontSize: '20px', fill: '#ffff00', fontWeight: 'bold', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setDepth(100); this.tweens.add({ targets: this.ovrText, alpha: 0.3, duration: 300, yoyo: true, repeat: -1 }); } this.ovrText.setPosition(player.x, player.y - 65); player.setTint(0xffff00); } else { if (this.ovrText) { this.ovrText.destroy(); this.ovrText = null; } player.clearTint(); }
-    // [bullets, playerBullets, minionBullets].forEach(group => { group.children.each(b => { if (b && b.active) { let trail = this.add.rectangle(b.x, b.y, b.displayWidth * 0.4, b.displayHeight * 0.4, b.tintTopLeft).setAlpha(0.4).setDepth(b.depth - 1); this.tweens.add({ targets: trail, scale: 0, alpha: 0, duration: 70, onComplete: () => trail.destroy() }); } }); });
+    
+    // Эффект радужного скина (оптимизировано через Tint)
+    if (currentSkin === 'rainbow' && player && player.active) {
+        const t = Math.floor(time / 200) % rainbowColors.length;
+        player.setTint(rainbowColors[t]);
+    }
+
+    // Восстановленные следы пуль (ОПТИМИЗИРОВАНО ЧЕРЕЗ ЧАСТИЦЫ)
+    [bullets, playerBullets, minionBullets].forEach(group => {
+        group.children.each(b => {
+            if (b && b.active && bulletTrailEmitter) {
+                bulletTrailEmitter.emitParticleAt(b.x, b.y);
+            }
+        });
+    });
+
     if (this.overheadGfx && this.overheadGfx.active && !isVictory) {
         this.overheadGfx.clear();
         if (player && player.active) { let pPct = playerHealth / maxPlayerHealth; let hudY = player.y - (player.displayHeight / 2) - 20; let barW = 40; let barColor = 0x00ffff; if (playerHealth < 20) { let pulse = Math.abs(Math.sin(time * 0.015)); barColor = pulse > 0.5 ? 0xff0000 : 0x660000; pHealthLabel.setX(player.x + Math.random() * 4 - 2); pHealthLabel.setFill('#ff0000'); } else { pHealthLabel.setX(player.x).setFill('#00ffff'); } this.overheadGfx.fillStyle(0x000000, 0.5).fillRect(player.x - barW/2, hudY, barW, 4); this.overheadGfx.fillStyle(barColor).fillRect(player.x - barW/2, hudY, barW * pPct, 4); pHealthLabel.setPosition(player.x, hudY - 12).setOrigin(0.5).setText(`${Math.ceil(playerHealth)} ${TRANSLATIONS[lang].hp_label}`); }
