@@ -50,6 +50,8 @@ class ScoreData(BaseModel):
     rank_xp: Optional[int] = 0
     daily_quests: Optional[dict] = {}
     last_daily_reset: Optional[int] = 0
+    daily_login_streak: Optional[int] = 0
+    last_login_date: Optional[str] = None
 
 # --- API ЭНДПОИНТЫ ---
 
@@ -68,7 +70,6 @@ async def get_invoice(item_type: str, user_id: int, username: str):
     amount = prices_map.get(item_type, 100)
     print(f"[Invoice] item={item_type}, amount={amount}")
 
-    # Теперь в полезную нагрузку пишем ID, а не имя!
     payload = f"{item_type}:{user_id}"
 
     invoice_link = await bot.create_invoice_link(
@@ -91,9 +92,6 @@ async def submit_score(data: ScoreData):
         existing = supabase.table("leaderboard").select("*").eq("telegram_id", data.telegram_id).execute()
         old = existing.data[0] if existing.data else {}
 
-        if old:
-            print(f"[Sync] Existing data for {data.telegram_id}: Level={old.get('level')}, Best={old.get('best_level')}")
-
         old_upgrades = old.get("upgrades") or {}
         new_upgrades = data.upgrades or {}
         merged_upgrades = old_upgrades.copy()
@@ -102,10 +100,8 @@ async def submit_score(data: ScoreData):
             try:
                 old_val = merged_upgrades.get(key)
                 if old_val is None: old_val = 0
-                
                 new_val_int = int(val) if val is not None else 0
                 old_val_int = int(old_val)
-                
                 merged_upgrades[key] = max(new_val_int, old_val_int)
             except:
                 merged_upgrades[key] = val if val is not None else merged_upgrades.get(key, 0)
@@ -114,10 +110,6 @@ async def submit_score(data: ScoreData):
         new_achievements = data.achievements or {}
         merged_achievements = {**old_achievements, **new_achievements}
 
-        new_level = int(data.level) if data.level is not None else 0
-        new_best = int(data.best_level) if data.best_level is not None else 0
-        
-        # Гарантируем, что уровень в базе не откатывается назад (строгая обработка None)
         def safe_int(val):
             if val is None: return 0
             try: return int(val)
@@ -130,8 +122,8 @@ async def submit_score(data: ScoreData):
         db_total_dist = safe_int(old.get("total_dist"))
         db_bosses_killed = safe_int(old.get("bosses_killed"))
 
-        merged_level = max(new_level, db_level)
-        merged_best_level = max(new_best, db_best, merged_level)
+        merged_level = max(safe_int(data.level), db_level)
+        merged_best_level = max(safe_int(data.best_level), db_best, merged_level)
 
         payload = {
             "telegram_id": data.telegram_id,
@@ -151,11 +143,12 @@ async def submit_score(data: ScoreData):
             "rank_xp": max(safe_int(data.rank_xp), safe_int(old.get("rank_xp"))),
             "daily_quests": data.daily_quests or old.get("daily_quests") or {},
             "last_daily_reset": data.last_daily_reset if data.last_daily_reset else old.get("last_daily_reset", 0),
+            "daily_login_streak": data.daily_login_streak if data.daily_login_streak is not None else old.get("daily_login_streak", 0),
+            "last_login_date": data.last_login_date or old.get("last_login_date"),
             "score_date": current_date
         }
 
-        print(f"[Sync] Upserting payload: Level={payload['level']}, Best={payload['best_level']}")
-        res = supabase.table("leaderboard").upsert(payload, on_conflict="telegram_id").execute()
+        supabase.table("leaderboard").upsert(payload, on_conflict="telegram_id").execute()
         
         return {
             "status": "ok",
@@ -170,10 +163,7 @@ async def submit_score(data: ScoreData):
 @app.get("/get_leaderboard")
 async def get_leaderboard():
     try:
-        res = supabase.table('leaderboard').select('*') \
-            .order('level', desc=True) \
-            .order('score', desc=True) \
-            .limit(50).execute()
+        res = supabase.table('leaderboard').select('*').order('level', desc=True).order('score', desc=True).limit(50).execute()
         return res.data
     except Exception as e:
         return {"error": str(e)}
@@ -184,11 +174,9 @@ async def get_leaderboard():
 async def checkout(query: PreCheckoutQuery):
     await query.answer(ok=True)
 
-
 def merge_user_upgrades(tg_id: int, patch: dict):
     res = supabase.table("leaderboard").select("*").eq("telegram_id", tg_id).execute()
     old = res.data[0] if res.data else {}
-
     upgrades = old.get("upgrades") or {}
     for key, val in patch.items():
         upgrades[key] = max(val, upgrades.get(key, 0))
@@ -196,20 +184,9 @@ def merge_user_upgrades(tg_id: int, patch: dict):
     payload = {
         "telegram_id": tg_id,
         "username": old.get("username", "PILOT"),
-        "score": old.get("score", 0),
-        "level": old.get("level", 1),
-        "best_level": old.get("best_level", old.get("level", 1)),
-        "explosion_color": old.get("explosion_color", 0xff0000),
-        "skin": old.get("skin", "classic"),
-        "shape": old.get("shape", "classic"),
-        "coins": old.get("coins", 0),
         "upgrades": upgrades,
-        "total_dist": old.get("total_dist", 0),
-        "bosses_killed": old.get("bosses_killed", 0),
-        "ship_name": old.get("ship_name", "RAZOR-01"),
-        "score_date": old.get("score_date") or datetime.now().isoformat()
+        "score_date": datetime.now().isoformat()
     }
-
     supabase.table("leaderboard").upsert(payload, on_conflict="telegram_id").execute()
     return payload
 
@@ -224,113 +201,84 @@ async def got_payment(message: types.Message):
         old = user_res.data[0] if user_res.data else {}
 
         skin_mapping = {
-            "skin_gold": "gold",
-            "skin_ghost": "ghost",
-            "skin_crimson": "crimson",
-            "skin_void": "void_skin",
-            "skin_plasma": "plasma",
-            "skin_solar": "solar",
-            "skin_frost": "frost"
+            "skin_gold": "gold", "skin_ghost": "ghost", "skin_crimson": "crimson",
+            "skin_void": "void_skin", "skin_plasma": "plasma", "skin_solar": "solar",
+            "skin_frost": "frost", "skin_rainbow": "rainbow", "skin_void_premium": "void_premium",
+            "skin_crystal": "crystal"
         }
         
         shape_mapping = {
-            "skin_striker": "striker",
-            "ship_tank": "tank",
-            "ship_dart": "dart",
-            "ship_viper": "viper",
-            "ship_phase": "phase"
-        }
-        
-        upgrade_mapping = {
-            "omega": "omega", "fx_blue": "fx_blue", "fx_pink": "fx_pink",
-            "skin_striker": "skin_striker", "ship_tank": "ship_tank",
-            "ship_dart": "ship_dart", "ship_viper": "ship_viper",
-            "ship_phase": "ship_phase", "skin_crimson": "skin_crimson",
-            "skin_void": "skin_void", "skin_plasma": "skin_plasma",
-            "skin_solar": "skin_solar", "skin_frost": "skin_frost"
+            "skin_striker": "striker", "ship_tank": "tank", "ship_dart": "dart",
+            "ship_viper": "viper", "ship_phase": "phase"
         }
 
         if item_type == "buy_coins":
-            current = old.get("coins", 0)
-            supabase.table("leaderboard").upsert({
-                "telegram_id": tg_id,
-                "username": old.get("username", message.from_user.first_name or "PILOT"),
-                "score": old.get("score", 0),
-                "level": old.get("level", 1),
-                "best_level": old.get("best_level", old.get("level", 1)),
-                "explosion_color": old.get("explosion_color", 0xff0000),
-                "skin": old.get("skin", "classic"),
-                "shape": old.get("shape", "classic"),
-                "coins": current + 5000,
-                "upgrades": old.get("upgrades", {}),
-                "total_dist": old.get("total_dist", 0),
-                "bosses_killed": old.get("bosses_killed", 0),
-                "ship_name": old.get("ship_name", "RAZOR-01"),
-                "score_date": old.get("score_date") or datetime.now().isoformat()
-            }, on_conflict="telegram_id").execute()
+            current_coins = old.get("coins", 0)
+            supabase.table("leaderboard").update({"coins": current_coins + 5000}).eq("telegram_id", tg_id).execute()
+        elif item_type.startswith("bundle_"):
+            bundle_data = {
+                "bundle_starter": {"skin_gold": 1, "up_antenna": 1, "up_speed": 1},
+                "bundle_warrior": {"skin_crimson": 1, "up_cannons": 1, "up_hull": 1},
+                "bundle_legend": {"skin_rainbow": 1, "skin_void_premium": 1, "omega": 1}
+            }
+            if item_type in bundle_data:
+                merge_user_upgrades(tg_id, bundle_data[item_type])
+                if item_type == "bundle_starter": supabase.table("leaderboard").update({"skin": "gold"}).eq("telegram_id", tg_id).execute()
+                if item_type == "bundle_warrior": supabase.table("leaderboard").update({"skin": "crimson"}).eq("telegram_id", tg_id).execute()
+                if item_type == "bundle_legend": supabase.table("leaderboard").update({"skin": "rainbow"}).eq("telegram_id", tg_id).execute()
         elif item_type in skin_mapping:
-            upgrade_key = item_type
-            new_skin = skin_mapping[item_type]
-            merge_user_upgrades(tg_id, {upgrade_key: 1})
-            supabase.table("leaderboard").update({"skin": new_skin}).eq("telegram_id", tg_id).execute()
+            merge_user_upgrades(tg_id, {item_type: 1})
+            supabase.table("leaderboard").update({"skin": skin_mapping[item_type]}).eq("telegram_id", tg_id).execute()
         elif item_type in shape_mapping:
-            upgrade_key = upgrade_mapping.get(item_type, item_type)
-            new_shape = shape_mapping[item_type]
-            merge_user_upgrades(tg_id, {upgrade_key: 1})
-            supabase.table("leaderboard").update({"shape": new_shape}).eq("telegram_id", tg_id).execute()
-        elif item_type in upgrade_mapping:
-            upgrade_key = upgrade_mapping[item_type]
-            merge_user_upgrades(tg_id, {upgrade_key: 1})
+            merge_user_upgrades(tg_id, {item_type: 1})
+            supabase.table("leaderboard").update({"shape": shape_mapping[item_type]}).eq("telegram_id", tg_id).execute()
+        else:
+            merge_user_upgrades(tg_id, {item_type: 1})
 
-        await message.answer(f"🦾 Система обновлена! Покупка привязана к ID: {tg_id}")
-
+        await message.answer(f"🦾 Система обновлена! Предмет '{item_type}' успешно активирован.")
     except Exception as e:
         print(f"Ошибка оплаты: {e}")
 
-
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🎮 GLITCHED ARENA", web_app=WebAppInfo(url="https://glitched-arena.onrender.com/"))]
-    ])
     args = message.text.split()
-    if len(args) > 1 and args[1].startswith("game_"):
-        game_id = args[1].replace("game_", "")
-        await message.answer(f"🎮 Запуск игры! ID: {game_id}", reply_markup=kb)
-    else:
-        await message.answer("🎮 Добро пожаловать в Glitched Arena!\n\nИспользуйте кнопку ниже, чтобы открыть приложение.", reply_markup=kb)
+    referrer_id = None
+    if len(args) > 1 and args[1].startswith("ref_"):
+        try: referrer_id = int(args[1].replace("ref_", ""))
+        except: pass
 
+    tg_id = message.from_user.id
+    username = message.from_user.first_name or "PILOT"
+    user_res = supabase.table("leaderboard").select("*").eq("telegram_id", tg_id).execute()
+    is_new_user = len(user_res.data) == 0
+
+    if is_new_user:
+        supabase.table("leaderboard").upsert({"telegram_id": tg_id, "username": username, "level": 1, "coins": 500, "upgrades": {}, "score_date": datetime.now().isoformat()}).execute()
+        if referrer_id and referrer_id != tg_id:
+            try:
+                ref_res = supabase.table("leaderboard").select("coins").eq("telegram_id", referrer_id).execute()
+                if ref_res.data:
+                    old_coins = ref_res.data[0].get("coins", 0)
+                    supabase.table("leaderboard").update({"coins": old_coins + 1500}).eq("telegram_id", referrer_id).execute()
+                    await bot.send_message(referrer_id, f"⚡ Новый пилот в твоей эскадрилье! +1500 💰 за приглашение {username}.")
+            except Exception as e: print(f"Error rewarding referrer: {e}")
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🎮 GLITCHED ARENA", web_app=WebAppInfo(url="https://glitched-arena.onrender.com/"))]])
+    welcome_msg = f"Привет, {username}! 🚀\n\nДобро пожаловать в Glitched Arena!\n🦾 Прокачивай корабль\n👾 Уничтожай боссов\nТвой стартовый бонус: 500 💰"
+    if not is_new_user: welcome_msg = f"С возвращением, {username}! Твои системы готовы к бою. 🦾"
+    await message.answer(welcome_msg, reply_markup=kb)
 
 @app.get("/get_user_personal/{tg_id}")
 async def get_user_personal(tg_id: int):
     try:
         res = supabase.table('leaderboard').select('*').eq('telegram_id', tg_id).execute()
         if not res.data: return {"error": "New Player"}
-
         user_data = res.data[0]
-        rank_res = supabase.table('leaderboard').select('telegram_id', count='exact') \
-            .or_(f"level.gt.{user_data['level']},and(level.eq.{user_data['level']},score.gt.{user_data['score']})") \
-            .execute()
-
+        rank_res = supabase.table('leaderboard').select('telegram_id', count='exact').or_(f"level.gt.{user_data['level']},and(level.eq.{user_data['level']},score.gt.{user_data['score']})").execute()
         user_data['rank'] = (rank_res.count or 0) + 1
         return user_data
-    except Exception as e:
-        return {"error": str(e)}
+    except Exception as e: return {"error": str(e)}
 
-
-# --- ПОДКЛЮЧЕНИЕ ФРОНТЕНДА ---
-app.mount("/", StaticFiles(directory=".", html=True), name="static")
-
-async def main():
-    port = int(os.getenv("PORT", 8000))
-    config = uvicorn.Config(app, host="0.0.0.0", port=port)
-    server = uvicorn.Server(config)
-    await asyncio.gather(server.serve(), dp.start_polling(bot))
-
-if __name__ == "__main__":
-    asyncio.run(main())
-
-# --- ПОДКЛЮЧЕНИЕ ФРОНТЕНДА ---
 app.mount("/", StaticFiles(directory=".", html=True), name="static")
 
 async def main():

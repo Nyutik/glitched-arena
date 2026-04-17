@@ -155,6 +155,7 @@ function create() {
         }, loop: true });
     }
     syncUserData.call(this); updateHudTexts();
+    initDailyLogin(this);
     if (!localStorage.getItem('GLITCHED_ARENA_INTRO_DONE')) showGaryIntro(this);
     if (shouldAutoStart) startRun(this); else showMenu(this);
 }
@@ -431,8 +432,37 @@ async function syncUserData() {
         if (cloudData.upgrades && typeof cloudData.upgrades === 'object') { for (const key in cloudData.upgrades) { if (key === 'helper_mercenary') continue; upgradeLevels[key] = Math.max(upgradeLevels[key] || 0, cloudData.upgrades[key] || 0); } }
         if (cloudData.achievements && typeof cloudData.achievements === 'object') { for (const key in cloudData.achievements) if (cloudData.achievements[key]) achievements[key] = true; }
         if (typeof cloudData.rank_xp === 'number') rankXP = Math.max(rankXP || 0, cloudData.rank_xp);
-        if (cloudData.daily_quests && typeof cloudData.daily_quests === 'object') { for (const key in cloudData.daily_quests) if (!dailyQuests[key] || cloudData.daily_quests[key].completed) dailyQuests[key] = cloudData.daily_quests[key]; }
-        if (typeof cloudData.last_daily_reset === 'number') { console.log('[Sync] lastDailyReset from cloud:', cloudData.last_daily_reset); lastDailyReset = cloudData.last_daily_reset; }
+        
+        if (typeof cloudData.daily_login_streak === 'number') dailyLoginStreak = cloudData.daily_login_streak;
+        if (cloudData.last_login_date) lastLoginDate = cloudData.last_login_date;
+
+        if (typeof cloudData.last_daily_reset === 'number') {
+            const cloudReset = cloudData.last_daily_reset;
+            const localReset = lastDailyReset || 0;
+            
+            console.log('[Sync] lastDailyReset check:', { cloudReset, localReset });
+            
+            if (cloudReset > localReset) {
+                // Облако свежее (например, зашли с другого устройства)
+                lastDailyReset = cloudReset;
+                if (cloudData.daily_quests && typeof cloudData.daily_quests === 'object') {
+                    dailyQuests = JSON.parse(JSON.stringify(cloudData.daily_quests));
+                }
+            } else if (cloudReset === localReset) {
+                // Одинаковое время, можно смержить прогресс (на всякий случай)
+                if (cloudData.daily_quests && typeof cloudData.daily_quests === 'object') {
+                    for (const key in cloudData.daily_quests) {
+                        if (!dailyQuests[key] || cloudData.daily_quests[key].completed) {
+                            dailyQuests[key] = cloudData.daily_quests[key];
+                        }
+                    }
+                }
+            } else {
+                // Локальное время свежее (только что был сброс), игнорируем старые квесты из облака
+                console.log('[Sync] Local reset is newer than cloud, keeping local quests.');
+                shouldPushLocalBack = true;
+            }
+        }
         initDailyQuests();
         saveProgress();
         currentStats = getShipStats(); maxPlayerHealth = 100 + (upgradeLevels.health || 0) * 25 + currentStats.hpBonus;
@@ -446,7 +476,7 @@ async function submitScore(manualData = null) {
     const tgUser = getTelegramUser(); if (!tgUser?.id) return false;
     const initData = window.Telegram?.WebApp?.initData || '';
     try {
-        const payload = { telegram_id: tgUser.id, username: tgUser.first_name || tgUser.username || 'PILOT', score: Math.floor(bestDistance), level: manualData ? manualData.level : level, best_level: manualData ? manualData.best_level : bestLevel, explosion_color: currentExplosionColor, skin: currentSkin, shape: currentShape, coins, upgrades: upgradeLevels, achievements, total_dist: Math.floor(totalDistance), bosses_killed: bossesKilled, ship_name: shipName || 'RAZOR-01', rank_xp: rankXP, daily_quests: dailyQuests, last_daily_reset: lastDailyReset };
+        const payload = { telegram_id: tgUser.id, username: tgUser.first_name || tgUser.username || 'PILOT', score: Math.floor(bestDistance), level: manualData ? manualData.level : level, best_level: manualData ? manualData.best_level : bestLevel, explosion_color: currentExplosionColor, skin: currentSkin, shape: currentShape, coins, upgrades: upgradeLevels, achievements, total_dist: Math.floor(totalDistance), bosses_killed: bossesKilled, ship_name: shipName || 'RAZOR-01', rank_xp: rankXP, daily_quests: dailyQuests, last_daily_reset: lastDailyReset, daily_login_streak: dailyLoginStreak, last_login_date: lastLoginDate };
         const response = await fetch(`${botUrl}/submit_score`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': initData }, body: JSON.stringify(payload) });
         if (response.ok) { console.log('✅ Синхронизация успешна:', await response.json()); return true; }
         return false;

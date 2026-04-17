@@ -119,7 +119,22 @@ function showShop(scene, mainMenu, fromVictory = false) {
         });
     });
 
-    invBg.on('pointerdown', () => { const shareText = encodeURIComponent(TRANSLATIONS[lang].share_invite.replace("%lvl%", level).replace("%dist%", bestDistance)); const fullLink = `https://t.me/share/url?url=${encodeURIComponent(SHARE_LINK)}&text=${shareText}`; if (window.Telegram?.WebApp) { Telegram.WebApp.openTelegramLink(fullLink); if (!upgradeLevels.shareClaimed) { coins += 500; upgradeLevels.shareClaimed = true; saveProgress(); creds.setText(`${TRANSLATIONS[lang].credits}: ${coins}`); invBg.setFillStyle(0x222222); invTxt.setText("✓").setFill("#777"); } } else window.open(fullLink, '_blank'); });
+    invBg.on('pointerdown', () => {
+        const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+        const refId = tgUser ? tgUser.id : 0;
+        const refParam = refId ? `?start=ref_${refId}` : "";
+        const shareText = encodeURIComponent(TRANSLATIONS[lang].share_invite.replace("%lvl%", level).replace("%dist%", bestDistance));
+        const fullLink = `https://t.me/share/url?url=${encodeURIComponent(SHARE_LINK + refParam)}&text=${shareText}`;
+        
+        if (window.Telegram?.WebApp) {
+            Telegram.WebApp.openTelegramLink(fullLink);
+            if (!upgradeLevels.shareClaimed) {
+                coins += 500; upgradeLevels.shareClaimed = true; saveProgress();
+                creds.setText(`${TRANSLATIONS[lang].credits}: ${coins}`);
+                invBg.setFillStyle(0x222222); invTxt.setText("✓").setFill("#777");
+            }
+        } else window.open(fullLink, '_blank');
+    });
     if (fromVictory) {
         const nextSector = level; const nextLabel = `${TRANSLATIONS[lang].deploy_btn} ${nextSector}`;
         const nextBg = scene.add.rectangle(187, 545, 250, 50, 0x003333).setInteractive().setStrokeStyle(2, 0x00ffff, 0.95);
