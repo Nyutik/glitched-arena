@@ -84,19 +84,45 @@ function showRewardUI(scene, titleText) {
     const duelBtn = scene.add.text(187, 560, ` ⚔️ ${TRANSLATIONS[lang].share_duel} `, { fontSize: '14px', fill: '#00ffff', padding: 10 }).setOrigin(0.5).setInteractive();
     container.add([info, doubleBtn, collectBtn, duelBtn]);
     duelBtn.on('pointerdown', () => shareDuel('win'));
-    doubleBtn.on('pointerdown', () => { showAdSafe(() => finalizeCollection(earnedAmount * 2)); });
-    collectBtn.on('pointerdown', () => { finalizeCollection(earnedAmount); });
+    doubleBtn.on('pointerdown', () => { 
+        doubleBtn.disableInteractive(); collectBtn.disableInteractive(); 
+        showAdSafe(() => finalizeCollection(earnedAmount * 2)); 
+    });
+    collectBtn.on('pointerdown', () => { 
+        doubleBtn.disableInteractive(); collectBtn.disableInteractive(); 
+        finalizeCollection(earnedAmount); 
+    });
+
     async function finalizeCollection(finalSum) {
-        coins += finalSum; coinsThisRun = 0;
+        // Сначала сохраняем в локальные монеты
+        const oldCoins = coins;
+        coins += finalSum;
+        
+        // Обнуляем "забег" только после того, как учли его в общем балансе
+        coinsThisRun = 0;
+        
         if (coins >= 5000 && !achievements.rich) achievements.rich = true;
         isVictory = true; isShopOpen = false; isDead = false; isBossFight = false; isPhase2 = false; isPhase3 = false; isStarted = false;
+        
+        console.log(`[Reward] Finalizing: ${oldCoins} + ${finalSum} = ${coins}`);
+        
         clearBattleTexts(scene); cleanupScreenFx(scene);
         if (boss && boss.active) { safeKillTweens(scene, boss); boss.setVisible(false); boss.setActive(true); boss.setAlpha(1); boss.setPosition(187, -200); boss.setAngle(0); boss.clearTint(); }
-        if (bossTrail) { bossTrail.setVisible(false); bossTrail.setAlpha(1); }
-        if (distanceText) distanceText.setText('').setVisible(false);
-        if (glitchText) { glitchText.setText('').setBackgroundColor(null).setAlpha(1).setVisible(false); }
-        saveProgress(); await submitScore();
-        container.destroy(); if (titleText && titleText.active) titleText.destroy();
+        
+        saveProgress(); 
+        
+        // Отправляем на сервер и ждем подтверждения
+        if (hasTelegramUser()) {
+            try {
+                await submitScore();
+                console.log('[Reward] Cloud sync successful');
+            } catch (e) {
+                console.error('[Reward] Cloud sync failed', e);
+            }
+        }
+        
+        container.destroy(); 
+        if (titleText && titleText.active) titleText.destroy();
         showShop(scene, null, true);
     }
 }

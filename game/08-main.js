@@ -132,8 +132,8 @@ function create() {
     this.physics.add.overlap(boss, playerBullets, hitBoss, null, this);
     this.physics.add.overlap(boss, playerMissiles, hitBoss, null, this);
     this.physics.add.overlap(player, items, collectItem, null, this);
-    this.physics.add.overlap(minions, playerBullets, (minion, bullet) => { let mx = minion.x; let my = minion.y; minion.destroy(); bullet.destroy(); coinsThisRun += 5; updateHudTexts(); minionExplode(this, mx, my); checkDailyQuest(this, 'kill50'); awardRankXP(this, 5, 'kill'); });
-    this.physics.add.overlap(minions, playerMissiles, (minion, m) => { let mx = minion.x; let my = minion.y; minion.destroy(); m.destroy(); coinsThisRun += 5; updateHudTexts(); minionExplode(this, mx, my); checkDailyQuest(this, 'kill50'); awardRankXP(this, 5, 'kill'); });
+    this.physics.add.overlap(minions, playerBullets, (minion, bullet) => { let mx = minion.x; let my = minion.y; minion.destroy(); bullet.destroy(); minionExplode(this, mx, my); checkDailyQuest(this, 'kill50'); awardRankXP(this, 5, 'kill'); });
+    this.physics.add.overlap(minions, playerMissiles, (minion, m) => { let mx = minion.x; let my = minion.y; minion.destroy(); m.destroy(); minionExplode(this, mx, my); checkDailyQuest(this, 'kill50'); awardRankXP(this, 5, 'kill'); });
     this.physics.add.overlap(player, minionBullets, (p, b) => { b.destroy(); handleDamage(this, 10); });
     this.physics.add.overlap(player, minions, (p, m) => { m.destroy(); handleDamage(this, 20); });
     this.physics.add.overlap(bossShields, playerBullets, (s, b) => { b.destroy(); s.setAlpha(1); this.time.delayedCall(100, () => s.setAlpha(0.4)); });
@@ -435,10 +435,17 @@ async function syncUserData() {
         console.log('[Sync] Cloud data received:', cloudData);
         let shouldPushLocalBack = false;
         
-        // Safe coin handling - prevent NaN
+        // Безопасная обработка монет - предотвращаем уменьшение баланса
         const cloudCoins = typeof cloudData.coins === 'number' && !isNaN(cloudData.coins) ? cloudData.coins : 0;
-        if (cloudCoins > (coins || 0)) { coins = cloudCoins; console.log('[Sync] Coins from cloud:', coins); }
-        else if ((coins || 0) > cloudCoins) shouldPushLocalBack = true;
+        const localCoins = coins || 0;
+
+        if (cloudCoins > localCoins) {
+            console.log(`[Sync] Updating coins: ${localCoins} -> ${cloudCoins} (Cloud is ahead)`);
+            coins = cloudCoins;
+        } else if (localCoins > cloudCoins) {
+            console.log(`[Sync] Local coins are ahead: ${localCoins} vs ${cloudCoins} (Will sync to cloud)`);
+            shouldPushLocalBack = true;
+        }
         
         const cloudLevel = typeof cloudData.level === 'number' ? cloudData.level : 0;
         if (cloudLevel > level) { level = cloudLevel; runGoal = 700 + (level - 1) * 100; } else if (level > cloudLevel) shouldPushLocalBack = true;
