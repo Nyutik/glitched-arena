@@ -8,16 +8,7 @@
 // ============================================
 
 const SHARE_LINK = "https://t.me/GlitchedArenaBot";
-const RENDER_URL = 'https://glitched-arena.myftp.org';
-const getBotUrl = () => {
-    const hostname = window.location.hostname;
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        return 'http://localhost:8000';
-    }
-    return RENDER_URL;
-};
-const botUrl = getBotUrl();
-
+const botUrl = "https://glitched-arena.myftp.org";
 const ASSETS = {
     BGM: 'assets/Cyberpunk 2.mp3',
     SFX_ULTRA: 'assets/futuristic-cyberpunk-digi-ivvyqv4k.wav',
