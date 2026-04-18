@@ -6,5 +6,9 @@ __pycache__/
 images/
 GEMINI.md
 STRUCTURE.md
-ROADMAP.md`nMARKETING.md
-`nSERVER_SETUP.md
+ROADMAP.md
+MARKETING.md
+SERVER_SETUP.md
+STATUS.md
+arena_id_rsa
+arena_id_rsa.pub

@@ -163,8 +163,10 @@ function create() {
             }
         }, loop: true });
     }
-    syncUserData.call(this); updateHudTexts();
-    initDailyLogin(this);
+    syncUserData.call(this).then(() => {
+        initDailyLogin(this);
+    });
+    updateHudTexts();
     if (!localStorage.getItem('GLITCHED_ARENA_INTRO_DONE')) showGaryIntro(this);
     if (shouldAutoStart) startRun(this); else showMenu(this);
 }
@@ -464,8 +466,16 @@ async function syncUserData() {
         if (cloudData.achievements && typeof cloudData.achievements === 'object') { for (const key in cloudData.achievements) if (cloudData.achievements[key]) achievements[key] = true; }
         if (typeof cloudData.rank_xp === 'number') rankXP = Math.max(rankXP || 0, cloudData.rank_xp);
         
-        if (typeof cloudData.daily_login_streak === 'number') dailyLoginStreak = cloudData.daily_login_streak;
-        if (cloudData.last_login_date) lastLoginDate = cloudData.last_login_date;
+        if (typeof cloudData.daily_login_streak === 'number') {
+            dailyLoginStreak = Math.max(dailyLoginStreak || 0, cloudData.daily_login_streak);
+        }
+        if (cloudData.last_login_date) {
+            if (!lastLoginDate || cloudData.last_login_date > lastLoginDate) {
+                lastLoginDate = cloudData.last_login_date;
+            } else if (lastLoginDate > cloudData.last_login_date) {
+                shouldPushLocalBack = true;
+            }
+        }
 
         if (typeof cloudData.last_daily_reset === 'number') {
             const cloudReset = cloudData.last_daily_reset;

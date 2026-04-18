@@ -161,6 +161,9 @@ function initDailyLogin(scene) {
     }
 
     lastLoginDate = todayStr;
+    saveProgress();
+    if (typeof submitScore === 'function') submitScore().catch(e => console.error('Sync error:', e));
+    
     const rewards = [100, 250, 500, 750, 1000, 1500, 3000];
     const reward = rewards[dailyLoginStreak - 1] || 100;
 
