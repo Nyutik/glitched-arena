@@ -157,6 +157,7 @@ function initDailyLogin(scene) {
     if (lastLoginDate === yesterdayStr) {
         dailyLoginStreak = (dailyLoginStreak % 7) + 1;
     } else {
+        // Если пропущен день или первый вход - сбрасываем на 1
         dailyLoginStreak = 1;
     }
 
@@ -165,7 +166,9 @@ function initDailyLogin(scene) {
     if (typeof submitScore === 'function') submitScore().catch(e => console.error('Sync error:', e));
     
     const rewards = [100, 250, 500, 750, 1000, 1500, 3000];
-    const reward = rewards[dailyLoginStreak - 1] || 100;
+    // Гарантируем, что день >= 1 для индекса
+    const rewardIdx = Math.max(0, dailyLoginStreak - 1);
+    const reward = rewards[rewardIdx] || 100;
 
     scene.time.delayedCall(1500, () => {
         showDailyLoginBonus(scene, dailyLoginStreak, reward);
@@ -173,13 +176,14 @@ function initDailyLogin(scene) {
 }
 
 function showDailyLoginBonus(scene, day, reward) {
+    const displayDay = day || 1; // Защита: если пришел 0, пишем 1
     const overlay = scene.add.container(0, 0).setDepth(10000);
     const bg = scene.add.graphics().fillStyle(0x000000, 0.85).fillRect(0, 0, 375, 667);
     bg.setInteractive(new Phaser.Geom.Rectangle(0, 0, 375, 667), Phaser.Geom.Rectangle.Contains);
     
     const panel = scene.add.rectangle(187, 333, 300, 350, 0x111111).setStrokeStyle(3, 0x00ffff);
     const title = scene.add.text(187, 210, TRANSLATIONS[lang].daily_reward_title || "DAILY REWARD", { fontSize: '24px', fontWeight: 'bold', fill: '#00ffff', fontFamily: 'Arial' }).setOrigin(0.5);
-    const dayText = scene.add.text(187, 250, (lang === 'ru' ? `ДЕНЬ ${day}` : `DAY ${day}`), { fontSize: '32px', fontWeight: 'bold', fill: '#ffff00', fontFamily: 'Arial' }).setOrigin(0.5);
+    const dayText = scene.add.text(187, 250, (lang === 'ru' ? `ДЕНЬ ${displayDay}` : `DAY ${displayDay}`), { fontSize: '32px', fontWeight: 'bold', fill: '#ffff00', fontFamily: 'Arial' }).setOrigin(0.5);
     const rewardText = scene.add.text(187, 320, `+${reward} 💰`, { fontSize: '40px', fontWeight: 'bold', fill: '#ffffff', fontFamily: 'Arial' }).setOrigin(0.5);
     
     const claimBtn = scene.add.rectangle(187, 420, 200, 50, 0x00ff00).setInteractive();
