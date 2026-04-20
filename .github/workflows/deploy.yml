@@ -1,0 +1,22 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploying via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: glitched-arena.myftp.org
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /var/www/glitched-arena
+            git pull origin main
+            # Если нужно перезапускать бэкенд (FastAPI), раскомментируй строку ниже:
+            # systemctl restart glitched-arena.service
