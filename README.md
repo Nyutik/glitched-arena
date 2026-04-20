@@ -9,7 +9,7 @@
 
 ## 📺 Game Preview
 <p align="center">
-  <img src="images/game.gif" alt="Glitched Arena Gameplay" width="300">
+  <img src="images/game2.gif" alt="Glitched Arena Gameplay" width="300">
 </p>
 
 **Glitched Arena** is a fast-paced survival action game built as a **Telegram Mini App**. Navigate through dangerous data streams, bypass elite security walls, and take down the corrupted **CORE Boss**.
