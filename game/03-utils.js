@@ -212,9 +212,9 @@ function initDailyQuests() {
     if (lastReset < todayMidnight && now >= todayMidnight) {
         dailyQuests = {
             kill50: { target: 50, current: 0, reward: 150, completed: false },
-            noshield: { completed: false, started: false },
-            combo15: { completed: false },
-            clearboss: { completed: false }
+            noshield: { target: 1, reward: 200, completed: false, started: false },
+            combo15: { target: 1, reward: 250, completed: false },
+            clearboss: { target: 1, reward: 500, completed: false }
         };
         lastDailyReset = now;
         saveProgress();
@@ -225,13 +225,17 @@ function checkDailyQuest(scene, questId) {
     const quest = dailyQuests[questId];
     if (!quest || quest.completed) return false;
     
+    // Fallback reward values
+    const fallbackRewards = { kill50: 150, noshield: 200, combo15: 250, clearboss: 500 };
+    const reward = quest.reward || fallbackRewards[questId] || 150;
+
     if (questId === 'kill50') {
         quest.current++;
         if (quest.current >= quest.target) {
             quest.completed = true;
-            coins += quest.reward;
+            coins += reward;
             saveProgress();
-            showQuestComplete(scene, TRANSLATIONS[lang].quest_kill50, quest.reward);
+            showQuestComplete(scene, TRANSLATIONS[lang].quest_kill50, reward);
             return true;
         }
     } else if (questId === 'noshield' && !isShieldActive && !quest.started) {
@@ -239,21 +243,21 @@ function checkDailyQuest(scene, questId) {
         saveProgress();
     } else if (questId === 'noshield' && quest.started && !isShieldActive && isBossFight) {
         quest.completed = true;
-        coins += quest.reward;
+        coins += reward;
         saveProgress();
-        showQuestComplete(scene, TRANSLATIONS[lang].quest_noshield, quest.reward);
+        showQuestComplete(scene, TRANSLATIONS[lang].quest_noshield, reward);
         return true;
     } else if (questId === 'combo15' && combo >= 15) {
         quest.completed = true;
-        coins += quest.reward;
+        coins += reward;
         saveProgress();
-        showQuestComplete(scene, TRANSLATIONS[lang].quest_combo15, quest.reward);
+        showQuestComplete(scene, TRANSLATIONS[lang].quest_combo15, reward);
         return true;
     } else if (questId === 'clearboss') {
         quest.completed = true;
-        coins += quest.reward;
+        coins += reward;
         saveProgress();
-        showQuestComplete(scene, TRANSLATIONS[lang].quest_clearboss, quest.reward);
+        showQuestComplete(scene, TRANSLATIONS[lang].quest_clearboss, reward);
         return true;
     }
     return false;
@@ -262,7 +266,7 @@ function checkDailyQuest(scene, questId) {
 function showQuestComplete(scene, questName, reward) {
     const questBg = scene.add.text(187, 80, '', { fontSize: '14px', fill: '#00ff00', backgroundColor: '#000000aa', padding: { x: 10, y: 6 }, fontFamily: 'Arial' }).setOrigin(0.5).setDepth(500);
     const titleText = (lang === 'ru' ? 'ЗАДАНИЕ ВЫПОЛНЕНО!' : 'QUEST COMPLETE!');
-    const rewardAmount = typeof reward === 'number' ? reward : 0;
+    const rewardAmount = (typeof reward === 'number' && reward > 0) ? reward : 150;
     questBg.setText(`${titleText} +${rewardAmount} 💰`);
     scene.tweens.add({ targets: questBg, y: 60, alpha: 0, delay: 2500, duration: 500, onComplete: () => questBg.destroy() });
     if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
