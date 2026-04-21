@@ -1,4 +1,4 @@
-name: Deploy to VPS
+name: Deploy Arena to VPS
 
 on:
   push:
@@ -15,8 +15,8 @@ jobs:
           host: glitched-arena.myftp.org
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
+          script: |, раскомментируй и пер
             cd /var/www/glitched-arena
-            git pull origin main
-            # Если нужно перезапускать бэкенд (FastAPI), раскомментируй строку ниже:
-            # systemctl restart glitched-arena.service
+            git fetch --all
+            git reset --hard origin/main
+            systemctl restart glitched-arena.service
