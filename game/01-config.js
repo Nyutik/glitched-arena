@@ -161,7 +161,6 @@ const TRANSLATIONS = {
     ru: {
         menu_title: "ГЛИТЧ\nАРЕНА", start: ">> ЗАПУСК СИСТЕМЫ", shop: ">> МАГАЗИН ДАННЫХ",
         hangar: ">> АНГАР КОРАБЛЯ", settings: ">> КАЛИБРОВКА", rules: ">> ИНСТРУКЦИЯ",
-        community: "💎 НАШ КАНАЛ",
         top: ">> РЕЙТИНГ ПИЛОТОВ", audio: "ЗВУК", back: "<< В ГЛАВНОЕ МЕНЮ",
         offset_label: "ОТСТУП", higher: "ВЫШЕ", lower: "НИЖЕ", apply: "<< ПРИМЕНИТЬ",
         share_duel: "⚔️ ВЫЗВАТЬ НА ДУЭЛЬ", profile: "[ ПРОФИЛЬ ]",
