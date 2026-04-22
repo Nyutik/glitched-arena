@@ -52,6 +52,9 @@ class ScoreData(BaseModel):
     last_daily_reset: Optional[int] = 0
     daily_login_streak: Optional[int] = 0
     last_login_date: Optional[str] = None
+    is_metric: Optional[bool] = False
+    event_type: Optional[str] = None
+    extra: Optional[str] = None
 
 class MetricData(BaseModel):
     telegram_id: int
@@ -339,6 +342,17 @@ async def retention_worker():
                         pass
         except Exception as e:
             print(f"[Retention] error: {e}")
+
+async def main():
+    port = int(os.getenv("PORT", 8000))
+    config = uvicorn.Config(app, host="0.0.0.0", port=port)
+    server = uvicorn.Server(config)
+    asyncio.create_task(retention_worker())
+    await asyncio.gather(server.serve(), dp.start_polling(bot))
+
+if __name__ == "__main__":
+    asyncio.run(main())
+           print(f"[Retention] error: {e}")
 
 async def main():
     port = int(os.getenv("PORT", 8000))

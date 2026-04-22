@@ -517,11 +517,15 @@ async function logMetric(eventType, extra = null) {
     const tgUser = getTelegramUser();
     if (!tgUser?.id) return;
     try {
-        await fetch(`${botUrl}/log_metric`, {
+        await fetch(`${botUrl}/submit_score`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 telegram_id: tgUser.id,
+                username: tgUser.first_name || tgUser.username || 'PILOT',
+                skin: currentSkin || 'classic',
+                shape: currentShape || 'classic',
+                is_metric: true,
                 event_type: eventType,
                 level: level,
                 score: Math.floor(distance || 0),
