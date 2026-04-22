@@ -17,6 +17,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /var/www/glitched-arena
+            git remote set-url origin https://${{ github.actor }}:${{ github.token }}@github.com/${{ github.repository }}.git
             git fetch --all
             git reset --hard origin/main
             systemctl restart glitched-arena.service
