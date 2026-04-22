@@ -27,13 +27,13 @@
 
 ## 📸 Screenshots
 <p align="center">
-  <img src="images/screenshots/screenshots_5.png" width="180">
-  <img src="images/screenshots/screenshots_4.png" width="180">
   <img src="images/screenshots/screenshots_1.png" width="180">
-</p>
-<p align="center">
   <img src="images/screenshots/screenshots_2.png" width="180">
   <img src="images/screenshots/screenshots_3.png" width="180">
+</p>
+<p align="center">
+  <img src="images/screenshots/screenshots_4.png" width="180">
+  <img src="images/screenshots/screenshots_5.png" width="180">
 </p>
 
 ---
