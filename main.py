@@ -315,7 +315,7 @@ async def handle_user_message(message: types.Message):
         f.write(f"{datetime.now().isoformat()} | User: {message.from_user.id} (@{message.from_user.username}): {message.text}\n")
     
     # Пересылаем сообщение тебе (Админу)
-    ADMIN_ID = 305610733
+    ADMIN_ID = 1448811620
     if message.from_user.id != ADMIN_ID:
         username_str = f"@{message.from_user.username}" if message.from_user.username else f"ID: {message.from_user.id}"
         try:
