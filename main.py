@@ -53,7 +53,24 @@ class ScoreData(BaseModel):
     daily_login_streak: Optional[int] = 0
     last_login_date: Optional[str] = None
 
+class MetricData(BaseModel):
+    telegram_id: int
+    event_type: str
+    level: int
+    score: int
+    extra: Optional[str] = None
+
 # --- API ЭНДПОИНТЫ ---
+
+@app.post("/log_metric")
+async def log_metric(data: MetricData):
+    try:
+        with open("game_metrics.log", "a", encoding="utf-8") as f:
+            f.write(f"{datetime.now().isoformat()} | User: {data.telegram_id} | Event: {data.event_type} | Level: {data.level} | Score: {data.score} | Extra: {data.extra}\n")
+        return {"status": "ok"}
+    except Exception as e:
+        print(f"Metrics log error: {e}")
+        return {"status": "error"}
 
 @app.get("/get_invoice")
 async def get_invoice(item_type: str, user_id: int, username: str):
@@ -243,12 +260,22 @@ async def got_payment(message: types.Message):
 async def cmd_start(message: types.Message):
     args = message.text.split()
     referrer_id = None
-    if len(args) > 1 and args[1].startswith("ref_"):
-        try: referrer_id = int(args[1].replace("ref_", ""))
-        except: pass
+    traffic_source = "organic"
+    if len(args) > 1:
+        traffic_source = args[1]
+        if args[1].startswith("ref_"):
+            try: referrer_id = int(args[1].replace("ref_", ""))
+            except: pass
 
     tg_id = message.from_user.id
     username = message.from_user.first_name or "PILOT"
+
+    try:
+        with open("traffic_sources.log", "a", encoding="utf-8") as f:
+            f.write(f"{datetime.now().isoformat()} | User: {tg_id} ({username}) | Source: {traffic_source}\n")
+    except Exception as e:
+        pass
+
     user_res = supabase.table("leaderboard").select("*").eq("telegram_id", tg_id).execute()
     is_new_user = len(user_res.data) == 0
 
