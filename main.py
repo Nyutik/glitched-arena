@@ -314,6 +314,15 @@ async def handle_user_message(message: types.Message):
     with open("bot_messages.log", "a", encoding="utf-8") as f:
         f.write(f"{datetime.now().isoformat()} | User: {message.from_user.id} (@{message.from_user.username}): {message.text}\n")
     
+    # Пересылаем сообщение тебе (Админу)
+    ADMIN_ID = 305610733
+    if message.from_user.id != ADMIN_ID:
+        username_str = f"@{message.from_user.username}" if message.from_user.username else f"ID: {message.from_user.id}"
+        try:
+            await bot.send_message(ADMIN_ID, f"💬 Новое сообщение от игрока {username_str}:\n\n{message.text}\n\n<i>(Оно также сохранено в лог-файл)</i>", parse_mode="HTML")
+        except Exception as e:
+            print(f"Не удалось переслать сообщение админу: {e}")
+
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🎮 ИГРАТЬ", web_app=WebAppInfo(url="https://glitched-arena.myftp.org"))]])
     await message.answer("Прием! Я бортовой компьютер Арены 🤖\nМоя главная задача — отправлять пилотов в бой. Нажимай кнопку ниже и погнали!", reply_markup=kb)
 
