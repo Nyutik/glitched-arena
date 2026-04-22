@@ -55,6 +55,9 @@ function showMenu(scene) {
     
     const langBtn = scene.add.text(320, 30, lang.toUpperCase(), { fontSize: '14px', fill: '#ffff00', backgroundColor: '#222', padding: 8, fontFamily: fontUI }).setOrigin(0.5).setInteractive();
     langBtn.on('pointerdown', () => { lang = (lang === 'ru') ? 'en' : 'ru'; saveProgress(); if (scene.glitchTimer) scene.glitchTimer.remove(); menu.destroy(); showMenu(scene); });
+    
+    const communityBtn = scene.add.text(260, 30, "💎", { fontSize: '18px', backgroundColor: '#222', padding: 8, fontFamily: fontUI }).setOrigin(0.5).setInteractive();
+    communityBtn.on('pointerdown', () => { if (window.Telegram?.WebApp) { Telegram.WebApp.openTelegramLink('https://t.me/GlitchedArenaCommunity'); } else { window.open('https://t.me/GlitchedArenaCommunity', '_blank'); } });
     const btnStyle = { fontSize: '18px', fill: '#fff', backgroundColor: '#222', padding: 10, fontFamily: fontUI, fontWeight: 'bold' };
     const startBtn = scene.add.text(187, 210, TRANSLATIONS[lang].start, btnStyle).setOrigin(0.5).setInteractive();
     const hangarBtn = scene.add.text(187, 275, TRANSLATIONS[lang].hangar, btnStyle).setOrigin(0.5).setInteractive();
