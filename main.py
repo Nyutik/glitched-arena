@@ -352,14 +352,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-           print(f"[Retention] error: {e}")
-
-async def main():
-    port = int(os.getenv("PORT", 8000))
-    config = uvicorn.Config(app, host="0.0.0.0", port=port)
-    server = uvicorn.Server(config)
-    asyncio.create_task(retention_worker())
-    await asyncio.gather(server.serve(), dp.start_polling(bot))
-
-if __name__ == "__main__":
-    asyncio.run(main())
