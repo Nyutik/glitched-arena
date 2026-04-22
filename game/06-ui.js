@@ -216,14 +216,25 @@ function showRules(scene, mainMenu) {
 
 function showGaryIntro(scene) {
     const intro = scene.add.container(0, 0).setDepth(7000);
-    const bg = scene.add.graphics().fillStyle(0x000000, 0.9).fillRect(0, 0, 375, 667);
+    const bg = scene.add.graphics().fillStyle(0x000000, 0.85).fillRect(0, 0, 375, 667);
     bg.setInteractive(new Phaser.Geom.Rectangle(0, 0, 375, 667), Phaser.Geom.Rectangle.Contains);
     const fontUI = 'Arial, sans-serif';
-    const frame = scene.add.rectangle(187, 333, 320, 250, 0x111111).setStrokeStyle(2, 0xff00ff);
-    const garyIcon = scene.add.sprite(187, 260, 'gary_avatar').setTint(0x00ff00).setScale(0.8);
-    const introText = (shipName === "RAZOR-01") ? TRANSLATIONS[lang].gary_intro : TRANSLATIONS[lang].gary_intro_ship.replace("%ship%", shipName);
-    const text = scene.add.text(187, 350, introText, { fontSize: '14px', fill: '#fff', align: 'center', wordWrap: { width: 280 }, fontFamily: fontUI }).setOrigin(0.5);
-    const closeBtn = scene.add.text(187, 430, TRANSLATIONS[lang].underst, { fontSize: '18px', fill: '#00ffff', fontWeight: 'bold' }).setOrigin(0.5).setInteractive().on('pointerdown', () => { intro.destroy(); localStorage.setItem('GLITCHED_ARENA_INTRO_DONE', 'true'); });
-    intro.add([bg, frame, garyIcon, text, closeBtn]);
-    scene.tweens.add({ targets: intro, alpha: { from: 0, to: 1 }, duration: 200 });
+    
+    const hand = scene.add.text(187, 420, '👆', { fontSize: '70px' }).setOrigin(0.5);
+    scene.tweens.add({ targets: hand, x: { from: 120, to: 250 }, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+
+    const text1 = scene.add.text(187, 230, lang === 'ru' ? "ВЕДИ КОРАБЛЬ ПАЛЬЦЕМ" : "DRAG TO MOVE", { fontSize: '24px', fill: '#00ffff', fontWeight: 'bold', fontFamily: fontUI, align: 'center' }).setOrigin(0.5);
+    const text2 = scene.add.text(187, 280, lang === 'ru' ? "КОРАБЛЬ СТРЕЛЯЕТ САМ!" : "AUTO-FIRE IS ON!", { fontSize: '18px', fill: '#ffff00', fontWeight: 'bold', fontFamily: fontUI, align: 'center' }).setOrigin(0.5);
+    
+    const closeBtn = scene.add.rectangle(187, 550, 220, 55, 0x00ff00).setInteractive().setStrokeStyle(3, 0xffffff);
+    const closeTxt = scene.add.text(187, 550, lang === 'ru' ? "В БОЙ!" : "FIGHT!", { fontSize: '22px', fill: '#000000', fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5);
+
+    intro.add([bg, hand, text1, text2, closeBtn, closeTxt]);
+    scene.tweens.add({ targets: closeBtn, scaleX: 1.05, scaleY: 1.05, duration: 600, yoyo: true, repeat: -1 });
+
+    closeBtn.on('pointerdown', () => { 
+        intro.destroy(); 
+        localStorage.setItem('GLITCHED_ARENA_INTRO_DONE', 'true'); 
+        if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+    });
 }

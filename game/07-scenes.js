@@ -8,6 +8,7 @@
 
 function showShop(scene, mainMenu, fromVictory = false) {
     saveProgress(); isShopOpen = true;
+    if (typeof logMetric === 'function') logMetric('shop_open');
     clearBattleTexts(scene); cleanupScreenFx(scene);
     if (distanceText) distanceText.setVisible(false); if (pHealthLabel) pHealthLabel.setVisible(false); if (bHealthLabel) bHealthLabel.setVisible(false); if (overdriveBar) overdriveBar.setVisible(false); if (roadBar) roadBar.setVisible(false);
     const overlay = scene.add.container(0, 0).setDepth(4000);

@@ -279,12 +279,45 @@ async def get_user_personal(tg_id: int):
         return user_data
     except Exception as e: return {"error": str(e)}
 
+@dp.message(F.text & ~F.text.startswith('/'))
+async def handle_user_message(message: types.Message):
+    with open("bot_messages.log", "a", encoding="utf-8") as f:
+        f.write(f"{datetime.now().isoformat()} | User: {message.from_user.id} (@{message.from_user.username}): {message.text}\n")
+    
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🎮 ИГРАТЬ", web_app=WebAppInfo(url="https://glitched-arena.myftp.org"))]])
+    await message.answer("Прием! Я бортовой компьютер Арены 🤖\nМоя главная задача — отправлять пилотов в бой. Нажимай кнопку ниже и погнали!", reply_markup=kb)
+
 app.mount("/", StaticFiles(directory=".", html=True), name="static")
+
+async def retention_worker():
+    from datetime import timedelta
+    while True:
+        try:
+            await asyncio.sleep(3600)  # Проверяем каждый час
+            print("[Retention] Checking for inactive players...")
+            now = datetime.now()
+            res = supabase.table('leaderboard').select('telegram_id, last_login_date, coins').execute()
+            for user in res.data:
+                last_login = user.get('last_login_date')
+                if last_login:
+                    try:
+                        last_dt = datetime.fromisoformat(last_login)
+                        diff = now - last_dt
+                        # Отправляем пуш тем, кто отсутствовал от 23 до 25 часов
+                        if timedelta(hours=23) <= diff <= timedelta(hours=25):
+                            kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🎮 ИГРАТЬ", web_app=WebAppInfo(url="https://glitched-arena.myftp.org"))]])
+                            await bot.send_message(user['telegram_id'], "👾 Капитан, ядро снова нестабильно! Вернитесь на Арену и заберите ежедневный бонус.", reply_markup=kb)
+                    except Exception as e_msg:
+                        # Игнорируем ошибки отправки (например, юзер заблокировал бота)
+                        pass
+        except Exception as e:
+            print(f"[Retention] error: {e}")
 
 async def main():
     port = int(os.getenv("PORT", 8000))
     config = uvicorn.Config(app, host="0.0.0.0", port=port)
     server = uvicorn.Server(config)
+    asyncio.create_task(retention_worker())
     await asyncio.gather(server.serve(), dp.start_polling(bot))
 
 if __name__ == "__main__":

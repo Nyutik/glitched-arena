@@ -15,7 +15,7 @@ jobs:
           host: glitched-arena.myftp.org
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |, раскомментируй и пер
+          script: |
             cd /var/www/glitched-arena
             git fetch --all
             git reset --hard origin/main

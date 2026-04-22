@@ -146,6 +146,7 @@ function triggerDeath(scene) {
     scene.cameras.main.shake(300, 0.03);
     if (Math.floor(distance) > bestDistance) bestDistance = Math.floor(distance);
     submitScore();
+    if (typeof logMetric === 'function') logMetric('player_death', `bossFight:${isBossFight}`);
     lastRunState = { isDead: true, pendingDeath: true };
     if (scene.ovrText) { scene.ovrText.destroy(); scene.ovrText = null; }
     player.setVisible(false); player.setTint(0x333333); trailEmitter.stop();

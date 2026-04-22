@@ -513,6 +513,24 @@ async function syncUserData() {
     } catch (e) { console.error('[Sync] syncUserData error', e); }
 }
 
+async function logMetric(eventType, extra = null) {
+    const tgUser = getTelegramUser();
+    if (!tgUser?.id) return;
+    try {
+        await fetch(`${botUrl}/log_metric`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                telegram_id: tgUser.id,
+                event_type: eventType,
+                level: level,
+                score: Math.floor(distance || 0),
+                extra: extra ? String(extra) : null
+            })
+        });
+    } catch (e) { console.log('[Metric] error', e); }
+}
+
 async function submitScore(manualData = null) {
     const tgUser = getTelegramUser(); if (!tgUser?.id) return false;
     const initData = window.Telegram?.WebApp?.initData || '';
