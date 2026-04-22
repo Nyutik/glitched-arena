@@ -83,8 +83,9 @@ function showMenu(scene) {
     shopBtn.on('pointerdown', () => { closeMenu(); showShop(scene, menu); });
     setBtn.on('pointerdown', () => { closeMenu(); showSettings(scene, menu); });
     rulesBtn.on('pointerdown', () => { closeMenu(); showRules(scene, menu); });
+    communityBtn.on('pointerdown', () => { if (window.Telegram?.WebApp) { Telegram.WebApp.openTelegramLink('https://t.me/GlitchedArenaCommunity'); } else { window.open('https://t.me/GlitchedArenaCommunity', '_blank'); } });
     topBtn.on('pointerdown', () => { closeMenu(); showLeaderboard(scene, menu); });
-    menu.add([bg, miniShip, title, langBtn, startBtn, hangarBtn, shopBtn, profileBtn, setBtn, soundBtn, rulesBtn, topBtn, questsBtn]);
+    menu.add([bg, miniShip, title, langBtn, startBtn, hangarBtn, shopBtn, profileBtn, setBtn, soundBtn, rulesBtn, communityBtn, topBtn, questsBtn]);
 }
 
 function showDailyQuests(scene, mainMenu) {
