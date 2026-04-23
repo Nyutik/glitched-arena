@@ -57,7 +57,31 @@ function showMenu(scene) {
     langBtn.on('pointerdown', () => { lang = (lang === 'ru') ? 'en' : 'ru'; saveProgress(); if (scene.glitchTimer) scene.glitchTimer.remove(); menu.destroy(); showMenu(scene); });
     
     const communityBtn = scene.add.text(320, 85, "💎", { fontSize: '18px', fill: '#ffffff', backgroundColor: '#222', padding: 8, fontFamily: fontUI }).setOrigin(0.5).setInteractive();
-    communityBtn.on('pointerdown', () => { if (window.Telegram?.WebApp) { Telegram.WebApp.openTelegramLink('https://t.me/GlitchedArenaCommunity'); } else { window.open('https://t.me/GlitchedArenaCommunity', '_blank'); } });
+    communityBtn.on('pointerdown', async () => { 
+        const url = 'https://t.me/GlitchedArenaCommunity';
+        if (window.Telegram?.WebApp) { Telegram.WebApp.openTelegramLink(url); } else { window.open(url, '_blank'); }
+        
+        // Даем небольшую паузу, чтобы юзер успел перейти, а потом проверяем
+        scene.time.delayedCall(2000, async () => {
+            const user = getTelegramUser();
+            if (!user) return;
+            try {
+                const res = await fetch(`${botUrl}/check_community/${user.id}`);
+                const data = await res.json();
+                if (data.status === 'success') {
+                    showToast(scene, "ELITE UNLOCKED!", data.message);
+                    currentSkin = 'elite';
+                    saveProgress();
+                    if (typeof submitScore === 'function') submitScore();
+                    // Обновляем превью корабля в меню
+                    if (miniShip) miniShip.setTint(SKIN_DATA.elite.body);
+                } else if (data.status === 'not_member') {
+                    // Просто игнорим или можно вывести подсказку
+                    console.log('Not a member yet');
+                }
+            } catch (e) { console.error('Check community error:', e); }
+        });
+    });
     const btnStyle = { fontSize: '18px', fill: '#fff', backgroundColor: '#222', padding: 10, fontFamily: fontUI, fontWeight: 'bold' };
     const startBtn = scene.add.text(187, 210, TRANSLATIONS[lang].start, btnStyle).setOrigin(0.5).setInteractive();
     const hangarBtn = scene.add.text(187, 275, TRANSLATIONS[lang].hangar, btnStyle).setOrigin(0.5).setInteractive();

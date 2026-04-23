@@ -30,6 +30,7 @@ const SKIN_DATA = {
     solar:   { body: 0xffaa00, eyes: 0xffff00, trail: 0xff8800, bullet: 0xffaa00, alpha: 1, passive: 'minionCoins' },
     frost:   { body: 0x88ddff, eyes: 0xffffff, trail: 0xaaddff, bullet: 0x88ccff, alpha: 1, passive: 'slowmoDuration' },
     rainbow:  { body: 0xff0000, eyes: 0xffffff, trail: 0xff0000, bullet: 0xff0000, alpha: 1, rainbow: true },
+    elite:    { body: 0x00ff00, eyes: 0xffffff, trail: 0x00ff00, bullet: 0x00ff00, alpha: 1, passive: 'minionCoins' },
     void_premium: { body: 0x220044, eyes: 0xff00ff, trail: 0x4400ff, bullet: 0x8800ff, alpha: 0.85, passive: 'voidShield' },
     crystal:  { body: 0x00ffaa, eyes: 0xffffff, trail: 0x88ffff, bullet: 0x00ffaa, alpha: 1, passive: 'crystalReflect' }
 };
@@ -88,6 +89,7 @@ const TRANSLATIONS = {
         skin_striker: "VOID STRIKER", desc_striker: "Dangerous Triangle (+20% ATK)",
         skin_gold: "GOLD SKIN", desc_gold: "Pure gold style (+10% ATK)",
         skin_ghost: "NEON GHOST", desc_ghost: "Cyberpunk ghost (+15% SPD)",
+        skin_elite: "COMMUNITY ELITE", desc_elite: "Elite pilot style (+15% Credits)",
         skin_crimson: "CRIMSON", desc_crimson: "Bloody +5% crit damage to boss",
         skin_void: "VOID", desc_void: "Dark +3% dodge boss bullets",
         skin_plasma: "PLASMA", desc_plasma: "Neon +5% ultra charge speed",
@@ -210,6 +212,7 @@ const TRANSLATIONS = {
         skin_striker: "РАССЕКАТЕЛЬ БЕЗДНЫ", desc_striker: "Форма треугольника (+20% АТК)",
         skin_gold: "ЗОЛОТОЙ ОБЛИК", desc_gold: "Стиль из чистого золота (+10% АТК)",
         skin_ghost: "НЕОНОВЫЙ ПРИЗРАК", desc_ghost: "Призрачный стиль (+15% СКОР)",
+        skin_elite: "ЭЛИТА СООБЩЕСТВА", desc_elite: "Стиль элитного пилота (+15% Кредитов)",
         skin_crimson: "КРАСНЫЙ", desc_crimson: "Кровавый +5% крит урон по боссу",
         skin_void: "ПУСТОТА", desc_void: "Тёмный +3% уклонение от босс-пуль",
         skin_plasma: "ПЛАЗМА", desc_plasma: "Неоновый +5% скорость зарядки ульты",

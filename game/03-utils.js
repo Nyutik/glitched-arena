@@ -263,6 +263,23 @@ function checkDailyQuest(scene, questId) {
     return false;
 }
 
+function showToast(scene, title, message) {
+    if (!scene) return;
+    const toast = scene.add.container(187, -100).setDepth(10000);
+    const bg = scene.add.rectangle(0, 0, 320, 80, 0x00ff00, 0.9).setStrokeStyle(2, 0xffffff);
+    const t1 = scene.add.text(0, -15, title, { fontSize: '18px', fontWeight: 'bold', fill: '#000' }).setOrigin(0.5);
+    const t2 = scene.add.text(0, 15, message, { fontSize: '14px', fill: '#000' }).setOrigin(0.5);
+    toast.add([bg, t1, t2]);
+    scene.tweens.add({
+        targets: toast, y: 100, duration: 500, ease: 'Back.easeOut',
+        onComplete: () => {
+            scene.time.delayedCall(3000, () => {
+                scene.tweens.add({ targets: toast, y: -100, alpha: 0, duration: 500, onComplete: () => toast.destroy() });
+            });
+        }
+    });
+}
+
 function showQuestComplete(scene, questName, reward) {
     const questBg = scene.add.text(187, 80, '', { fontSize: '14px', fill: '#00ff00', backgroundColor: '#000000aa', padding: { x: 10, y: 6 }, fontFamily: 'Arial' }).setOrigin(0.5).setDepth(500);
     const titleText = (lang === 'ru' ? 'ЗАДАНИЕ ВЫПОЛНЕНО!' : 'QUEST COMPLETE!');
