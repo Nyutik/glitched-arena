@@ -492,7 +492,14 @@ async function syncUserData() {
         if (cloudScore > bestDistance) bestDistance = cloudScore; else if (bestDistance > cloudScore) shouldPushLocalBack = true;
         
         if (cloudData.skin) currentSkin = cloudData.skin; if (cloudData.shape) currentShape = cloudData.shape; if (cloudData.ship_name) shipName = cloudData.ship_name;
-        if (typeof cloudData.explosion_color === 'number') currentExplosionColor = cloudData.explosion_color;
+        
+        // Умная синхронизация цвета взрыва: не затираем локальный выбор, если в облаке пусто или 0
+        if (typeof cloudData.explosion_color === 'number' && cloudData.explosion_color !== 0) {
+            currentExplosionColor = cloudData.explosion_color;
+        } else {
+            // Если в облаке пусто, а у нас есть выбор - отправим его в облако при следующем submitScore
+            shouldPushLocalBack = true;
+        }
         if (typeof cloudData.total_dist === 'number') totalDistance = Math.max(totalDistance, cloudData.total_dist);
         if (typeof cloudData.bosses_killed === 'number') bossesKilled = Math.max(bossesKilled, cloudData.bosses_killed);
         if (cloudData.upgrades && typeof cloudData.upgrades === 'object') { for (const key in cloudData.upgrades) { if (key === 'helper_mercenary') continue; upgradeLevels[key] = Math.max(upgradeLevels[key] || 0, cloudData.upgrades[key] || 0); } }
