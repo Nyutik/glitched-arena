@@ -164,14 +164,13 @@ function showShop(scene, mainMenu, fromVictory = false) {
         
         sY += step*10 + 20;
         addHeader(sY, lang === 'ru' ? "--- ЭФФЕКТЫ ВЗРЫВА ---" : "--- EXPLOSION FX ---"); sY += 40;
-        createBtn(sY, "fx_blue_exp", "desc_blue_exp", 100, 'fx_blue', () => { currentExplosionColor = 0x00ffff; }); 
-        createBtn(sY+step, "fx_pink_exp", "desc_pink_exp", 100, 'fx_pink', () => { currentExplosionColor = 0xff00ff; }); 
-        createBtn(sY+step*2, "fx_rainbow_exp", "desc_rainbow_exp", 150, 'fx_rainbow', () => { currentExplosionColor = -1; }); 
-        createBtn(sY+step*3, "fx_gold_exp", "desc_gold_exp", 150, 'fx_gold', () => { currentExplosionColor = 0xffaa00; }); 
-        createBtn(sY+step*4, "fx_green_exp", "desc_green_exp", 150, 'fx_green', () => { currentExplosionColor = 0x00ff00; }); 
-        createBtn(sY+step*5, "fx_red_exp", "desc_red_exp", 150, 'fx_red', () => { currentExplosionColor = 0xff0000; }); 
-        maxScroll = sY + step * 6;
-    } else if (currentShopTab === 'bundles') {
+        createBtn(sY, "fx_blue_exp", "desc_blue_exp", 100, 'fx_blue', () => { currentExplosionColor = 0x00ffff; saveProgress(); submitScore(); });
+        createBtn(sY+step, "fx_pink_exp", "desc_pink_exp", 100, 'fx_pink', () => { currentExplosionColor = 0xff00ff; saveProgress(); submitScore(); });
+        createBtn(sY+step*2, "fx_rainbow_exp", "desc_rainbow_exp", 150, 'fx_rainbow', () => { currentExplosionColor = -1; saveProgress(); submitScore(); });
+        createBtn(sY+step*3, "fx_gold_exp", "desc_gold_exp", 150, 'fx_gold', () => { currentExplosionColor = 0xffaa00; saveProgress(); submitScore(); });
+        createBtn(sY+step*4, "fx_green_exp", "desc_green_exp", 150, 'fx_green', () => { currentExplosionColor = 0x00ff00; saveProgress(); submitScore(); });
+        createBtn(sY+step*5, "fx_red_exp", "desc_red_exp", 150, 'fx_red', () => { currentExplosionColor = 0xff0000; saveProgress(); submitScore(); });
+        maxScroll = sY + step * 6;    } else if (currentShopTab === 'bundles') {
         addHeader(sY, lang === 'ru' ? "--- ВЫГОДНЫЕ ПАКЕТЫ ---" : "--- BEST DEALS ---"); sY += 40;
         createBtn(sY, "bundle_starter", "bundle_starter_desc", 100, 'bundle_starter', () => { upgradeLevels.skin_gold = 1; upgradeLevels.up_antenna = 1; upgradeLevels.up_speed = 1; currentSkin = 'gold'; refreshPlayerAppearance(scene); saveProgress(); }); 
         createBtn(sY+step, "bundle_warrior", "bundle_warrior_desc", 250, 'bundle_warrior', () => { upgradeLevels.skin_crimson = 1; upgradeLevels.up_cannons = 1; upgradeLevels.up_hull = 1; currentSkin = 'crimson'; maxPlayerHealth += 25; playerHealth = maxPlayerHealth; refreshPlayerAppearance(scene); saveProgress(); }); 
