@@ -17,7 +17,8 @@ function preload() {
     g.clear().fillStyle(0xff0000, 0.9).fillRect(0, 0, 80, 25).generateTexture('wall', 80, 25);
     g.clear().lineStyle(2, 0x00ffff, 0.5).strokeCircle(25, 25, 22).generateTexture('shield_aura', 50, 50);
     g.clear().fillStyle(0xff0088).fillTriangle(15, 10, 5, 20, 25, 20).fillCircle(10, 10, 6).fillCircle(20, 10, 6); g.generateTexture('heart', 30, 30);
-    g.clear(); g.fillStyle(0xffffff, 1).fillRect(0, 0, 2, 32); g.fillStyle(0xffffff, 0.3).fillRect(-1, 2, 4, 28);
+    g.clear(); g.fillStyle(0xffffff, 1).fillRect(0, 0, 2, 32);
+ g.fillStyle(0xffffff, 0.3).fillRect(-1, 2, 4, 28);
     g.clear(); g.fillStyle(0x333333).fillRect(0, 5, 40, 30); g.fillStyle(0x000000).fillRect(4, 9, 32, 22); g.fillStyle(0x00ff00).fillRect(10, 15, 4, 4); g.fillStyle(0x00ff00).fillRect(26, 15, 4, 4); g.lineStyle(2, 0x00ff00).lineBetween(12, 25, 28, 25); g.generateTexture('gary_avatar', 40, 40);
     g.generateTexture('fast_streak', 4, 32); g.destroy();
 }
@@ -322,7 +323,14 @@ function startRun(scene) {
     scene.input.off('pointerdown'); scene.input.off('pointermove');
     scene.input.on('pointerdown', p => { if (!isStarted || isShopOpen || isDead || isPaused || !player?.active) return; if (p.y < 90) return; scene.isFirstMove = true; player.x = Phaser.Math.Clamp(p.x, 20, 355); player.y = Phaser.Math.Clamp(p.y + yOffset, 80, 620); if (shieldAura) shieldAura.setPosition(player.x, player.y); if (overdrive >= 100 && !isVictory && isBossFight) useOverdrive.call(scene); });
     scene.input.on('pointermove', p => { if (!isStarted || isShopOpen || isDead || isPaused || !player?.active) return; if (scene.isFirstMove) { player.x = Phaser.Math.Clamp(p.x, 20, 355); player.y = Phaser.Math.Clamp(p.y + yOffset, 80, 620); if (shieldAura) shieldAura.setPosition(player.x, player.y); } });
-    scene.obstacleTimer = scene.time.addEvent({ delay: Math.max(460, 1220 - level * 28), callback: spawnObstacle, callbackScope: scene, loop: true });
+    scene.obstacleTimer = scene.time.addEvent({ 
+        // Делаем спавн чуть более редким (было 1220 - level * 28, min 460)
+        // Теперь на 1 уровне 1275мс, на 30 уровне 525мс
+        delay: Math.max(520, 1300 - level * 25), 
+        callback: spawnObstacle, 
+        callbackScope: scene, 
+        loop: true 
+    });
     let shootDelay = 150 - (upgradeLevels.fire * 20);
     if (upgradeLevels.up_enhanced > 0 && level >= 50) shootDelay = Math.max(50, shootDelay - 30);
     scene.shootEvent = scene.time.addEvent({ delay: shootDelay, callback: playerShoot, callbackScope: scene, loop: true });
@@ -539,7 +547,28 @@ async function submitScore(manualData = null) {
     const tgUser = getTelegramUser(); if (!tgUser?.id) return false;
     const initData = window.Telegram?.WebApp?.initData || '';
     try {
-        const payload = { telegram_id: tgUser.id, username: tgUser.first_name || tgUser.username || 'PILOT', score: Math.floor(bestDistance), level: manualData ? manualData.level : level, best_level: manualData ? manualData.best_level : bestLevel, explosion_color: currentExplosionColor, skin: currentSkin, shape: currentShape, coins, upgrades: upgradeLevels, achievements, total_dist: Math.floor(totalDistance), bosses_killed: bossesKilled, ship_name: shipName || 'RAZOR-01', rank_xp: rankXP, daily_quests: dailyQuests, last_daily_reset: lastDailyReset, daily_login_streak: dailyLoginStreak, last_login_date: lastLoginDate };
+        const payload = { 
+            telegram_id: tgUser.id, 
+            username: tgUser.first_name || tgUser.username || 'PILOT', 
+            score: Math.floor(bestDistance), 
+            level: manualData ? manualData.level : level, 
+            best_level: manualData ? manualData.best_level : bestLevel, 
+            explosion_color: currentExplosionColor, 
+            skin: currentSkin, 
+            shape: currentShape, 
+            coins, 
+            upgrades: upgradeLevels, 
+            achievements, 
+            total_dist: Math.floor(totalDistance), 
+            bosses_killed: bossesKilled, 
+            ship_name: shipName || 'RAZOR-01', 
+            rank_xp: rankXP, 
+            daily_quests: dailyQuests, 
+            last_daily_reset: lastDailyReset, 
+            daily_login_streak: dailyLoginStreak, 
+            last_login_date: lastLoginDate,
+            lang: lang || 'en'
+        };
         const response = await fetch(`${botUrl}/submit_score`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': initData }, body: JSON.stringify(payload) });
         if (response.ok) { console.log('✅ Синхронизация успешна:', await response.json()); return true; }
         return false;

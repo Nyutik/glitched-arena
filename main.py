@@ -52,6 +52,7 @@ class ScoreData(BaseModel):
     last_daily_reset: Optional[int] = 0
     daily_login_streak: Optional[int] = 0
     last_login_date: Optional[str] = None
+    lang: Optional[str] = 'en'
     is_metric: Optional[bool] = False
     event_type: Optional[str] = None
     extra: Optional[str] = None
@@ -165,6 +166,7 @@ async def submit_score(data: ScoreData):
             "last_daily_reset": data.last_daily_reset if data.last_daily_reset else old.get("last_daily_reset", 0),
             "daily_login_streak": data.daily_login_streak if data.daily_login_streak is not None else old.get("daily_login_streak", 0),
             "last_login_date": data.last_login_date or old.get("last_login_date"),
+            "lang": data.lang or old.get("lang") or "en",
             "score_date": current_date
         }
 
@@ -272,6 +274,8 @@ async def cmd_start(message: types.Message):
 
     tg_id = message.from_user.id
     username = message.from_user.first_name or "PILOT"
+    user_lang = message.from_user.language_code or 'en'
+    if user_lang != 'ru': user_lang = 'en'
 
     try:
         with open("traffic_sources.log", "a", encoding="utf-8") as f:
@@ -283,7 +287,7 @@ async def cmd_start(message: types.Message):
     is_new_user = len(user_res.data) == 0
 
     if is_new_user:
-        supabase.table("leaderboard").upsert({"telegram_id": tg_id, "username": username, "level": 1, "coins": 500, "upgrades": {}, "score_date": datetime.now().isoformat()}).execute()
+        supabase.table("leaderboard").upsert({"telegram_id": tg_id, "username": username, "level": 1, "coins": 500, "upgrades": {}, "lang": user_lang, "score_date": datetime.now().isoformat()}).execute()
         if referrer_id and referrer_id != tg_id:
             try:
                 ref_res = supabase.table("leaderboard").select("coins").eq("telegram_id", referrer_id).execute()
@@ -294,8 +298,14 @@ async def cmd_start(message: types.Message):
             except Exception as e: print(f"Error rewarding referrer: {e}")
 
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🎮 GLITCHED ARENA", web_app=WebAppInfo(url="https://glitched-arena.myftp.org"))]])
-    welcome_msg = f"Привет, {username}! 🚀\n\nДобро пожаловать в Glitched Arena!\n🦾 Прокачивай корабль\n👾 Уничтожай боссов\nТвой стартовый бонус: 500 💰"
-    if not is_new_user: welcome_msg = f"С возвращением, {username}! Твои системы готовы к бою. 🦾"
+    
+    if user_lang == 'ru':
+        welcome_msg = f"Привет, {username}! 🚀\n\nДобро пожаловать в Glitched Arena!\n🦾 Прокачивай корабль\n👾 Уничтожай боссов\nТвой стартовый бонус: 500 💰"
+        if not is_new_user: welcome_msg = f"С возвращением, {username}! Твои системы готовы к бою. 🦾"
+    else:
+        welcome_msg = f"Hello, {username}! 🚀\n\nWelcome to Glitched Arena!\n🦾 Upgrade your ship\n👾 Destroy bosses\nYour starting bonus: 500 💰"
+        if not is_new_user: welcome_msg = f"Welcome back, {username}! Your systems are combat-ready. 🦾"
+        
     await message.answer(welcome_msg, reply_markup=kb)
 
 @app.get("/get_user_personal/{tg_id}")
@@ -330,12 +340,19 @@ app.mount("/", StaticFiles(directory=".", html=True), name="static")
 
 async def retention_worker():
     from datetime import timedelta
+    # Словарь переводов для уведомлений
+    RETENTION_MSGS = {
+        "ru": "👾 Капитан, ядро снова нестабильно! Вернитесь на Арену и заберите ежедневный бонус.",
+        "en": "👾 Captain, the core is unstable again! Return to the Arena and claim your daily bonus."
+    }
+    
     while True:
         try:
             await asyncio.sleep(3600)  # Проверяем каждый час
             print("[Retention] Checking for inactive players...")
             now = datetime.now()
-            res = supabase.table('leaderboard').select('telegram_id, last_login_date, coins').execute()
+            # Добавляем lang в выборку
+            res = supabase.table('leaderboard').select('telegram_id, last_login_date, coins, lang').execute()
             for user in res.data:
                 last_login = user.get('last_login_date')
                 if last_login:
@@ -345,7 +362,10 @@ async def retention_worker():
                         # Отправляем пуш тем, кто отсутствовал от 23 до 25 часов
                         if timedelta(hours=23) <= diff <= timedelta(hours=25):
                             kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🎮 ИГРАТЬ", web_app=WebAppInfo(url="https://glitched-arena.myftp.org"))]])
-                            await bot.send_message(user['telegram_id'], "👾 Капитан, ядро снова нестабильно! Вернитесь на Арену и заберите ежедневный бонус.", reply_markup=kb)
+                            user_lang = user.get('lang', 'en')
+                            if user_lang not in RETENTION_MSGS: user_lang = 'en'
+                            msg = RETENTION_MSGS[user_lang]
+                            await bot.send_message(user['telegram_id'], msg, reply_markup=kb)
                     except Exception as e_msg:
                         # Игнорируем ошибки отправки (например, юзер заблокировал бота)
                         pass

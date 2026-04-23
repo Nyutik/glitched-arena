@@ -568,7 +568,13 @@ function spawnItem() {
     if (rand > 0.92) type = 'nuke';
     else if (rand > 0.84) type = 'magnet';
     else if (rand > 0.74) type = 'slowmo';
-    else { let baseHeartChance = level >= 30 ? 0.40 : (level >= 25 ? 0.25 : 0.01); let actualHeartChance = (playerHealth < 40) ? 0.45 : baseHeartChance; if (Math.random() < actualHeartChance) type = 'heart'; else type = 'coin'; }
+    else { 
+        // Увеличиваем шанс выпадения сердечек на ранних уровнях для лучшего удержания игроков
+        let baseHeartChance = level >= 30 ? 0.40 : (level >= 20 ? 0.30 : (level >= 10 ? 0.20 : 0.12)); 
+        let actualHeartChance = (playerHealth < 40) ? 0.60 : baseHeartChance; 
+        if (Math.random() < actualHeartChance) type = 'heart'; 
+        else type = 'coin'; 
+    }
     let item = items.create(x, -20, type === 'heart' ? 'heart' : 'pixel');
     if (type === 'heart') { item.setTint(0xff0088).setScale(1.2); this.tweens.add({ targets: item, scale: 1.6, duration: 400, yoyo: true, repeat: -1 }); }
     else if (type === 'coin') { item.setTint(0xffff00).setData('type', 'coin').setScale(1.5); this.tweens.add({ targets: item, alpha: 0.5, duration: 200, yoyo: true, repeat: -1 }); }

@@ -50,13 +50,13 @@ function showMenu(scene) {
     const miniShip = scene.add.sprite(110, 145, player.texture.key).setScale(0.8).setAlpha(0.8);
     scene.tweens.add({ targets: miniShip, x: 105, duration: 1000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     profileBtn.on('pointerdown', () => { closeMenu(); showProfile(scene, menu); });
-    const questsBtn = scene.add.text(310, 75, "📋", { fontSize: '24px', fontFamily: fontUI }).setOrigin(0.5).setInteractive();
+    const questsBtn = scene.add.text(320, 135, "📋", { fontSize: '18px', fill: '#ffffff', backgroundColor: '#222', padding: 8, fontFamily: fontUI }).setOrigin(0.5).setInteractive();
     questsBtn.on('pointerdown', () => { closeMenu(); showDailyQuests(scene, menu); });
     
-    const langBtn = scene.add.text(320, 30, lang.toUpperCase(), { fontSize: '14px', fill: '#ffff00', backgroundColor: '#222', padding: 8, fontFamily: fontUI }).setOrigin(0.5).setInteractive();
+    const langBtn = scene.add.text(320, 35, lang.toUpperCase(), { fontSize: '14px', fill: '#ffff00', backgroundColor: '#222', padding: 8, fontFamily: fontUI }).setOrigin(0.5).setInteractive();
     langBtn.on('pointerdown', () => { lang = (lang === 'ru') ? 'en' : 'ru'; saveProgress(); if (scene.glitchTimer) scene.glitchTimer.remove(); menu.destroy(); showMenu(scene); });
     
-    const communityBtn = scene.add.text(275, 30, "💎", { fontSize: '18px', fill: '#ffffff', backgroundColor: '#222', padding: 8, fontFamily: fontUI }).setOrigin(0.5).setInteractive();
+    const communityBtn = scene.add.text(320, 85, "💎", { fontSize: '18px', fill: '#ffffff', backgroundColor: '#222', padding: 8, fontFamily: fontUI }).setOrigin(0.5).setInteractive();
     communityBtn.on('pointerdown', () => { if (window.Telegram?.WebApp) { Telegram.WebApp.openTelegramLink('https://t.me/GlitchedArenaCommunity'); } else { window.open('https://t.me/GlitchedArenaCommunity', '_blank'); } });
     const btnStyle = { fontSize: '18px', fill: '#fff', backgroundColor: '#222', padding: 10, fontFamily: fontUI, fontWeight: 'bold' };
     const startBtn = scene.add.text(187, 210, TRANSLATIONS[lang].start, btnStyle).setOrigin(0.5).setInteractive();
@@ -87,7 +87,7 @@ function showMenu(scene) {
     setBtn.on('pointerdown', () => { closeMenu(); showSettings(scene, menu); });
     rulesBtn.on('pointerdown', () => { closeMenu(); showRules(scene, menu); });
     topBtn.on('pointerdown', () => { closeMenu(); showLeaderboard(scene, menu); });
-    menu.add([bg, miniShip, title, langBtn, startBtn, hangarBtn, shopBtn, profileBtn, setBtn, soundBtn, rulesBtn, topBtn, questsBtn]);
+    menu.add([bg, miniShip, title, langBtn, communityBtn, startBtn, hangarBtn, shopBtn, profileBtn, setBtn, soundBtn, rulesBtn, topBtn, questsBtn]);
 }
 
 function showDailyQuests(scene, mainMenu) {
@@ -166,9 +166,25 @@ function showRules(scene, mainMenu) {
         { key: 'heart', c: 0xff0088, t: TRANSLATIONS[lang].rule_heart },
         { key: 'pixel', c: 0xff00ff, t: TRANSLATIONS[lang].rule_nuke, angle: 45, scale: 2.2 },
         { key: 'pixel', c: 0xff00ff, t: TRANSLATIONS[lang].rule_magnet, angle: 180, scale: 1.6 },
-        { key: 'pixel', c: 0x00ff00, t: TRANSLATIONS[lang].rule_slowmo, scale: 1.6 }
+        { key: 'pixel', c: 0x00ff00, t: TRANSLATIONS[lang].rule_slowmo, scale: 1.6 },
+        { key: 'ui_crystal', c: 0xffffff, t: TRANSLATIONS[lang].rule_community, scale: 1.5 }
     ];
-    itemsList.forEach((item, i) => { let y = scrollAreaTop + currentY + 20; let icon = scene.add.sprite(75, y, item.key).setTint(item.c); icon.setScale(item.scale || (item.key === 'pixel' ? 1.8 : 0.6)); if (item.angle) icon.setAngle(item.angle); let txt = scene.add.text(105, y, item.t, { fontSize: '11px', fill: '#fff', fontFamily: fontUI, wordWrap: { width: 240 } }).setOrigin(0, 0.5); contentContainer.add([icon, txt]); currentY += 35; });
+    itemsList.forEach((item, i) => { 
+        let y = scrollAreaTop + currentY + 20; 
+        if (item.key === 'ui_crystal') {
+            // Рисуем эмодзи вместо спрайта
+            let icon = scene.add.text(75, y, "💎", { fontSize: '18px' }).setOrigin(0.5);
+            contentContainer.add(icon);
+        } else {
+            let icon = scene.add.sprite(75, y, item.key).setTint(item.c); 
+            icon.setScale(item.scale || (item.key === 'pixel' ? 1.8 : 0.6)); 
+            if (item.angle) icon.setAngle(item.angle); 
+            contentContainer.add(icon);
+        }
+        let txt = scene.add.text(105, y, item.t, { fontSize: '11px', fill: '#fff', fontFamily: fontUI, wordWrap: { width: 240 } }).setOrigin(0, 0.5);
+        contentContainer.add(txt); 
+        currentY += 35; 
+    });
     currentY += 5;
     const comboTip = scene.add.text(187, scrollAreaTop + currentY, TRANSLATIONS[lang].combo_tip || "⚡ COMBO: Evade obstacles to build, resets on hit!", { fontSize: '10px', fill: '#ffff00', fontFamily: fontUI, align: 'center', wordWrap: { width: 320 } }).setOrigin(0.5); contentContainer.add(comboTip); currentY += 25;
     currentY += 15;
