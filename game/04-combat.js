@@ -641,7 +641,7 @@ function spawnObstacle() {
         obs.setTint(0x00ffff).setScale(1.5, 0.8).setVelocityY(baseSpeed * 0.8);
         obs.setData('hp', 3); // Нужно 3 попадания
         obs.setData('isElite', true);
-        scene.tweens.add({ targets: obs, alpha: 0.6, duration: 200, yoyo: true, repeat: -1 });
+        this.tweens.add({ targets: obs, alpha: 0.6, duration: 200, yoyo: true, repeat: -1 });
     };
 
     const spawnDrone = (x, y = -30) => { 
