@@ -224,8 +224,8 @@ function showRules(scene, mainMenu) {
     
     const hTitle = scene.add.text(187, scrollAreaTop + currentY, lang === 'ru' ? "--- ПРОГРАММА ПРИВИЛЕГИЙ ---" : "--- PILOT PRIVILEGES ---", { fontSize: '14px', fill: '#ffff00', fontWeight: 'bold' }).setOrigin(0.5); contentContainer.add(hTitle); currentY += 30;
     const bonusText = (lang === 'ru' 
-        ? "• РЕФЕРАЛЫ: +1500 💰 за каждого друга!\n• ЛОГИН: Заходи 7 дней подряд - получи 3000 💰\n• СКИНЫ: Редкие скины дают бонусы к АТК и СКР" 
-        : "• REFERRALS: +1500 💰 per invited friend!\n• LOGIN: Enter 7 days in a row for 3000 💰\n• SKINS: Rare skins grant ATK & SPD buffs");
+        ? "• СООБЩЕСТВО: Скин ELITE + 1000 💰 за 💎\n• РЕФЕРАЛЫ: +1500 💰 за каждого друга!\n• ЛОГИН: Заходи 7 дней подряд - получи 3000 💰" 
+        : "• COMMUNITY: ELITE skin + 1000 💰 for 💎\n• REFERRALS: +1500 💰 per invited friend!\n• LOGIN: Enter 7 days in a row for 3000 💰");
     const bonusTxt = scene.add.text(187, scrollAreaTop + currentY, bonusText, { fontSize: '11px', fill: '#ffffff', fontFamily: fontUI, align: 'left', lineSpacing: 5 }).setOrigin(0.5); contentContainer.add(bonusTxt); currentY += 60;
 
     // --- ОБУЧЕНИЕ (РУКА) — внизу контента ---
