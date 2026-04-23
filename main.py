@@ -106,48 +106,92 @@ async def get_invoice(item_type: str, user_id: int, username: str):
 
 @app.get("/check_community/{user_id}")
 async def check_community(user_id: int):
+    print(f"[Community] Checking subscription for {user_id}")
     try:
         # 1. Проверяем подписку в Telegram
-        # ВАЖНО: Бот должен быть администратором канала @GlitchedArenaCommunity
-        member = await bot.get_chat_member(chat_id="@GlitchedArenaCommunity", user_id=user_id)
+        try:
+            member = await bot.get_chat_member(chat_id="@GlitchedArenaCommunity", user_id=user_id)
+            print(f"[Community] Status for {user_id}: {member.status}")
+        except Exception as tg_err:
+            print(f"[Community] Telegram API Error: {tg_err}")
+            return {"status": "error", "message": "Could not verify subscription"}
         
         if member.status in ["member", "administrator", "creator"]:
-            # 2. Проверяем в БД, не получен ли уже бонус
+            # 2. Проверяем в БД
             res = supabase.table("leaderboard").select("upgrades, coins").eq("telegram_id", user_id).execute()
             if not res.data:
-                return {"status": "error", "message": "User not found. Start the game first!"}
+                print(f"[Community] User {user_id} not found in DB")
+                return {"status": "error", "message": "User not found"}
             
             user_data = res.data[0]
             upgrades = user_data.get("upgrades") or {}
             
             if upgrades.get("skin_elite"):
-                return {"status": "already_claimed", "message": "You already have the Elite skin!"}
+                return {"status": "already_claimed", "message": "Already claimed!"}
             
-            # 3. Выдаем бонус: скин Elite + 1000 монет
+            # 3. Выдаем бонус
             upgrades["skin_elite"] = 1
             current_coins = user_data.get("coins", 0)
             
             supabase.table("leaderboard").update({
                 "upgrades": upgrades,
                 "coins": current_coins + 1000,
-                "skin": "elite" # Сразу экипируем
+                "skin": "elite"
             }).eq("telegram_id", user_id).execute()
             
-            return {"status": "success", "message": "Welcome to the Elite! Skin and 1000 coins granted."}
+            print(f"[Community] Bonus granted to {user_id}")
+            return {"status": "success", "message": "Elite skin + 1000 coins granted!"}
         else:
-            return {"status": "not_member", "message": "Please join our community first!"}
+            return {"status": "not_member", "message": "Join @GlitchedArenaCommunity first!"}
     except Exception as e:
-        print(f"Check community error: {e}")
+        print(f"[Community] Critical Error: {e}")
         return {"status": "error", "message": str(e)}
 
 @app.post("/submit_score")
 async def submit_score(data: ScoreData):
     try:
         current_date = datetime.now().isoformat()
-        print(f"[Sync] Incoming score from {data.username} (ID: {data.telegram_id}): Level={data.level}, Best={data.best_level}")
-
-        existing = supabase.table("leaderboard").select("*").eq("telegram_id", data.telegram_id).execute()
-        old = existing.data[0] if existing.data else {}
+        # Проверяем наличие пользователя перед обновлением
+        res = supabase.table("leaderboard").select("*").eq("telegram_id", data.telegram_id).execute()
+        
+        if not res.data:
+            # Создаем нового пользователя
+            print(f"[Sync] Creating new pilot: {data.username}")
+            supabase.table("leaderboard").insert({
+                "telegram_id": data.telegram_id,
+                "username": data.username,
+                "score": data.score,
+                "level": data.level,
+                "best_level": data.best_level,
+                "coins": data.coins,
+                "upgrades": data.upgrades,
+                "skin": data.skin,
+                "shape": data.shape,
+                "score_date": current_date
+            }).execute()
+        else:
+            # Обновляем существующего
+            old = res.data[0]
+            # Логика объединения данных (берем максимум)
+            new_coins = max(data.coins, old.get("coins", 0))
+            new_best = max(data.best_level, old.get("best_level", 1))
+            
+            supabase.table("leaderboard").update({
+                "username": data.username,
+                "score": max(data.score, old.get("score", 0)),
+                "level": data.level,
+                "best_level": new_best,
+                "coins": new_coins,
+                "upgrades": data.upgrades,
+                "skin": data.skin,
+                "shape": data.shape,
+                "score_date": current_date
+            }).eq("telegram_id", data.telegram_id).execute()
+            
+        return {"status": "ok"}
+    except Exception as e:
+        print(f"[Sync] Error: {e}")
+        return {"status": "error", "message": str(e)}
 
         old_upgrades = old.get("upgrades") or {}
         new_upgrades = data.upgrades or {}
