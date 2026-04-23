@@ -347,7 +347,7 @@ function showHangar(scene, mainMenu) {
     const mask = scene.make.graphics().fillRect(0, scrollAreaTop, 375, scrollHeight).createGeometryMask(); scrollWindow.setMask(mask);
     const title = scene.add.text(187, 30, TRANSLATIONS[lang].hangar_title, { fontSize: '22px', fill: '#00ffff', fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5); overlay.add(title);
     const stats = getShipStats(); const statsBox = scene.add.rectangle(187, 58, 330, 24, 0x222222).setStrokeStyle(1, 0xffff00); const statsText = scene.add.text(187, 58, stats.label, { fontSize: '10px', fill: '#ffff00', fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5); overlay.add([statsBox, statsText]);
-    const previewSprite = scene.add.sprite(270, 240, player.texture.key).setScale(3.5); const glow = scene.add.circle(270, 240, 42, 0x00ffff, 0.15).setDepth(previewSprite.depth - 1); overlay.add([glow, previewSprite]);
+    const previewSprite = scene.add.sprite(285, 190, player.texture.key).setScale(3.5); const glow = scene.add.circle(285, 190, 42, 0x00ffff, 0.15).setDepth(previewSprite.depth - 1); overlay.add([glow, previewSprite]);
     let currentY = 0;
     const leftX = 15;
     contentContainer.add(scene.add.text(leftX, scrollAreaTop + currentY, TRANSLATIONS[lang].hull_type, { fontSize: '13px', fill: '#ff00ff', fontWeight: 'bold', fontFamily: fontUI })); currentY += 28;
@@ -377,6 +377,10 @@ function showHangar(scene, mainMenu) {
         { id: 'crystal', name: TRANSLATIONS[lang].crystal, unlocked: upgradeLevels.skin_crystal > 0 }
     ];
     skins.forEach((sk) => { if (!sk.unlocked) return; const isSelected = currentSkin === sk.id; const btn = scene.add.text(leftX + 5, scrollAreaTop + currentY, `> ${sk.name}`, { fontSize: '12px', fill: isSelected ? '#00ffff' : '#888', backgroundColor: isSelected ? '#003333' : null, padding: 3, fontFamily: fontUI }).setInteractive().on('pointerdown', () => { currentSkin = sk.id; saveProgress(); refreshPlayerAppearance(scene); overlay.destroy(); showHangar(scene, mainMenu); }); contentContainer.add(btn); currentY += 26; });
+    
+    // ГАРАНТИРУЕМ, ЧТО БЛОК РАЗВЕДКИ НЕ ПОДНИМЕТСЯ ВЫШЕ ОПРЕДЕЛЕННОЙ ТОЧКИ (чтобы не налезть на корабль)
+    currentY = Math.max(currentY, 280); 
+    
     currentY += 15;
     const intel = getBossIntel();
     const intelBox = scene.add.rectangle(187, scrollAreaTop + currentY + 55, 340, 105, 0x000000, 0.7).setStrokeStyle(1, 0xff00ff);
