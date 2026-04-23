@@ -68,16 +68,18 @@ function showMenu(scene) {
             try {
                 const res = await fetch(`${botUrl}/check_community/${user.id}`);
                 const data = await res.json();
+                console.log('[Community] Response:', data);
                 if (data.status === 'success') {
                     showToast(scene, "ELITE UNLOCKED!", data.message);
                     currentSkin = 'elite';
+                    upgradeLevels.skin_elite = 1; // Явно ставим флаг локально
                     saveProgress();
                     if (typeof submitScore === 'function') submitScore();
-                    // Обновляем превью корабля в меню
                     if (miniShip) miniShip.setTint(SKIN_DATA.elite.body);
                 } else if (data.status === 'not_member') {
-                    // Просто игнорим или можно вывести подсказку
-                    console.log('Not a member yet');
+                    showToast(scene, "ACCESS DENIED", TRANSLATIONS[lang].rule_community);
+                } else if (data.status === 'already_claimed') {
+                    showToast(scene, "SYSTEM", data.message);
                 }
             } catch (e) { console.error('Check community error:', e); }
         });
