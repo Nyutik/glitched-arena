@@ -193,6 +193,7 @@ function showRules(scene, mainMenu) {
         { key: 'pixel', c: 0xff00ff, t: TRANSLATIONS[lang].rule_nuke, angle: 45, scale: 2.2 },
         { key: 'pixel', c: 0xff00ff, t: TRANSLATIONS[lang].rule_magnet, angle: 180, scale: 1.6 },
         { key: 'pixel', c: 0x00ff00, t: TRANSLATIONS[lang].rule_slowmo, scale: 1.6 },
+        { key: 'wall', c: 0x00ffff, t: lang === 'ru' ? "ЭЛИТНЫЙ УЗЕЛ (3 хита): +25 💰" : "ELITE NODE (3 hits): +25 💰", scale: 0.8 },
         { key: 'ui_crystal', c: 0xffffff, t: TRANSLATIONS[lang].rule_community, scale: 1.5 }
     ];
     itemsList.forEach((item, i) => { 

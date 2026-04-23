@@ -638,10 +638,23 @@ function spawnObstacle() {
 
     const spawnElite = (x, y = -30) => {
         const obs = obstacles.create(x, y, 'wall');
+        // На 68 уровне HP будет около 9-10. На 1 уровне - 3.
+        const eliteHP = Math.floor(3 + level / 10);
         obs.setTint(0x00ffff).setScale(1.5, 0.8).setVelocityY(baseSpeed * 0.8);
-        obs.setData('hp', 3); // Нужно 3 попадания
+        obs.setData('hp', eliteHP);
         obs.setData('isElite', true);
-        this.tweens.add({ targets: obs, alpha: 0.6, duration: 200, yoyo: true, repeat: -1 });
+        
+        // Визуальный эффект сияния (glow)
+        const glow = this.add.circle(x, y, 40, 0x00ffff, 0.2).setDepth(obs.depth - 1);
+        this.tweens.add({ targets: glow, alpha: 0.5, scale: 1.5, duration: 400, yoyo: true, repeat: -1 });
+        this.tweens.add({ targets: obs, alpha: 0.7, duration: 200, yoyo: true, repeat: -1 });
+        
+        // Связываем сияние с объектом, чтобы оно удалялось вместе с ним
+        obs.on('destroy', () => { glow.destroy(); });
+        // В Phaser 3 Arcade Physics нужно обновлять позицию вручную или через контейнер, 
+        // но здесь проще в update или просто заставить glow лететь с той же скоростью.
+        this.physics.add.existing(glow);
+        glow.body.setVelocityY(obs.body.velocity.y);
     };
 
     const spawnDrone = (x, y = -30) => { 
