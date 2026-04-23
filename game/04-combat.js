@@ -551,15 +551,33 @@ function spawnMinion() {
 }
 
 function minionExplode(scene, x, y) {
+    // 1. Тряска экрана (сочность)
+    scene.cameras.main.shake(120, 0.008);
+    
+    // 2. Hitstop (эффект замирания для акцента на попадании)
+    const originalTimeScale = scene.physics.world.timeScale;
+    scene.physics.world.timeScale = 10; // В Phaser 3 чем выше timeScale, тем медленнее мир
+    scene.time.delayedCall(40, () => { if (scene && scene.physics) scene.physics.world.timeScale = originalTimeScale; });
+
     let blast = scene.add.circle(x, y, 10, 0x00ff00, 0.4).setDepth(4);
-    scene.tweens.add({ targets: blast, radius: 100, alpha: 0, duration: 400, onUpdate: () => {
+    scene.tweens.add({ targets: blast, radius: 120, alpha: 0, duration: 400, onUpdate: () => {
         bullets.children.each(b => { if (b && b.active) { let dist = Phaser.Math.Distance.Between(x, y, b.x, b.y); if (dist < blast.radius) { b.destroy(); coinsThisRun += 1; } } });
     }, onComplete: () => blast.destroy() });
+    
     if (upgradeLevels.omega > 0) { overdrive = Math.min(100, overdrive + 20); let chargeFlash = scene.add.circle(player.x, player.y, 40, 0xffff00, 0.5); scene.tweens.add({ targets: chargeFlash, scale: 2, alpha: 0, duration: 300, onComplete: () => chargeFlash.destroy() }); }
+    
     let coinBonus = 5;
     if (currentSkin === 'solar') coinBonus = Math.floor(coinBonus * 1.1);
     coinsThisRun += coinBonus; updateHudTexts();
-    for(let i = 0; i < 15; i++) { let p = scene.add.rectangle(x, y, 4, 4, 0x00ff00); scene.physics.add.existing(p); p.body.setVelocity(Phaser.Math.Between(-300, 300), Phaser.Math.Between(-300, 300)); scene.time.delayedCall(400, () => p.destroy()); }
+
+    // 3. Больше осколков (было 15, стало 25)
+    for(let i = 0; i < 25; i++) { 
+        let p = scene.add.rectangle(x, y, 4, 4, 0x00ff00).setDepth(5); 
+        scene.physics.add.existing(p); 
+        p.body.setVelocity(Phaser.Math.Between(-400, 400), Phaser.Math.Between(-400, 400)); 
+        p.body.setAngularVelocity(Phaser.Math.Between(-200, 200));
+        scene.tweens.add({ targets: p, alpha: 0, scale: 0, duration: Phaser.Math.Between(400, 700), onComplete: () => p.destroy() }); 
+    }
 }
 
 function spawnItem() {
@@ -604,9 +622,44 @@ function spawnObstacle() {
     if (!isStarted || isBossFight || isShopOpen || isPaused || isVictory || isDead) return;
     if (!obstacles) return;
     const laneXs = [55, 120, 187, 255, 320];
-    const baseSpeed = level >= 55 ? 440 : level >= 45 ? 425 : level >= 35 ? 400 : level >= 25 ? 375 : level >= 15 ? 345 : 315;
-    const spawnWall = (x, y = -30, scaleX = 1, scaleY = 1, tint = 0xff0000) => { const obstacle = obstacles.create(x, y, 'wall'); obstacle.setTint(tint); obstacle.setScale(scaleX, scaleY); obstacle.setVelocityY(baseSpeed); obstacle.setData('isDrone', false); obstacle.setData('missed', false); return obstacle; };
-    const spawnDrone = (x, y = -30) => { const obstacle = obstacles.create(x, y, 'wall'); obstacle.setTint(0xffaa00); obstacle.setScale(0.72, 0.9); obstacle.setVelocityY(baseSpeed + 15); obstacle.setData('isDrone', true); obstacle.setData('missed', false); return obstacle; };
+    
+    // Увеличенная базовая скорость (было 315, стало 350 для 1-го уровня)
+    const baseSpeed = level >= 55 ? 480 : level >= 45 ? 460 : level >= 35 ? 430 : level >= 25 ? 400 : level >= 15 ? 380 : 350;
+    
+    const spawnWall = (x, y = -30, scaleX = 1, scaleY = 1, tint = 0xff0000) => { 
+        const obstacle = obstacles.create(x, y, 'wall'); 
+        obstacle.setTint(tint); 
+        obstacle.setScale(scaleX, scaleY); 
+        obstacle.setVelocityY(baseSpeed); 
+        obstacle.setData('isDrone', false); 
+        obstacle.setData('missed', false); 
+        return obstacle; 
+    };
+
+    const spawnElite = (x, y = -30) => {
+        const obs = obstacles.create(x, y, 'wall');
+        obs.setTint(0x00ffff).setScale(1.5, 0.8).setVelocityY(baseSpeed * 0.8);
+        obs.setData('hp', 3); // Нужно 3 попадания
+        obs.setData('isElite', true);
+        scene.tweens.add({ targets: obs, alpha: 0.6, duration: 200, yoyo: true, repeat: -1 });
+    };
+
+    const spawnDrone = (x, y = -30) => { 
+        const obstacle = obstacles.create(x, y, 'wall'); 
+        obstacle.setTint(0xffaa00); 
+        obstacle.setScale(0.72, 0.9); 
+        obstacle.setVelocityY(baseSpeed + 25); 
+        obstacle.setData('isDrone', true); 
+        obstacle.setData('missed', false); 
+        return obstacle; 
+    };
+
+    // На 3 уровне добавляем шанс появления элитного врага
+    if (level >= 3 && Math.random() < 0.15) {
+        spawnElite(Phaser.Utils.Array.GetRandom(laneXs));
+        return;
+    }
+
     const patterns = {
         single: () => { spawnWall(Phaser.Utils.Array.GetRandom(laneXs), -30, 0.95, 1); },
         staggered: () => { let a = Phaser.Math.Between(0, laneXs.length - 1); let b = Phaser.Math.Between(0, laneXs.length - 1); while (b === a) b = Phaser.Math.Between(0, laneXs.length - 1); spawnWall(laneXs[a], -30, 0.95, 1); spawnWall(laneXs[b], -130, 0.95, 1); },

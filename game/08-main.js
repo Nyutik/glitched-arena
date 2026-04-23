@@ -84,6 +84,31 @@ function create() {
     distanceText = this.add.text(187, 105, '', { fontFamily: fontUI, fontSize: '14px', fill: '#00ffff', align: 'center' }).setOrigin(0.5, 0).setDepth(100);
     glitchText = this.add.text(187, 285, '', { fontFamily: fontUI, fontSize: '20px', stroke: '#000', strokeThickness: 6, align: 'center', wordWrap: { width: 320, useAdvancedWrap: true }, lineSpacing: 2 }).setOrigin(0.5).setDepth(100);
     overdriveBar = this.add.graphics().setDepth(100); roadBar = this.add.graphics().setDepth(100); this.overheadGfx = this.add.graphics().setDepth(11);
+    // --- ОБРАБОТКА ПОПАДАНИЙ В ПРЕПЯТСТВИЯ (ДЛЯ ЭЛИТНЫХ ВРАГОВ) ---
+    this.physics.add.overlap(playerBullets, obstacles, (bullet, obs) => {
+        bullet.destroy();
+        // Эффект искр при попадании
+        let spark = this.add.circle(bullet.x, bullet.y, 3, 0x00ffff).setDepth(20);
+        this.tweens.add({ targets: spark, scale: 2, alpha: 0, duration: 150, onComplete: () => spark.destroy() });
+
+        if (obs.getData('isElite')) {
+            let hp = obs.getData('hp') - 1;
+            obs.setData('hp', hp);
+            this.cameras.main.shake(50, 0.005);
+            if (hp <= 0) {
+                let ox = obs.x; let oy = obs.y;
+                obs.destroy();
+                minionExplode(this, ox, oy);
+                coinsThisRun += 25; // Большая награда за элиту
+                updateHudTexts();
+                if (glitchText) { glitchText.setText("ELITE DATA PURGED!").setFill('#00ffff'); this.time.delayedCall(800, () => { if (glitchText.text.includes('ELITE')) glitchText.setText(''); }); }
+            } else {
+                obs.setTint(0xffffff);
+                this.time.delayedCall(50, () => { if (obs.active) obs.setTint(0x00ffff); });
+            }
+        }
+    });
+
     this.physics.add.overlap(player, obstacles, (p, o) => { 
         if (currentShape === 'phase' && upgradeLevels.ship_phase > 0 && Math.random() < 0.10) {
             o.destroy();
