@@ -8,7 +8,7 @@
 // ============================================
 
 const SHARE_LINK = "https://t.me/GlitchedArenaBot";
-const botUrl = window.location.origin; // Автоматически берет текущий домен сервера
+const botUrl = "https://glitched-arena.myftp.org";
 const ASSETS = {
     BGM: 'assets/Cyberpunk 2.mp3',
     SFX_ULTRA: 'assets/futuristic-cyberpunk-digi-ivvyqv4k.wav',
