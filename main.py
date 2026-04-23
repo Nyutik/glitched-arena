@@ -167,6 +167,7 @@ async def submit_score(data: ScoreData):
                 "upgrades": data.upgrades,
                 "skin": data.skin,
                 "shape": data.shape,
+                "explosion_color": data.explosion_color,
                 "score_date": current_date
             }).execute()
         else:
@@ -185,6 +186,7 @@ async def submit_score(data: ScoreData):
                 "upgrades": data.upgrades,
                 "skin": data.skin,
                 "shape": data.shape,
+                "explosion_color": data.explosion_color,
                 "score_date": current_date
             }).eq("telegram_id", data.telegram_id).execute()
             

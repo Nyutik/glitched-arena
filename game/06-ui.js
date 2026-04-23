@@ -206,6 +206,14 @@ function showRules(scene, mainMenu) {
             let icon = scene.add.sprite(75, y, item.key).setTint(item.c); 
             icon.setScale(item.scale || (item.key === 'pixel' ? 1.8 : 0.6)); 
             if (item.angle) icon.setAngle(item.angle); 
+            
+            // Если это элитный узел, добавляем сияние и в правилах
+            if (item.t.includes("ЭЛИТ") || item.t.includes("ELITE")) {
+                const rulesGlow = scene.add.circle(75, y, 15, 0x00ffff, 0.3);
+                scene.tweens.add({ targets: rulesGlow, alpha: 0.6, scale: 1.5, duration: 800, yoyo: true, repeat: -1 });
+                contentContainer.add(rulesGlow);
+            }
+            
             contentContainer.add(icon);
         }
         let txt = scene.add.text(105, y, item.t, { fontSize: '11px', fill: '#fff', fontFamily: fontUI, wordWrap: { width: 240 } }).setOrigin(0, 0.5);
