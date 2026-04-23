@@ -372,6 +372,7 @@ function showHangar(scene, mainMenu) {
         { id: 'solar', name: TRANSLATIONS[lang].skin_solar, unlocked: upgradeLevels.skin_solar > 0 },
         { id: 'frost', name: TRANSLATIONS[lang].skin_frost, unlocked: upgradeLevels.skin_frost > 0 },
         { id: 'rainbow', name: TRANSLATIONS[lang].skin_rainbow, unlocked: upgradeLevels.skin_rainbow > 0 },
+        { id: 'elite', name: TRANSLATIONS[lang].skin_elite, unlocked: upgradeLevels.skin_elite > 0 },
         { id: 'void_premium', name: TRANSLATIONS[lang].void_premium, unlocked: upgradeLevels.skin_void_premium > 0 },
         { id: 'crystal', name: TRANSLATIONS[lang].crystal, unlocked: upgradeLevels.skin_crystal > 0 }
     ];
