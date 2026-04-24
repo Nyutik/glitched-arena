@@ -48,7 +48,8 @@ function showShop(scene, mainMenu, fromVictory = false) {
         const shipTypes = ['skin_striker', 'ship_tank', 'ship_dart', 'ship_viper', 'ship_phase'];
         const skinTypes = ['skin_gold', 'skin_ghost', 'skin_crimson', 'skin_void', 'skin_plasma', 'skin_solar', 'skin_frost', 'skin_rainbow', 'skin_void_premium', 'skin_crystal'];
         const isCustom = ['skin_striker', 'skin_gold', 'skin_ghost', 'fx_blue', 'fx_pink', 'fx_rainbow', 'fx_gold', 'fx_green', 'fx_red', 'ship_tank', 'ship_dart', 'ship_viper', 'ship_phase', 'skin_crimson', 'skin_void', 'skin_plasma', 'skin_solar', 'skin_frost', 'skin_rainbow', 'skin_void_premium', 'skin_crystal', 'helper_drone', 'helper_autoshield', 'helper_autobomb', 'helper_autoheal', 'helper_mercenary', 'up_extralife', 'up_doubleDMG', 'up_enhanced'].includes(type);
-        const maxLvl = (type === 'health') ? 20 : 1;
+        const maxLevels = { health: 20, meta_plating: 3, meta_overdrive: 3 };
+        const maxLvl = maxLevels[type] || 1;
         let curLvl = (type === 'shield') ? (isShieldActive ? 1 : 0) : (upgradeLevels[type] || 0);
         let isEquipped = (type === 'skin_striker' && currentShape === 'striker') || (type === 'ship_tank' && currentShape === 'tank') || (type === 'ship_dart' && currentShape === 'dart') || (type === 'ship_viper' && currentShape === 'viper') || (type === 'ship_phase' && currentShape === 'phase') || (type === 'skin_gold' && currentSkin === 'gold') || (type === 'skin_ghost' && currentSkin === 'ghost') || (type === 'skin_crimson' && currentSkin === 'crimson') || (type === 'skin_void' && currentSkin === 'void_skin') || (type === 'skin_plasma' && currentSkin === 'plasma') || (type === 'skin_solar' && currentSkin === 'solar') || (type === 'skin_frost' && currentSkin === 'frost') || (type === 'skin_rainbow' && currentSkin === 'rainbow') || (type === 'skin_void_premium' && currentSkin === 'void_premium') || (type === 'skin_crystal' && currentSkin === 'crystal') || (type === 'fx_blue' && currentExplosionColor === 0x00ffff) || (type === 'fx_pink' && currentExplosionColor === 0xff00ff) || (type === 'fx_rainbow' && currentExplosionColor === -1) || (type === 'fx_gold' && currentExplosionColor === 0xffaa00) || (type === 'fx_green' && currentExplosionColor === 0x00ff00) || (type === 'fx_red' && currentExplosionColor === 0xff0000);
         let isOwned = (upgradeLevels[type] > 0); let isMaxed = (!isCustom && curLvl >= maxLvl);
@@ -121,6 +122,11 @@ function showShop(scene, mainMenu, fromVictory = false) {
 
     let sY = 20, step = 60;
     if (currentShopTab === 'upgrades') {
+        addHeader(sY, lang === 'ru' ? "--- ПЕРМАНЕНТНОЕ ЯДРО ---" : "--- PERMANENT CORE ---"); sY += 40;
+        createBtn(sY, "meta_plating", "desc_meta_plating", 250, 'meta_plating');
+        createBtn(sY+step, "meta_overdrive", "desc_meta_overdrive", 300, 'meta_overdrive');
+        
+        sY += step*2 + 20;
         addHeader(sY, lang === 'ru' ? "--- СИСТЕМЫ КОРАБЛЯ ---" : "--- SHIP SYSTEMS ---"); sY += 40;
         createBtn(sY, "up_antenna", "desc_antenna", 400, 'ultra'); 
         createBtn(sY+step, "up_cannons", "desc_cannons", 800, 'fire'); 

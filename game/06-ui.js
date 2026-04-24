@@ -33,26 +33,53 @@ function shareDuel(status = 'win') {
 
 function showMenu(scene) {
     console.log('[Menu] showMenu called');
+    currentStats = getShipStats();
     initDailyQuests();
     clearBattleTexts(scene); cleanupScreenFx(scene);
     ensureBgm(scene); isStarted = false; isVictory = false; isDead = false; isBossFight = false; isPaused = false; isShopOpen = false;
     scene.physics.resume(); scene.time.paused = false;
     if (scene.physics && scene.physics.world) scene.physics.world.timeScale = 1;
     const menu = scene.add.container(0, 0).setDepth(3000);
-    const bg = scene.add.graphics().fillStyle(0x000000, 1).fillRect(0, 0, 375, 667);
+    const bg = scene.add.graphics().fillStyle(0x04070d, 1).fillRect(0, 0, 375, 667);
     const fontUI = 'Arial, sans-serif';
-    const title = scene.add.text(187, 80, TRANSLATIONS[lang].menu_title, { fontSize: '42px', fill: '#00ffff', align: 'center', fontWeight: 'bold', stroke: '#ff00ff', strokeThickness: 4, fontFamily: fontUI }).setOrigin(0.5);
+    const topGlow = scene.add.ellipse(187, 85, 300, 115, 0x00e5ff, 0.12);
+    const heroGlow = scene.add.ellipse(187, 205, 230, 150, 0xff00aa, 0.11);
+    const heroAura = scene.add.circle(187, 205, 58, 0x00ffff, 0.12).setStrokeStyle(2, 0x00ffff, 0.35);
+    const heroFrame = scene.add.rectangle(187, 205, 168, 112, 0x07141d, 0.86).setStrokeStyle(2, 0x00ffff, 0.65);
+    const decoLines = scene.add.graphics();
+    decoLines.lineStyle(1, 0x00ffff, 0.13);
+    for (let y = 0; y <= 667; y += 32) decoLines.lineBetween(20, y, 355, y);
+    decoLines.lineStyle(1, 0xff00ff, 0.08);
+    decoLines.lineBetween(42, 130, 112, 130);
+    decoLines.lineBetween(263, 130, 333, 130);
+    decoLines.lineBetween(42, 278, 112, 278);
+    decoLines.lineBetween(263, 278, 333, 278);
+    const title = scene.add.text(187, 74, TRANSLATIONS[lang].menu_title, { fontSize: '42px', fill: '#00ffff', align: 'center', fontWeight: 'bold', stroke: '#ff00ff', strokeThickness: 4, fontFamily: fontUI }).setOrigin(0.5);
     menu.titleRef = title;
     startTitleGlitch(scene, title);
     scene.glitchTimer = scene.time.addEvent({ delay: 2000, callback: () => applyGlitchEffect(scene, title), callbackScope: scene, loop: true });
     const closeMenu = () => { if (scene.glitchTimer) scene.glitchTimer.remove(); menu.setVisible(false); };
-    const profileBtn = scene.add.text(187, 145, TRANSLATIONS[lang].profile, { fontSize: '16px', fontFamily: fontUI, fill: '#00ffff', fontWeight: 'bold' }).setOrigin(0.5).setInteractive();
-    const miniShip = scene.add.sprite(110, 145, player.texture.key).setScale(0.8).setAlpha(0.8);
-    scene.tweens.add({ targets: miniShip, x: 105, duration: 1000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    const profileBtn = scene.add.text(187, 126, TRANSLATIONS[lang].profile, { fontSize: '16px', fontFamily: fontUI, fill: '#00ffff', fontWeight: 'bold' }).setOrigin(0.5).setInteractive();
+    const showcaseTrail = scene.add.ellipse(187, 235, 105, 18, 0x00ffff, 0.12);
+    const showcaseShip = scene.add.sprite(187, 205, player.texture.key).setScale(2.45).setAlpha(0.98).setAngle(-4);
+    const loadoutLabel = scene.add.text(187, 270, lang === 'ru' ? 'АКТИВНАЯ СБОРКА' : 'ACTIVE LOADOUT', { fontSize: '10px', fontFamily: fontUI, fill: '#88ffee', fontWeight: 'bold', letterSpacing: 1 }).setOrigin(0.5);
+    const loadoutStats = scene.add.text(187, 289, currentStats.label, { fontSize: '10px', fontFamily: fontUI, fill: '#ffe680', fontWeight: 'bold', align: 'center', wordWrap: { width: 270 } }).setOrigin(0.5);
+    const flavorText = scene.add.text(187, 311, lang === 'ru' ? 'НЕОН. СКОРОСТЬ. ОХОТА ЗА ЯДРОМ.' : 'NEON. SPEED. CORE HUNT.', { fontSize: '10px', fontFamily: fontUI, fill: '#8aa4bf', fontStyle: 'italic' }).setOrigin(0.5);
+    let droneOrbit = null;
+    if (upgradeLevels.helper_drone > 0) {
+        const droneHalo = scene.add.circle(244, 193, 11, 0x00ff88, 0.14);
+        const showcaseDrone = scene.add.circle(244, 193, 8, 0x00ff88, 0.9).setStrokeStyle(2, 0xcaffea, 0.8);
+        const droneCore = scene.add.circle(244, 193, 3, 0xffffff, 0.95);
+        droneOrbit = scene.add.container(0, 0, [droneHalo, showcaseDrone, droneCore]);
+        scene.tweens.add({ targets: droneOrbit, x: -6, y: -5, duration: 950, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    }
+    scene.tweens.add({ targets: showcaseShip, y: 199, angle: 4, duration: 1500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    scene.tweens.add({ targets: [heroGlow, heroAura], alpha: { from: 0.08, to: 0.2 }, scaleX: 1.04, scaleY: 1.06, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    scene.tweens.add({ targets: showcaseTrail, alpha: { from: 0.08, to: 0.22 }, width: 125, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     profileBtn.on('pointerdown', () => { closeMenu(); showProfile(scene, menu); });
     if (!achievements.firstBossReward) {
-        const missionBox = scene.add.rectangle(187, 185, 320, 40, 0x003322, 0.8).setStrokeStyle(1, 0x00ff88, 0.7);
-        const missionText = scene.add.text(187, 185, lang === 'ru'
+        const missionBox = scene.add.rectangle(187, 325, 320, 44, 0x003322, 0.82).setStrokeStyle(1, 0x00ff88, 0.7);
+        const missionText = scene.add.text(187, 325, lang === 'ru'
             ? 'ПЕРВАЯ ЦЕЛЬ: ПОБЕДИ БОССА И ПОЛУЧИ ЗОЛОТОЙ ОБЛИК + ДРОН'
             : 'FIRST TARGET: beat the boss for GOLD SKIN + DRONE',
             { fontSize: '11px', fontFamily: fontUI, fill: '#00ff88', fontWeight: 'bold', align: 'center', wordWrap: { width: 295 } }).setOrigin(0.5);
@@ -83,7 +110,7 @@ function showMenu(scene) {
                     upgradeLevels.skin_elite = 1; // Явно ставим флаг локально
                     saveProgress();
                     if (typeof submitScore === 'function') submitScore();
-                    if (miniShip) miniShip.setTint(SKIN_DATA.elite.body);
+                    if (showcaseShip) showcaseShip.setTint(SKIN_DATA.elite.body);
                 } else if (data.status === 'not_member') {
                     showToast(scene, "ACCESS DENIED", TRANSLATIONS[lang].rule_community);
                 } else if (data.status === 'already_claimed') {
@@ -93,14 +120,16 @@ function showMenu(scene) {
         });
     });
     const btnStyle = { fontSize: '18px', fill: '#fff', backgroundColor: '#222', padding: 10, fontFamily: fontUI, fontWeight: 'bold' };
-    const startBtn = scene.add.text(187, 210, TRANSLATIONS[lang].start, btnStyle).setOrigin(0.5).setInteractive();
-    const hangarBtn = scene.add.text(187, 275, TRANSLATIONS[lang].hangar, btnStyle).setOrigin(0.5).setInteractive();
-    const shopBtn = scene.add.text(187, 340, TRANSLATIONS[lang].shop, btnStyle).setOrigin(0.5).setInteractive();
-    const setBtn = scene.add.text(187, 405, TRANSLATIONS[lang].settings, btnStyle).setOrigin(0.5).setInteractive();
+    const startPulse = scene.add.rectangle(187, 382, 276, 54, 0x00d7ff, 0.14).setStrokeStyle(2, 0x00ffff, 0.95);
+    const startBtn = scene.add.text(187, 382, TRANSLATIONS[lang].start, { fontSize: '19px', fill: '#ffffff', backgroundColor: '#003746', padding: { left: 18, right: 18, top: 10, bottom: 10 }, fontFamily: fontUI, fontWeight: 'bold' }).setOrigin(0.5).setInteractive();
+    const hangarBtn = scene.add.text(187, 440, TRANSLATIONS[lang].hangar, btnStyle).setOrigin(0.5).setInteractive();
+    const shopBtn = scene.add.text(187, 492, TRANSLATIONS[lang].shop, btnStyle).setOrigin(0.5).setInteractive();
+    const setBtn = scene.add.text(187, 544, TRANSLATIONS[lang].settings, btnStyle).setOrigin(0.5).setInteractive();
     let audioState = isSoundOn ? TRANSLATIONS[lang].v_on : TRANSLATIONS[lang].v_off;
-    const soundBtn = scene.add.text(187, 470, `>> ${TRANSLATIONS[lang].audio}: ${audioState}`, btnStyle).setOrigin(0.5).setInteractive();
-    const rulesBtn = scene.add.text(187, 535, TRANSLATIONS[lang].rules, btnStyle).setOrigin(0.5).setInteractive();
-    const topBtn = scene.add.text(187, 600, TRANSLATIONS[lang].top, { fontSize: '16px', fill: '#ffff00', backgroundColor: '#333300', padding: 10, fontFamily: fontUI, fontWeight: 'bold' }).setOrigin(0.5).setInteractive();
+    const soundBtn = scene.add.text(187, 586, `>> ${TRANSLATIONS[lang].audio}: ${audioState}`, { fontSize: '15px', fill: '#fff', backgroundColor: '#222', padding: 8, fontFamily: fontUI, fontWeight: 'bold' }).setOrigin(0.5).setInteractive();
+    const rulesBtn = scene.add.text(102, 633, TRANSLATIONS[lang].rules, { fontSize: '13px', fill: '#d3b4ff', backgroundColor: '#23142f', padding: 8, fontFamily: fontUI, fontWeight: 'bold' }).setOrigin(0.5).setInteractive();
+    const topBtn = scene.add.text(274, 633, TRANSLATIONS[lang].top, { fontSize: '13px', fill: '#ffff00', backgroundColor: '#333300', padding: 8, fontFamily: fontUI, fontWeight: 'bold' }).setOrigin(0.5).setInteractive();
+    scene.tweens.add({ targets: [startPulse, startBtn], scaleX: 1.03, scaleY: 1.03, alpha: { from: 0.92, to: 1 }, duration: 850, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     startBtn.on('pointerdown', () => { 
         // Сначала проверяем флаг просмотра рекламы
         if (adWatchedPendingRevive) {
@@ -121,7 +150,28 @@ function showMenu(scene) {
     setBtn.on('pointerdown', () => { closeMenu(); showSettings(scene, menu); });
     rulesBtn.on('pointerdown', () => { closeMenu(); showRules(scene, menu); });
     topBtn.on('pointerdown', () => { closeMenu(); showLeaderboard(scene, menu); });
-    menu.add([bg, miniShip, title, langBtn, communityBtn, startBtn, hangarBtn, shopBtn, profileBtn, setBtn, soundBtn, rulesBtn, topBtn, questsBtn]);
+    menu.add([bg, decoLines, topGlow, heroGlow, heroAura, heroFrame, showcaseTrail, showcaseShip, title, langBtn, communityBtn, profileBtn, loadoutLabel, loadoutStats, flavorText, startPulse, startBtn, hangarBtn, shopBtn, setBtn, soundBtn, rulesBtn, topBtn, questsBtn]);
+    if (droneOrbit) menu.add(droneOrbit);
+    menu.setAlpha(0);
+    menu.iterate(child => {
+        if (!child || child === bg) return;
+        child.y += 12;
+        child.alpha = 0;
+    });
+    scene.tweens.add({ targets: menu, alpha: 1, duration: 260, ease: 'Quad.easeOut' });
+    let revealIndex = 0;
+    menu.iterate(child => {
+        if (!child || child === bg) return;
+        scene.tweens.add({
+            targets: child,
+            y: child.y - 12,
+            alpha: 1,
+            duration: 260,
+            delay: 40 + revealIndex * 18,
+            ease: 'Quad.easeOut'
+        });
+        revealIndex += 1;
+    });
 }
 
 function showDailyQuests(scene, mainMenu) {
@@ -278,21 +328,31 @@ function showRules(scene, mainMenu) {
 
 function showGaryIntro(scene) {
     const intro = scene.add.container(0, 0).setDepth(7000);
-    const bg = scene.add.graphics().fillStyle(0x000000, 0.85).fillRect(0, 0, 375, 667);
+    const bg = scene.add.graphics().fillStyle(0x03060b, 0.92).fillRect(0, 0, 375, 667);
     bg.setInteractive(new Phaser.Geom.Rectangle(0, 0, 375, 667), Phaser.Geom.Rectangle.Contains);
     const fontUI = 'Arial, sans-serif';
-    
-    const hand = scene.add.text(187, 420, '👆', { fontSize: '70px' }).setOrigin(0.5);
+    const glow = scene.add.ellipse(187, 150, 280, 130, 0x00e5ff, 0.12);
+    const panel = scene.add.rectangle(187, 325, 320, 430, 0x0a1119, 0.92).setStrokeStyle(2, 0x00ffff, 0.8);
+    const heroFrame = scene.add.rectangle(187, 170, 170, 95, 0x08141d, 0.9).setStrokeStyle(2, 0xff00ff, 0.55);
+    const heroShip = scene.add.sprite(187, 170, player.texture.key).setScale(2.2).setAngle(-5);
+    scene.tweens.add({ targets: heroShip, y: 164, angle: 5, duration: 1350, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    const title = scene.add.text(187, 80, lang === 'ru' ? 'БЫСТРЫЙ СТАРТ' : 'QUICK START', { fontSize: '28px', fill: '#00ffff', fontWeight: 'bold', fontFamily: fontUI, stroke: '#00141e', strokeThickness: 4 }).setOrigin(0.5);
+    const subtitle = scene.add.text(187, 115, lang === 'ru' ? '30 секунд, и ты уже в арене' : '30 seconds and you are in the arena', { fontSize: '14px', fill: '#b5efff', fontFamily: fontUI }).setOrigin(0.5);
+    const hand = scene.add.text(120, 430, '👆', { fontSize: '62px' }).setOrigin(0.5);
     scene.tweens.add({ targets: hand, x: { from: 120, to: 250 }, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
 
-    const text1 = scene.add.text(187, 230, lang === 'ru' ? "ВЕДИ КОРАБЛЬ ПАЛЬЦЕМ" : "DRAG TO MOVE", { fontSize: '24px', fill: '#00ffff', fontWeight: 'bold', fontFamily: fontUI, align: 'center' }).setOrigin(0.5);
-    const text2 = scene.add.text(187, 280, lang === 'ru' ? "КОРАБЛЬ СТРЕЛЯЕТ САМ!" : "AUTO-FIRE IS ON!", { fontSize: '18px', fill: '#ffff00', fontWeight: 'bold', fontFamily: fontUI, align: 'center' }).setOrigin(0.5);
-    
-    const closeBtn = scene.add.rectangle(187, 550, 220, 55, 0x00ff00).setInteractive().setStrokeStyle(3, 0xffffff);
-    const closeTxt = scene.add.text(187, 550, lang === 'ru' ? "В БОЙ!" : "FIGHT!", { fontSize: '22px', fill: '#000000', fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5);
+    const tip1Box = scene.add.rectangle(187, 255, 260, 48, 0x10202a, 0.85).setStrokeStyle(1, 0x00ffff, 0.4);
+    const tip1 = scene.add.text(187, 255, lang === 'ru' ? 'ВЕДИ КОРАБЛЬ ПАЛЬЦЕМ' : 'DRAG TO MOVE', { fontSize: '18px', fill: '#00ffff', fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5);
+    const tip2Box = scene.add.rectangle(187, 315, 260, 48, 0x201b10, 0.85).setStrokeStyle(1, 0xffcc33, 0.45);
+    const tip2 = scene.add.text(187, 315, lang === 'ru' ? 'КОРАБЛЬ СТРЕЛЯЕТ САМ' : 'AUTO-FIRE IS ON', { fontSize: '17px', fill: '#ffdd66', fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5);
+    const tip3Box = scene.add.rectangle(187, 375, 260, 48, 0x112015, 0.85).setStrokeStyle(1, 0x00ff88, 0.45);
+    const tip3 = scene.add.text(187, 375, lang === 'ru' ? 'ПОБЕДИ ПЕРВОГО БОССА И ПОЛУЧИ НАБОР' : 'BEAT THE FIRST BOSS FOR A STARTER DROP', { fontSize: '14px', fill: '#88ffbf', fontWeight: 'bold', fontFamily: fontUI, align: 'center', wordWrap: { width: 230 } }).setOrigin(0.5);
 
-    intro.add([bg, hand, text1, text2, closeBtn, closeTxt]);
-    scene.tweens.add({ targets: closeBtn, scaleX: 1.05, scaleY: 1.05, duration: 600, yoyo: true, repeat: -1 });
+    const closeBtn = scene.add.rectangle(187, 550, 228, 58, 0x00ff88).setInteractive().setStrokeStyle(3, 0xffffff, 0.9);
+    const closeTxt = scene.add.text(187, 550, lang === 'ru' ? "ВЛЕТЕТЬ В АРЕНУ" : "ENTER THE ARENA", { fontSize: '20px', fill: '#001d12', fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5);
+
+    intro.add([bg, glow, panel, heroFrame, heroShip, title, subtitle, tip1Box, tip1, tip2Box, tip2, tip3Box, tip3, hand, closeBtn, closeTxt]);
+    scene.tweens.add({ targets: [closeBtn, glow], scaleX: 1.03, scaleY: 1.03, alpha: { from: 0.92, to: 1 }, duration: 700, yoyo: true, repeat: -1 });
 
     closeBtn.on('pointerdown', () => { 
         intro.destroy(); 

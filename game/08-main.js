@@ -40,7 +40,8 @@ function create() {
     if (window.adController) adController = window.adController;
     currentStats = getShipStats();
     isPhase3 = false; isVictory = false; isShopOpen = false; isDead = false; isBossFight = false; isStarted = false; isPaused = false; isPhase2 = false;
-    distance = 0; overdrive = 0; coinsThisRun = 0; playerHealth = maxPlayerHealth; isMagnetActive = false; isGlitchMode = false;
+    const bootHealth = 100 + (upgradeLevels.meta_plating || 0) * 10 + (upgradeLevels.health || 0) * 25 + currentStats.hpBonus;
+    distance = 0; overdrive = 0; coinsThisRun = 0; playerHealth = bootHealth; maxPlayerHealth = bootHealth; isMagnetActive = false; isGlitchMode = false;
     if (this.physics?.world) this.physics.world.timeScale = 1;
     
     // Тёмный фон (как было)
@@ -192,6 +193,7 @@ function create() {
         }, loop: true });
     }
     syncUserData.call(this).then(() => {
+        prepareOfflineEarnings();
         initDailyLogin(this);
     });
     updateHudTexts();
@@ -327,8 +329,10 @@ function startRun(scene) {
     currentStats = getShipStats(); 
     let healthBonus = upgradeLevels.health || 0;
     if (upgradeLevels.up_enhanced > 0 && level >= 50) healthBonus *= 2;
-    maxPlayerHealth = 100 + healthBonus * 25 + currentStats.hpBonus; playerHealth = maxPlayerHealth;
-    distance = 0; overdrive = 0; coinsThisRun = 0; viperShotCounter = 0;
+    const metaHealthBonus = (upgradeLevels.meta_plating || 0) * 10;
+    const startOverdrive = Math.min(100, (upgradeLevels.meta_overdrive || 0) * 15);
+    maxPlayerHealth = 100 + metaHealthBonus + healthBonus * 25 + currentStats.hpBonus; playerHealth = maxPlayerHealth;
+    distance = 0; overdrive = startOverdrive; coinsThisRun = 0; viperShotCounter = 0;
     bossDamageTaken = 0; coinsCollectedThisRun = 0; overdriveUsedToKill = false;
     if (wallZoneGraphics) { wallZoneGraphics.destroy(); wallZoneGraphics = null; }
     if (secondCore) { secondCore.destroy(); secondCore = null; }
@@ -549,7 +553,7 @@ async function syncUserData() {
         }
         initDailyQuests();
         saveProgress();
-        currentStats = getShipStats(); maxPlayerHealth = 100 + (upgradeLevels.health || 0) * 25 + currentStats.hpBonus;
+        currentStats = getShipStats(); maxPlayerHealth = 100 + (upgradeLevels.meta_plating || 0) * 10 + (upgradeLevels.health || 0) * 25 + currentStats.hpBonus;
         saveProgress(); updateHudTexts();
         if (player && player.active) refreshPlayerAppearance(this);
         if (shouldPushLocalBack) { await submitScore(); console.log('[Sync] Cloud updated from local', level, bestLevel, bestDistance, coins); }

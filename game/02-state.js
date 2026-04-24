@@ -76,7 +76,7 @@ let dailyQuests = {};
 let lastDailyReset = null;
 let dailyLoginStreak = 0;
 let lastLoginDate = null;
-let upgradeLevels = { fire: 0, ultra: 0, speed: 0, health: 0, shield: 0, skin_striker: 0, skin_gold: 0, omega: 0, ship_tank: 0, ship_dart: 0, ship_viper: 0, ship_phase: 0, skin_crimson: 0, skin_void: 0, skin_plasma: 0, skin_solar: 0, skin_frost: 0, fx_blue: 0, fx_pink: 0, fx_rainbow: 0, fx_gold: 0, fx_green: 0, fx_red: 0, skin_rainbow: 0, skin_void_premium: 0, skin_crystal: 0, helper_drone: 0, helper_missile: 0, helper_autoshield: 0, helper_autobomb: 0, helper_autoheal: 0, helper_mercenary: 0, up_extralife: 0, up_doubleDMG: 0, up_enhanced: 0 };
+let upgradeLevels = { fire: 0, ultra: 0, speed: 0, health: 0, shield: 0, meta_plating: 0, meta_overdrive: 0, skin_striker: 0, skin_gold: 0, omega: 0, ship_tank: 0, ship_dart: 0, ship_viper: 0, ship_phase: 0, skin_crimson: 0, skin_void: 0, skin_plasma: 0, skin_solar: 0, skin_frost: 0, fx_blue: 0, fx_pink: 0, fx_rainbow: 0, fx_gold: 0, fx_green: 0, fx_red: 0, skin_rainbow: 0, skin_void_premium: 0, skin_crystal: 0, helper_drone: 0, helper_missile: 0, helper_autoshield: 0, helper_autobomb: 0, helper_autoheal: 0, helper_mercenary: 0, up_extralife: 0, up_doubleDMG: 0, up_enhanced: 0 };
 
 let playerHealth = 100, bossHealth = 400, isShieldActive = false;
 let overdrive = 0, isVictory = false, isShopOpen = false, isDead = false;
@@ -125,6 +125,10 @@ let currentRank = 'rookie';
 let rankXP = 0;
 let rankXPNext = 1000;
 let rankXPDistanceAccum = 0;
+let pendingOfflineCredits = 0;
+let pendingOfflineHours = 0;
+let pendingWelcomeBackCredits = 0;
+let pendingWelcomeBackHours = 0;
 
 let lastTapTime = 0;
 let lastEmpTime = 0;

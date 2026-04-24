@@ -85,6 +85,117 @@ function resetBossPhrase(scene) {
     bossPhraseText.setText('').setAlpha(0).setVisible(false).setBackgroundColor(null).setScale(1).setY(250);
 }
 
+const OFFLINE_TS_KEY = 'GLITCHED_ARENA_LAST_SEEN_AT';
+
+function recordSessionEnd() {
+    try {
+        localStorage.setItem(OFFLINE_TS_KEY, String(Date.now()));
+    } catch (e) {}
+}
+
+function prepareOfflineEarnings() {
+    pendingOfflineCredits = 0;
+    pendingOfflineHours = 0;
+    pendingWelcomeBackCredits = 0;
+    pendingWelcomeBackHours = 0;
+    try {
+        const rawTs = localStorage.getItem(OFFLINE_TS_KEY);
+        recordSessionEnd();
+        if (!rawTs) return;
+        const elapsedMs = Date.now() - Number(rawTs);
+        if (!Number.isFinite(elapsedMs) || elapsedMs < 20 * 60 * 1000) return;
+
+        const cappedMs = Math.min(elapsedMs, 8 * 60 * 60 * 1000);
+        const hours = cappedMs / (60 * 60 * 1000);
+        pendingOfflineCredits = Math.max(120, Math.floor(hours * 140));
+        pendingOfflineHours = Math.max(0.5, Math.round(hours * 10) / 10);
+
+        if (elapsedMs >= 24 * 60 * 60 * 1000) {
+            const welcomeHours = Math.min(elapsedMs / (60 * 60 * 1000), 72);
+            pendingWelcomeBackCredits = 350 + Math.floor(welcomeHours * 12);
+            pendingWelcomeBackHours = Math.round(welcomeHours);
+        }
+    } catch (e) {}
+}
+
+function maybeShowOfflineEarnings(scene) {
+    if (!scene || pendingOfflineCredits <= 0) return;
+    showOfflineEarnings(scene, pendingOfflineCredits, pendingOfflineHours);
+}
+
+function maybeShowWelcomeBackGift(scene) {
+    if (!scene || pendingWelcomeBackCredits <= 0) return;
+    showWelcomeBackGift(scene, pendingWelcomeBackCredits, pendingWelcomeBackHours);
+}
+
+function showOfflineEarnings(scene, amount, hours) {
+    if (!scene || amount <= 0) return;
+    const safeHours = Math.max(0.5, Number(hours || 0.5));
+    const overlay = scene.add.container(0, 0).setDepth(10020);
+    const bg = scene.add.graphics().fillStyle(0x000000, 0.86).fillRect(0, 0, 375, 667);
+    bg.setInteractive(new Phaser.Geom.Rectangle(0, 0, 375, 667), Phaser.Geom.Rectangle.Contains);
+    const panel = scene.add.rectangle(187, 333, 308, 250, 0x10161f).setStrokeStyle(3, 0x00ff88, 0.9);
+    const title = scene.add.text(187, 245, TRANSLATIONS[lang].offline_title || 'IDLE CREDITS', { fontSize: '22px', fontWeight: 'bold', fill: '#00ff88', fontFamily: 'Arial' }).setOrigin(0.5);
+    const body = scene.add.text(187, 305, TRANSLATIONS[lang].offline_body || 'Your scripts kept mining while you were away.', { fontSize: '15px', fill: '#d8fff1', fontFamily: 'Arial', align: 'center', wordWrap: { width: 250 } }).setOrigin(0.5);
+    const rewardText = scene.add.text(187, 365, `+${amount} 💰`, { fontSize: '36px', fontWeight: 'bold', fill: '#ffffff', fontFamily: 'Arial' }).setOrigin(0.5);
+    const hoursText = scene.add.text(187, 410, (TRANSLATIONS[lang].offline_hours || 'Offline: %hours%h').replace('%hours%', safeHours), { fontSize: '14px', fill: '#88ffcc', fontFamily: 'Arial' }).setOrigin(0.5);
+    const claimBtn = scene.add.rectangle(187, 475, 210, 50, 0x00aa55).setInteractive();
+    const claimTxt = scene.add.text(187, 475, TRANSLATIONS[lang].offline_claim || 'COLLECT', { fontSize: '20px', fontWeight: 'bold', fill: '#001a0c', fontFamily: 'Arial' }).setOrigin(0.5);
+
+    claimBtn.on('pointerdown', () => {
+        coins += amount;
+        pendingOfflineCredits = 0;
+        pendingOfflineHours = 0;
+        recordSessionEnd();
+        saveProgress();
+        if (typeof updateHudTexts === 'function') updateHudTexts();
+        scene.cameras.main.flash(350, 0, 255, 136, 0.28);
+        safeHaptic('notification', 'success');
+        overlay.destroy();
+        if (pendingWelcomeBackCredits > 0) scene.time.delayedCall(220, () => maybeShowWelcomeBackGift(scene));
+        if (typeof submitScore === 'function') submitScore().catch(e => console.error('Sync error:', e));
+    });
+
+    overlay.add([bg, panel, title, body, rewardText, hoursText, claimBtn, claimTxt]);
+    overlay.setAlpha(0);
+    scene.tweens.add({ targets: overlay, alpha: 1, duration: 250 });
+}
+
+function showWelcomeBackGift(scene, amount, hours) {
+    if (!scene || amount <= 0) return;
+    const safeHours = Math.max(24, Number(hours || 24));
+    const overlay = scene.add.container(0, 0).setDepth(10030);
+    const bg = scene.add.graphics().fillStyle(0x02040a, 0.9).fillRect(0, 0, 375, 667);
+    bg.setInteractive(new Phaser.Geom.Rectangle(0, 0, 375, 667), Phaser.Geom.Rectangle.Contains);
+    const glow = scene.add.ellipse(187, 255, 260, 140, 0xffcc33, 0.12);
+    const panel = scene.add.rectangle(187, 333, 310, 280, 0x16120b).setStrokeStyle(3, 0xffcc33, 0.95);
+    const title = scene.add.text(187, 225, TRANSLATIONS[lang].welcome_back_title || 'WELCOME BACK', { fontSize: '24px', fontWeight: 'bold', fill: '#ffdd55', fontFamily: 'Arial' }).setOrigin(0.5);
+    const body = scene.add.text(187, 292, TRANSLATIONS[lang].welcome_back_body || 'Your return triggered a bonus cache from the arena core.', { fontSize: '15px', fill: '#fff4c2', fontFamily: 'Arial', align: 'center', wordWrap: { width: 250 } }).setOrigin(0.5);
+    const rewardText = scene.add.text(187, 362, `+${amount} 💰`, { fontSize: '38px', fontWeight: 'bold', fill: '#ffffff', fontFamily: 'Arial' }).setOrigin(0.5);
+    const hoursText = scene.add.text(187, 408, (TRANSLATIONS[lang].welcome_back_hours || 'Away for %hours%h').replace('%hours%', safeHours), { fontSize: '14px', fill: '#ffd56f', fontFamily: 'Arial' }).setOrigin(0.5);
+    const cacheOuter = scene.add.circle(187, 165, 18, 0xffcc33, 0.18).setStrokeStyle(2, 0xffdd88, 0.8);
+    const cacheInner = scene.add.circle(187, 165, 8, 0xffeeaa, 0.95);
+    scene.tweens.add({ targets: [glow, cacheOuter], alpha: { from: 0.1, to: 0.24 }, scaleX: 1.08, scaleY: 1.08, duration: 950, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    const claimBtn = scene.add.rectangle(187, 475, 220, 52, 0xffcc33).setInteractive();
+    const claimTxt = scene.add.text(187, 475, TRANSLATIONS[lang].welcome_back_claim || 'OPEN CACHE', { fontSize: '20px', fontWeight: 'bold', fill: '#2a1e00', fontFamily: 'Arial' }).setOrigin(0.5);
+
+    claimBtn.on('pointerdown', () => {
+        coins += amount;
+        pendingWelcomeBackCredits = 0;
+        pendingWelcomeBackHours = 0;
+        saveProgress();
+        if (typeof updateHudTexts === 'function') updateHudTexts();
+        scene.cameras.main.flash(380, 255, 220, 80, 0.3);
+        safeHaptic('notification', 'success');
+        overlay.destroy();
+        if (typeof submitScore === 'function') submitScore().catch(e => console.error('Sync error:', e));
+    });
+
+    overlay.add([bg, glow, panel, cacheOuter, cacheInner, title, body, rewardText, hoursText, claimBtn, claimTxt]);
+    overlay.setAlpha(0);
+    scene.tweens.add({ targets: overlay, alpha: 1, duration: 260 });
+}
+
 // --- СИСТЕМА СОХРАНЕНИЙ ---
 
 function saveProgress() {
@@ -147,6 +258,10 @@ function initDailyLogin(scene) {
     
     if (lastLoginDate === todayStr) {
         console.log('[DailyLogin] Already claimed today.');
+        scene.time.delayedCall(500, () => {
+            if (pendingOfflineCredits > 0) maybeShowOfflineEarnings(scene);
+            else if (pendingWelcomeBackCredits > 0) maybeShowWelcomeBackGift(scene);
+        });
         return;
     }
 
@@ -196,6 +311,8 @@ function showDailyLoginBonus(scene, day, reward) {
         scene.cameras.main.flash(500, 0, 255, 0, 0.3);
         if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
         overlay.destroy();
+        if (pendingOfflineCredits > 0) scene.time.delayedCall(220, () => maybeShowOfflineEarnings(scene));
+        else if (pendingWelcomeBackCredits > 0) scene.time.delayedCall(220, () => maybeShowWelcomeBackGift(scene));
         if (typeof submitScore === 'function') submitScore().catch(e => console.error('Sync error:', e));
     });
 
@@ -203,6 +320,11 @@ function showDailyLoginBonus(scene, day, reward) {
     overlay.setAlpha(0);
     scene.tweens.add({ targets: overlay, alpha: 1, duration: 300 });
 }
+
+window.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') recordSessionEnd();
+});
+window.addEventListener('pagehide', recordSessionEnd);
 
 function initDailyQuests() {
     const now = Date.now();
