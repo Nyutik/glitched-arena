@@ -64,7 +64,8 @@ let totalDistance = 0, bossesKilled = 0;
 let achievements = { 
     flawless: false, rich: false, marathon: false,
     sharpshooter: false, speedster: false, collector: false,
-    survivor10: false, survivor50: false, bossSlayer: false
+    survivor10: false, survivor50: false, bossSlayer: false,
+    firstBossReward: false
 };
 let bossesSurvived = 0;
 let coinsCollectedThisRun = 0;

@@ -110,6 +110,7 @@ function create() {
     });
 
     this.physics.add.overlap(player, obstacles, (p, o) => { 
+        const earlyDifficulty = getEarlyRunDifficulty();
         if (currentShape === 'phase' && upgradeLevels.ship_phase > 0 && Math.random() < 0.10) {
             o.destroy();
             if (glitchText) glitchText.setText("PHASE SHIFT!").setFill('#aa00ff');
@@ -117,9 +118,10 @@ function create() {
             this.cameras.main.flash(100, 170, 0, 255, 0.3);
             return;
         }
-        o.destroy(); handleDamage(this, 35); 
+        o.destroy(); handleDamage(this, earlyDifficulty.obstacleHit); 
     });
     this.physics.add.overlap(player, bullets, (p, b) => { 
+        const earlyDifficulty = getEarlyRunDifficulty();
         if (currentSkin === 'void_skin' && Math.random() < 0.03) {
             b.destroy();
             if (glitchText) glitchText.setText("VOID DODGE!").setFill('#aa00ff');
@@ -142,7 +144,7 @@ function create() {
             }
         }
         b.destroy(); 
-        let dmg = 15;
+        let dmg = earlyDifficulty.bulletHit;
         if (level >= 40 && !isInSafeZone()) dmg = 25;
         if (level >= 60 && isInStormZone()) dmg = 20;
         if (level >= 70 && absorbedBullets > 0) {
@@ -160,8 +162,8 @@ function create() {
     this.physics.add.overlap(player, items, collectItem, null, this);
     this.physics.add.overlap(minions, playerBullets, (minion, bullet) => { let mx = minion.x; let my = minion.y; minion.destroy(); bullet.destroy(); minionExplode(this, mx, my); checkDailyQuest(this, 'kill50'); awardRankXP(this, 5, 'kill'); });
     this.physics.add.overlap(minions, playerMissiles, (minion, m) => { let mx = minion.x; let my = minion.y; minion.destroy(); m.destroy(); minionExplode(this, mx, my); checkDailyQuest(this, 'kill50'); awardRankXP(this, 5, 'kill'); });
-    this.physics.add.overlap(player, minionBullets, (p, b) => { b.destroy(); handleDamage(this, 10); });
-    this.physics.add.overlap(player, minions, (p, m) => { m.destroy(); handleDamage(this, 20); });
+    this.physics.add.overlap(player, minionBullets, (p, b) => { b.destroy(); handleDamage(this, getEarlyRunDifficulty().minionBulletHit); });
+    this.physics.add.overlap(player, minions, (p, m) => { m.destroy(); handleDamage(this, getEarlyRunDifficulty().minionHit); });
     this.physics.add.overlap(bossShields, playerBullets, (s, b) => { b.destroy(); s.setAlpha(1); this.time.delayedCall(100, () => s.setAlpha(0.4)); });
     comboPopText = this.add.text(0, 0, '', { fontFamily: fontUI, fontSize: '18px', fill: '#00ff00', fontWeight: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(100).setAlpha(0);
     this.rainbowIndex = 0;
@@ -320,6 +322,7 @@ function update(time, delta) {
 
 function startRun(scene) {
     isStarted = true; isVictory = false; isDead = false; isPaused = false; isBossFight = false; isShopOpen = false; shouldAutoStart = false;
+    if (typeof logMetric === 'function') logMetric('run_start', `sector:${level}`);
     clearBattleTexts(scene); cleanupScreenFx(scene); lastObstaclePattern = null;
     currentStats = getShipStats(); 
     let healthBonus = upgradeLevels.health || 0;
@@ -351,7 +354,7 @@ function startRun(scene) {
     scene.obstacleTimer = scene.time.addEvent({ 
         // Делаем спавн чуть более редким (было 1220 - level * 28, min 460)
         // Теперь на 1 уровне 1275мс, на 30 уровне 525мс
-        delay: Math.max(520, 1300 - level * 25), 
+        delay: level <= 1 ? 1650 : level <= 3 ? 1500 : level <= 5 ? 1400 : Math.max(520, 1300 - level * 25), 
         callback: spawnObstacle, 
         callbackScope: scene, 
         loop: true 
@@ -557,15 +560,11 @@ async function logMetric(eventType, extra = null) {
     const tgUser = getTelegramUser();
     if (!tgUser?.id) return;
     try {
-        await fetch(`${botUrl}/submit_score`, {
+        await fetch(`${botUrl}/log_metric`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 telegram_id: tgUser.id,
-                username: tgUser.first_name || tgUser.username || 'PILOT',
-                skin: currentSkin || 'classic',
-                shape: currentShape || 'classic',
-                is_metric: true,
                 event_type: eventType,
                 level: level,
                 score: Math.floor(distance || 0),

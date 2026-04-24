@@ -50,6 +50,14 @@ function showMenu(scene) {
     const miniShip = scene.add.sprite(110, 145, player.texture.key).setScale(0.8).setAlpha(0.8);
     scene.tweens.add({ targets: miniShip, x: 105, duration: 1000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     profileBtn.on('pointerdown', () => { closeMenu(); showProfile(scene, menu); });
+    if (!achievements.firstBossReward) {
+        const missionBox = scene.add.rectangle(187, 185, 320, 40, 0x003322, 0.8).setStrokeStyle(1, 0x00ff88, 0.7);
+        const missionText = scene.add.text(187, 185, lang === 'ru'
+            ? 'ПЕРВАЯ ЦЕЛЬ: ПОБЕДИ БОССА И ПОЛУЧИ ЗОЛОТОЙ ОБЛИК + ДРОН'
+            : 'FIRST TARGET: beat the boss for GOLD SKIN + DRONE',
+            { fontSize: '11px', fontFamily: fontUI, fill: '#00ff88', fontWeight: 'bold', align: 'center', wordWrap: { width: 295 } }).setOrigin(0.5);
+        menu.add([missionBox, missionText]);
+    }
     const questsBtn = scene.add.text(320, 135, "📋", { fontSize: '18px', fill: '#ffffff', backgroundColor: '#222', padding: 8, fontFamily: fontUI }).setOrigin(0.5).setInteractive();
     questsBtn.on('pointerdown', () => { closeMenu(); showDailyQuests(scene, menu); });
     

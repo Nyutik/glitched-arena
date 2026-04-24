@@ -43,11 +43,26 @@ async function triggerVictory(scene) {
     if (bossTurretL) { bossTurretL.destroy(); bossTurretL = null; } if (bossTurretR) { bossTurretR.destroy(); bossTurretR = null; }
     if (secondCore) { secondCore.destroy(); secondCore = null; } if (scene.dualCoreShootTimer) { scene.dualCoreShootTimer.remove(); scene.dualCoreShootTimer = null; }
     const completedLevel = level; level++; bestLevel = Math.max(bestLevel, completedLevel); bossesKilled += 1; bossesSurvived += 1;
+    if (typeof logMetric === 'function') logMetric('boss_killed', `sector:${completedLevel}`);
     awardRankXP(scene, 100, 'boss'); 
     if (bossDamageTaken === 0 && !achievements.flawless) { achievements.flawless = true; showAchievement(scene, 'flawless', TRANSLATIONS[lang].flawlesst, TRANSLATIONS[lang].boss_damage); }
     checkAchievements(scene);
     checkDailyQuest(scene, 'clearboss');
     if (!isShieldActive && upgradeLevels.shield > 0) checkDailyQuest(scene, 'noshield');
+    let rewardInfo = null;
+    if (completedLevel === 1 && !achievements.firstBossReward) {
+        achievements.firstBossReward = true;
+        upgradeLevels.helper_drone = Math.max(upgradeLevels.helper_drone || 0, 1);
+        upgradeLevels.skin_gold = Math.max(upgradeLevels.skin_gold || 0, 1);
+        currentSkin = 'gold';
+        coinsThisRun += 300;
+        rewardInfo = {
+            title: lang === 'ru' ? 'СТАРТОВЫЙ НАБОР РАЗБЛОКИРОВАН' : 'STARTER DROP UNLOCKED',
+            body: lang === 'ru'
+                ? 'ЗОЛОТОЙ ОБЛИК + БОЕВОЙ ДРОН + 300 КРЕДИТОВ'
+                : 'GOLD SKIN + COMBAT DRONE + 300 credits'
+        };
+    }
     saveProgress();
     if (hasTelegramUser()) submitScore({ level: level, best_level: bestLevel });
     let explodeCol = currentExplosionColor || 0xff0000;
@@ -67,22 +82,36 @@ async function triggerVictory(scene) {
             for (let i = 0; i < 40; i++) { let chunk = scene.add.rectangle(boss.x, boss.y, 8, 8, i % 2 === 0 ? explodeCol : 0xffffff).setDepth(5000); scene.physics.add.existing(chunk); let angle = Math.random() * Math.PI * 2; let speed = Phaser.Math.Between(400, 1000); chunk.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed); scene.tweens.add({ targets: chunk, alpha: 0, scale: 0, duration: 2000, onComplete: () => chunk.destroy() }); }
             let vText = scene.add.text(187, 333, TRANSLATIONS[lang].core_destroyed, { fontFamily: 'Courier New', fontSize: '32px', fill: '#ffffff', fontWeight: 'bold', stroke: hexColor, strokeThickness: 12, align: 'center', wordWrap: { width: 340 } }).setOrigin(0.5).setDepth(10000);
             scene.tweens.add({ targets: vText, scale: {from: 0.8, to: 1.1}, duration: 200, yoyo: true, repeat: -1 });
-            scene.time.delayedCall(2500, () => { if (vText) vText.destroy(); showRewardUI(scene, null); });
+            scene.time.delayedCall(2500, () => { if (vText) vText.destroy(); showRewardUI(scene, rewardInfo); });
         }});
-    } else { showRewardUI(scene, null); }
+    } else { showRewardUI(scene, rewardInfo); }
 }
 
-function showRewardUI(scene, titleText) {
+function showRewardUI(scene, rewardInfo = null) {
     clearBattleTexts(scene); cleanupScreenFx(scene);
     const container = scene.add.container(0, 0).setDepth(5001);
     const bg = scene.add.graphics().fillStyle(0x000000, 0.9).fillRect(0, 0, 375, 667);
     container.add(bg);
     const earnedAmount = coinsThisRun;
+    let rewardPanel = null;
+    let rewardTitle = null;
+    let rewardBody = null;
+    if (rewardInfo) {
+        rewardPanel = scene.add.rectangle(187, 252, 345, 132, 0x002233, 0.45).setStrokeStyle(2, 0x00ffff, 0.7);
+        rewardTitle = scene.add.text(187, 210, rewardInfo.title, { fontSize: '22px', fill: '#00ffff', fontWeight: 'bold', fontFamily: 'Arial', align: 'center', wordWrap: { width: 320 } }).setOrigin(0.5);
+        rewardBody = scene.add.text(187, 258, rewardInfo.body, { fontSize: '16px', fill: '#ffffff', fontWeight: 'bold', fontFamily: 'Arial', align: 'center', wordWrap: { width: 320 } }).setOrigin(0.5);
+    }
     const info = scene.add.text(187, 330, `${lang === 'ru' ? 'ДОБЫТО' : 'COLLECTED'}: ${earnedAmount} 💰`, { fontSize: '24px', fill: '#ffff00', fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5);
     const doubleBtn = scene.add.text(187, 420, lang === 'ru' ? 'x2 ЗА РЕКЛАМУ' : 'x2 WITH AD', { fontSize: '20px', fill: '#ffffff', backgroundColor: '#004400', padding: { left: 15, right: 15, top: 10, bottom: 10 }, fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5).setInteractive();
     const collectBtn = scene.add.text(187, 500, lang === 'ru' ? 'ПРОСТО ЗАБРАТЬ' : 'JUST COLLECT', { fontSize: '16px', fill: '#aaaaaa', padding: { left: 10, right: 10, top: 8, bottom: 8 }, fontFamily: 'Arial' }).setOrigin(0.5).setInteractive();
     const duelBtn = scene.add.text(187, 560, ` ⚔️ ${TRANSLATIONS[lang].share_duel} `, { fontSize: '14px', fill: '#00ffff', padding: 10 }).setOrigin(0.5).setInteractive();
-    container.add([info, doubleBtn, collectBtn, duelBtn]);
+    container.add([rewardPanel, rewardTitle, rewardBody, info, doubleBtn, collectBtn, duelBtn].filter(Boolean));
+    if (rewardInfo) {
+        info.setY(335);
+        doubleBtn.setY(430);
+        collectBtn.setY(505);
+        duelBtn.setY(565).setText(` ⚡ ${TRANSLATIONS[lang].share_duel} `);
+    }
     duelBtn.on('pointerdown', () => shareDuel('win'));
     doubleBtn.on('pointerdown', () => { 
         doubleBtn.disableInteractive(); collectBtn.disableInteractive(); 
@@ -122,7 +151,6 @@ function showRewardUI(scene, titleText) {
         }
         
         container.destroy(); 
-        if (titleText && titleText.active) titleText.destroy();
         showShop(scene, null, true);
     }
 }

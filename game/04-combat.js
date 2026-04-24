@@ -111,6 +111,13 @@ function handleDamage(scene, dmg) {
     if (playerHealth <= 0) triggerDeath(scene);
 }
 
+function getEarlyRunDifficulty() {
+    if (level <= 1) return { obstacleHit: 18, bulletHit: 8, minionHit: 12, minionBulletHit: 6, bossBulletScale: 0.72 };
+    if (level <= 3) return { obstacleHit: 24, bulletHit: 10, minionHit: 15, minionBulletHit: 8, bossBulletScale: 0.82 };
+    if (level <= 5) return { obstacleHit: 30, bulletHit: 12, minionHit: 18, minionBulletHit: 9, bossBulletScale: 0.9 };
+    return { obstacleHit: 35, bulletHit: 15, minionHit: 20, minionBulletHit: 10, bossBulletScale: 1 };
+}
+
 function triggerDeath(scene) {
     if (isDead || isVictory) return;
     if (upgradeLevels.up_extralife > 0 && (upgradeLevels.up_extralife_used || 0) < Math.min(5, upgradeLevels.up_extralife)) {
@@ -122,6 +129,7 @@ function triggerDeath(scene) {
         scene.time.delayedCall(1500, () => glitchText.setText(''));
         if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
         return;
+    }
     if (upgradeLevels.helper_autobomb > 0 && isBossFight && boss && boss.active) {
         let bombDmg = bossHealth * 0.8;
         bossHealth -= bombDmg;
@@ -129,7 +137,6 @@ function triggerDeath(scene) {
         scene.cameras.main.flash(300, 255, 0, 255, 0.5);
         if (bullets) bullets.clear(true, true);
         if (bossShields) bossShields.clear(true, true);
-    }
         scene.cameras.main.shake(300, 0.03);
     }
     cleanupScreenFx(scene);
@@ -315,6 +322,7 @@ function useOverdrive() {
 
 function startBossFight(scene) {
     resetBossPhrase(scene); clearBattleTexts(scene);
+    if (typeof logMetric === 'function') logMetric('boss_reached', `sector:${level}`);
     obstacles.clear(true, true); bullets.clear(true, true); isBossFight = true;
     scene.cameras.main.shake(1000, 0.02); scene.cameras.main.flash(500, 255, 0, 255, 0.3);
     let alertText = scene.add.text(187, 333, TRANSLATIONS[lang].warning_boss, { fontSize: '32px', fontFamily: 'Arial', fontWeight: 'bold', fill: '#ff0000', align: 'center' }).setOrigin(0.5).setDepth(1000);
@@ -445,10 +453,14 @@ function isInStormZone() {
 
 function bossShoot() {
     if (isShopOpen || isDead || !isBossFight || isPaused || bullets.getLength() > 200) return;
+    const earlyDifficulty = getEarlyRunDifficulty();
     let baseBullets = 10 + Math.floor(level / 2);
+    if (level <= 3) baseBullets = 6 + level;
+    else if (level <= 5) baseBullets = 8 + level;
     let count = isPhase3 ? 32 : (isPhase2 ? Math.min(26, baseBullets + 6) : Math.min(22, baseBullets));
     if (level >= 50) count = Math.min(36, count + 10);
     let speed = isPhase3 ? 400 : (280 + level * 7);
+    speed *= earlyDifficulty.bossBulletScale;
     let patternType = Math.floor(this.time.now / 5000) % 2;
     let isSniperLevel = (level % 5 === 0);
     if (isSniperLevel && !isPhase3) { speed += 120; patternType = 1; }
@@ -624,7 +636,7 @@ function spawnObstacle() {
     const laneXs = [55, 120, 187, 255, 320];
     
     // Увеличенная базовая скорость (было 315, стало 350 для 1-го уровня)
-    const baseSpeed = level >= 55 ? 480 : level >= 45 ? 460 : level >= 35 ? 430 : level >= 25 ? 400 : level >= 15 ? 380 : 350;
+    const baseSpeed = level <= 1 ? 250 : level <= 3 ? 280 : level <= 5 ? 315 : level >= 55 ? 480 : level >= 45 ? 460 : level >= 35 ? 430 : level >= 25 ? 400 : level >= 15 ? 380 : 350;
     
     const spawnWall = (x, y = -30, scaleX = 1, scaleY = 1, tint = 0xff0000) => { 
         const obstacle = obstacles.create(x, y, 'wall'); 
@@ -668,7 +680,7 @@ function spawnObstacle() {
     };
 
     // На 3 уровне добавляем шанс появления элитного врага
-    if (level >= 3 && Math.random() < 0.15) {
+    if (level >= 5 && Math.random() < (level <= 8 ? 0.08 : 0.15)) {
         spawnElite(Phaser.Utils.Array.GetRandom(laneXs));
         return;
     }
