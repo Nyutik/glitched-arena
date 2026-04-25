@@ -105,7 +105,7 @@ function showRewardUI(scene, rewardInfo = null) {
     const info = scene.add.text(187, 330, `${lang === 'ru' ? 'ДОБЫТО' : 'COLLECTED'}: ${earnedAmount} ${TRANSLATIONS[lang].credits}`, { fontSize: '24px', fill: '#ffff00', fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5);
     const doubleBtn = scene.add.text(187, 420, lang === 'ru' ? 'x2 ЗА РЕКЛАМУ' : 'x2 WITH AD', { fontSize: '20px', fill: '#ffffff', backgroundColor: '#004400', padding: { left: 15, right: 15, top: 10, bottom: 10 }, fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5).setInteractive();
     const collectBtn = scene.add.text(187, 500, lang === 'ru' ? 'ПРОСТО ЗАБРАТЬ' : 'JUST COLLECT', { fontSize: '16px', fill: '#aaaaaa', padding: { left: 10, right: 10, top: 8, bottom: 8 }, fontFamily: 'Arial' }).setOrigin(0.5).setInteractive();
-    const duelBtn = scene.add.text(187, 560, '[DUEL] ' + TRANSLATIONS[lang].share_duel, { fontSize: '14px', fill: '#00ffff', padding: 10, fontFamily: 'Arial' }).setOrigin(0.5).setInteractive();
+    const duelBtn = scene.add.text(187, 560, TRANSLATIONS[lang].share_duel, { fontSize: '14px', fill: '#00ffff', padding: 10, fontFamily: 'Arial' }).setOrigin(0.5).setInteractive();
     container.add([rewardPanel, rewardTitle, rewardBody, info, doubleBtn, collectBtn, duelBtn].filter(Boolean));
     if (rewardInfo) {
         info.setY(335);
