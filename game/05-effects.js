@@ -111,7 +111,7 @@ function showRewardUI(scene, rewardInfo = null) {
         info.setY(335);
         doubleBtn.setY(430);
         collectBtn.setY(505);
-        duelBtn.setY(565).setText('[DUEL] ' + TRANSLATIONS[lang].share_duel);
+        duelBtn.setY(565).setText(TRANSLATIONS[lang].share_duel);
     }
     duelBtn.on('pointerdown', () => shareDuel('win'));
     doubleBtn.on('pointerdown', () => { 
