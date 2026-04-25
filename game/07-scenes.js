@@ -44,6 +44,10 @@ function showShop(scene, mainMenu, fromVictory = false) {
         const noBtn = scene.add.text(254, 385, `[ ${lang === 'ru' ? 'НЕТ' : 'NO'} ]`, { fontSize: '20px', fontFamily: fontUI, fill: '#ff0000', backgroundColor: '#330000', padding: 10 }).setOrigin(0.5).setInteractive().on('pointerdown', () => confirmOverlay.destroy());
         confirmOverlay.add([cBg, panel, txt, price, yesBtn, noBtn]);
     };
+    const isRecommendedShopItem = (type) => {
+        if (starterContracts.firstBoss) return false;
+        return ['speed', 'health', 'meta_plating', 'helper_drone'].includes(type);
+    };
     const createBtn = (y, nameKey, descKey, cost, type, action) => {
         const shipTypes = ['skin_striker', 'ship_tank', 'ship_dart', 'ship_viper', 'ship_phase'];
         const skinTypes = ['skin_gold', 'skin_ghost', 'skin_crimson', 'skin_void', 'skin_plasma', 'skin_solar', 'skin_frost', 'skin_rainbow', 'skin_void_premium', 'skin_crystal'];
@@ -79,6 +83,9 @@ function showShop(scene, mainMenu, fromVictory = false) {
         const textFill = isLocked ? '#555' : (isEquipped ? '#00ffff' : (isStarItem ? '#ffaa00' : '#fff'));
         const btnText = scene.add.text(187, y - 10, `${namet}${!isCustom && maxLvl > 1 ? ` [${curLvl}/${maxLvl}]` : ""} ${priceTag}`, { fontSize: '13px', fontFamily: fontUI, fill: textFill, fontWeight: 'bold' }).setOrigin(0.5);
         const descText = scene.add.text(187, y + 12, TRANSLATIONS[lang][descKey], { fontSize: '10px', fontFamily: fontUI, fill: isLocked ? '#333' : '#999', align: 'center', wordWrap: { width: 310 } }).setOrigin(0.5);
+        const recommendedTag = isRecommendedShopItem(type) && !isOwned && !isLocked && !isMaxed
+            ? scene.add.text(48, y + 14, TRANSLATIONS[lang].recommended, { fontSize: '8px', fontFamily: fontUI, fill: '#00170f', backgroundColor: '#00ff88', padding: { x: 4, y: 2 }, fontWeight: 'bold' }).setOrigin(0, 0.5)
+            : null;
         
         btnBg.on('pointerdown', p => { dragStartX = p.x; dragStartY = p.y; });
         btnBg.on('pointerup', p => {
@@ -110,7 +117,7 @@ function showShop(scene, mainMenu, fromVictory = false) {
                 } else scene.cameras.main.shake(200, 0.01);
             });
         });
-        contentContainer.add([btnBg, btnText, descText]);
+        contentContainer.add([btnBg, btnText, descText, recommendedTag].filter(Boolean));
     };
 
     const addHeader = (y, text) => {
@@ -258,7 +265,11 @@ function showProfile(scene, mainMenu) {
     const scrollWindowHeight = 350; const scrollContainer = scene.add.container(0, 170); overlay.add(scrollContainer);
     const maskShape = scene.make.graphics(); maskShape.fillStyle(0xffffff, 1).fillRect(0, 170, 375, scrollWindowHeight); scrollContainer.setMask(maskShape.createGeometryMask());
     let currentY = 20;
-    const preview = scene.add.sprite(187, currentY + 40, player.texture.key).setScale(3); scrollContainer.add(preview); currentY += 120;
+    const previewGlow = scene.add.circle(187, currentY + 40, 34, 0x00ffff, 0.14);
+    const preview = scene.add.sprite(187, currentY + 40, player.texture.key).setScale(3);
+    scene.tweens.add({ targets: preview, y: currentY + 34, angle: 4, duration: 1500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    scene.tweens.add({ targets: previewGlow, alpha: { from: 0.08, to: 0.22 }, scaleX: 1.08, scaleY: 1.08, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    scrollContainer.add([previewGlow, preview]); currentY += 120;
     let statusText = (level > 40) ? (lang === 'ru' ? "МАСТЕР ГЛИТЧА" : "GLITCH MASTER") : (level > 20) ? (lang === 'ru' ? "ЭЛИТНЫЙ ПИЛОТ" : "ELITE PILOT") : (lang === 'ru' ? "НОВИЧОК" : "ROOKIE");
     scrollContainer.add(scene.add.text(187, currentY, statusText, { fontSize: '18px', fill: level > 40 ? "#ff00ff" : "#00ffff", fontWeight: 'bold' }).setOrigin(0.5)); currentY += 50;
     const statsBox = scene.add.rectangle(187, currentY + 60, 320, 140, 0x111111).setStrokeStyle(1, 0x00ffff, 0.2); scrollContainer.add(statsBox);
@@ -352,7 +363,11 @@ function showHangar(scene, mainMenu) {
     const mask = scene.make.graphics().fillRect(0, scrollAreaTop, 375, scrollHeight).createGeometryMask(); scrollWindow.setMask(mask);
     const title = scene.add.text(187, 30, TRANSLATIONS[lang].hangar_title, { fontSize: '22px', fill: '#00ffff', fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5); overlay.add(title);
     const stats = getShipStats(); const statsBox = scene.add.rectangle(187, 58, 330, 24, 0x222222).setStrokeStyle(1, 0xffff00); const statsText = scene.add.text(187, 58, stats.label, { fontSize: '10px', fill: '#ffff00', fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5); overlay.add([statsBox, statsText]);
-    const previewSprite = scene.add.sprite(285, 190, player.texture.key).setScale(3.5); const glow = scene.add.circle(285, 190, 42, 0x00ffff, 0.15).setDepth(previewSprite.depth - 1); overlay.add([glow, previewSprite]);
+    const previewSprite = scene.add.sprite(285, 190, player.texture.key).setScale(3.5);
+    const glow = scene.add.circle(285, 190, 42, 0x00ffff, 0.15).setDepth(previewSprite.depth - 1);
+    scene.tweens.add({ targets: previewSprite, y: 184, angle: 5, duration: 1450, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    scene.tweens.add({ targets: glow, alpha: { from: 0.08, to: 0.2 }, scaleX: 1.08, scaleY: 1.08, duration: 1050, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    overlay.add([glow, previewSprite]);
     let currentY = 0;
     const leftX = 15;
     contentContainer.add(scene.add.text(leftX, scrollAreaTop + currentY, TRANSLATIONS[lang].hull_type, { fontSize: '13px', fill: '#ff00ff', fontWeight: 'bold', fontFamily: fontUI })); currentY += 28;

@@ -61,7 +61,7 @@ function showMenu(scene) {
     const closeMenu = () => { if (scene.glitchTimer) scene.glitchTimer.remove(); menu.setVisible(false); };
     const profileBtn = scene.add.text(187, 126, TRANSLATIONS[lang].profile, { fontSize: '16px', fontFamily: fontUI, fill: '#00ffff', fontWeight: 'bold' }).setOrigin(0.5).setInteractive();
     const showcaseTrail = scene.add.ellipse(187, 235, 105, 18, 0x00ffff, 0.12);
-    const showcaseShip = scene.add.sprite(187, 205, player.texture.key).setScale(2.45).setAlpha(0.98).setAngle(-4);
+    const showcaseShip = scene.add.sprite(187, 205, player?.texture?.key || 'pixel').setScale(2.45).setAlpha(0.98).setAngle(-4);
     const loadoutLabel = scene.add.text(187, 270, lang === 'ru' ? 'АКТИВНАЯ СБОРКА' : 'ACTIVE LOADOUT', { fontSize: '10px', fontFamily: fontUI, fill: '#88ffee', fontWeight: 'bold', letterSpacing: 1 }).setOrigin(0.5);
     const loadoutStats = scene.add.text(187, 289, currentStats.label, { fontSize: '10px', fontFamily: fontUI, fill: '#ffe680', fontWeight: 'bold', align: 'center', wordWrap: { width: 270 } }).setOrigin(0.5);
     const flavorText = scene.add.text(187, 311, lang === 'ru' ? 'НЕОН. СКОРОСТЬ. ОХОТА ЗА ЯДРОМ.' : 'NEON. SPEED. CORE HUNT.', { fontSize: '10px', fontFamily: fontUI, fill: '#8aa4bf', fontStyle: 'italic' }).setOrigin(0.5);
@@ -73,25 +73,26 @@ function showMenu(scene) {
         droneOrbit = scene.add.container(0, 0, [droneHalo, showcaseDrone, droneCore]);
         scene.tweens.add({ targets: droneOrbit, x: -6, y: -5, duration: 950, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     }
-    scene.tweens.add({ targets: showcaseShip, y: 199, angle: 4, duration: 1500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    scene.time.delayedCall(400, () => {
+        if (showcaseShip && showcaseShip.active) {
+            scene.tweens.add({ targets: showcaseShip, y: showcaseShip.y - 6, angle: 4, duration: 1500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        }
+    });
     scene.tweens.add({ targets: [heroGlow, heroAura], alpha: { from: 0.08, to: 0.2 }, scaleX: 1.04, scaleY: 1.06, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     scene.tweens.add({ targets: showcaseTrail, alpha: { from: 0.08, to: 0.22 }, width: 125, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     profileBtn.on('pointerdown', () => { closeMenu(); showProfile(scene, menu); });
-    if (!achievements.firstBossReward) {
-        const missionBox = scene.add.rectangle(187, 325, 320, 44, 0x003322, 0.82).setStrokeStyle(1, 0x00ff88, 0.7);
-        const missionText = scene.add.text(187, 325, lang === 'ru'
-            ? 'ПЕРВАЯ ЦЕЛЬ: ПОБЕДИ БОССА И ПОЛУЧИ ЗОЛОТОЙ ОБЛИК + ДРОН'
-            : 'FIRST TARGET: beat the boss for GOLD SKIN + DRONE',
-            { fontSize: '11px', fontFamily: fontUI, fill: '#00ff88', fontWeight: 'bold', align: 'center', wordWrap: { width: 295 } }).setOrigin(0.5);
-        menu.add([missionBox, missionText]);
-    }
-    const questsBtn = scene.add.text(320, 135, "📋", { fontSize: '18px', fill: '#ffffff', backgroundColor: '#222', padding: 8, fontFamily: fontUI }).setOrigin(0.5).setInteractive();
+    const startY = 352;
+    const hangarY = 410;
+    const shopY = 462;
+    const settingsY = 514;
+    const soundY = 556;
+    const questsBtn = scene.add.text(320, 135, '📋', { fontSize: '18px', fill: '#ffffff', backgroundColor: '#222', padding: 8, fontFamily: fontUI }).setOrigin(0.5).setInteractive();
     questsBtn.on('pointerdown', () => { closeMenu(); showDailyQuests(scene, menu); });
     
     const langBtn = scene.add.text(320, 35, lang.toUpperCase(), { fontSize: '14px', fill: '#ffff00', backgroundColor: '#222', padding: 8, fontFamily: fontUI }).setOrigin(0.5).setInteractive();
     langBtn.on('pointerdown', () => { lang = (lang === 'ru') ? 'en' : 'ru'; saveProgress(); if (scene.glitchTimer) scene.glitchTimer.remove(); menu.destroy(); showMenu(scene); });
     
-    const communityBtn = scene.add.text(320, 85, "💎", { fontSize: '18px', fill: '#ffffff', backgroundColor: '#222', padding: 8, fontFamily: fontUI }).setOrigin(0.5).setInteractive();
+    const communityBtn = scene.add.text(320, 85, '💎', { fontSize: '18px', fill: '#ffffff', backgroundColor: '#222', padding: 8, fontFamily: fontUI }).setOrigin(0.5).setInteractive();
     communityBtn.on('pointerdown', async () => { 
         const url = 'https://t.me/GlitchedArenaCommunity';
         if (window.Telegram?.WebApp) { Telegram.WebApp.openTelegramLink(url); } else { window.open(url, '_blank'); }
@@ -108,9 +109,10 @@ function showMenu(scene) {
                     showToast(scene, "ELITE UNLOCKED!", data.message);
                     currentSkin = 'elite';
                     upgradeLevels.skin_elite = 1; // Явно ставим флаг локально
+                    if (typeof refreshPlayerAppearance === 'function') refreshPlayerAppearance(scene);
                     saveProgress();
                     if (typeof submitScore === 'function') submitScore();
-                    if (showcaseShip) showcaseShip.setTint(SKIN_DATA.elite.body);
+                    if (showcaseShip && player) showcaseShip.setTexture(player.texture.key);
                 } else if (data.status === 'not_member') {
                     showToast(scene, "ACCESS DENIED", TRANSLATIONS[lang].rule_community);
                 } else if (data.status === 'already_claimed') {
@@ -120,13 +122,13 @@ function showMenu(scene) {
         });
     });
     const btnStyle = { fontSize: '18px', fill: '#fff', backgroundColor: '#222', padding: 10, fontFamily: fontUI, fontWeight: 'bold' };
-    const startPulse = scene.add.rectangle(187, 382, 276, 54, 0x00d7ff, 0.14).setStrokeStyle(2, 0x00ffff, 0.95);
-    const startBtn = scene.add.text(187, 382, TRANSLATIONS[lang].start, { fontSize: '19px', fill: '#ffffff', backgroundColor: '#003746', padding: { left: 18, right: 18, top: 10, bottom: 10 }, fontFamily: fontUI, fontWeight: 'bold' }).setOrigin(0.5).setInteractive();
-    const hangarBtn = scene.add.text(187, 440, TRANSLATIONS[lang].hangar, btnStyle).setOrigin(0.5).setInteractive();
-    const shopBtn = scene.add.text(187, 492, TRANSLATIONS[lang].shop, btnStyle).setOrigin(0.5).setInteractive();
-    const setBtn = scene.add.text(187, 544, TRANSLATIONS[lang].settings, btnStyle).setOrigin(0.5).setInteractive();
+    const startPulse = scene.add.rectangle(187, startY, 276, 54, 0x00d7ff, 0.14).setStrokeStyle(2, 0x00ffff, 0.95);
+    const startBtn = scene.add.text(187, startY, TRANSLATIONS[lang].start, { fontSize: '19px', fill: '#ffffff', backgroundColor: '#003746', padding: { left: 18, right: 18, top: 10, bottom: 10 }, fontFamily: fontUI, fontWeight: 'bold' }).setOrigin(0.5).setInteractive();
+    const hangarBtn = scene.add.text(187, hangarY, TRANSLATIONS[lang].hangar, btnStyle).setOrigin(0.5).setInteractive();
+    const shopBtn = scene.add.text(187, shopY, TRANSLATIONS[lang].shop, btnStyle).setOrigin(0.5).setInteractive();
+    const setBtn = scene.add.text(187, settingsY, TRANSLATIONS[lang].settings, btnStyle).setOrigin(0.5).setInteractive();
     let audioState = isSoundOn ? TRANSLATIONS[lang].v_on : TRANSLATIONS[lang].v_off;
-    const soundBtn = scene.add.text(187, 586, `>> ${TRANSLATIONS[lang].audio}: ${audioState}`, { fontSize: '15px', fill: '#fff', backgroundColor: '#222', padding: 8, fontFamily: fontUI, fontWeight: 'bold' }).setOrigin(0.5).setInteractive();
+    const soundBtn = scene.add.text(187, soundY, `>> ${TRANSLATIONS[lang].audio}: ${audioState}`, { fontSize: '15px', fill: '#fff', backgroundColor: '#222', padding: 8, fontFamily: fontUI, fontWeight: 'bold' }).setOrigin(0.5).setInteractive();
     const rulesBtn = scene.add.text(102, 633, TRANSLATIONS[lang].rules, { fontSize: '13px', fill: '#d3b4ff', backgroundColor: '#23142f', padding: 8, fontFamily: fontUI, fontWeight: 'bold' }).setOrigin(0.5).setInteractive();
     const topBtn = scene.add.text(274, 633, TRANSLATIONS[lang].top, { fontSize: '13px', fill: '#ffff00', backgroundColor: '#333300', padding: 8, fontFamily: fontUI, fontWeight: 'bold' }).setOrigin(0.5).setInteractive();
     scene.tweens.add({ targets: [startPulse, startBtn], scaleX: 1.03, scaleY: 1.03, alpha: { from: 0.92, to: 1 }, duration: 850, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
@@ -183,7 +185,7 @@ function showDailyQuests(scene, mainMenu) {
     const quests = [
         { key: 'kill50', icon: '💀', color: '#ff6666' },
         { key: 'noshield', icon: '🛡️', color: '#66aaff' },
-        { key: 'combo15', icon: '⚡', color: '#ffff66' },
+        { key: 'combo15', icon: '🔥', color: '#ffff66' },
         { key: 'clearboss', icon: '👑', color: '#ff66ff' }
     ];
     let yPos = 120;
@@ -251,21 +253,21 @@ function showRules(scene, mainMenu) {
         { key: 'pixel', c: 0xff00ff, t: TRANSLATIONS[lang].rule_nuke, angle: 45, scale: 2.2 },
         { key: 'pixel', c: 0xff00ff, t: TRANSLATIONS[lang].rule_magnet, angle: 180, scale: 1.6 },
         { key: 'pixel', c: 0x00ff00, t: TRANSLATIONS[lang].rule_slowmo, scale: 1.6 },
-        { key: 'wall', c: 0x00ffff, t: lang === 'ru' ? "ЭЛИТНЫЙ УЗЕЛ (3 хита): +25 💰" : "ELITE NODE (3 hits): +25 💰", scale: 0.8 },
+        { key: 'wall', c: 0x00ffff, t: lang === 'ru' ? 'ЭЛИТНЫЙ УЗЕЛ (3 удара): +25 💰' : 'ELITE NODE (3 hits): +25 💰', scale: 0.8 },
         { key: 'ui_crystal', c: 0xffffff, t: TRANSLATIONS[lang].rule_community, scale: 1.5 }
     ];
     itemsList.forEach((item, i) => { 
         let y = scrollAreaTop + currentY + 20; 
         if (item.key === 'ui_crystal') {
-            // Рисуем эмодзи вместо спрайта
-            let icon = scene.add.text(75, y, "💎", { fontSize: '18px' }).setOrigin(0.5);
+            // Р В Р С‘РЎРѓРЎС“Р ВµР С РЎРЊР СР С•Р Т‘Р В·Р С‘ Р Р†Р СР ВµРЎРѓРЎвЂљР С• РЎРѓР С—РЎР‚Р В°Р в„–РЎвЂљР В°
+            let icon = scene.add.text(75, y, '💎', { fontSize: '18px' }).setOrigin(0.5);
             contentContainer.add(icon);
         } else {
             let icon = scene.add.sprite(75, y, item.key).setTint(item.c); 
             icon.setScale(item.scale || (item.key === 'pixel' ? 1.8 : 0.6)); 
             if (item.angle) icon.setAngle(item.angle); 
             
-            // Если это элитный узел, добавляем сияние и в правилах
+            // Р вЂўРЎРѓР В»Р С‘ РЎРЊРЎвЂљР С• РЎРЊР В»Р С‘РЎвЂљР Р…РЎвЂ№Р в„– РЎС“Р В·Р ВµР В», Р Т‘Р С•Р В±Р В°Р Р†Р В»РЎРЏР ВµР С РЎРѓР С‘РЎРЏР Р…Р С‘Р Вµ Р С‘ Р Р† Р С—РЎР‚Р В°Р Р†Р С‘Р В»Р В°РЎвЂ¦
             if (item.t.includes("ЭЛИТ") || item.t.includes("ELITE")) {
                 const rulesGlow = scene.add.circle(75, y, 15, 0x00ffff, 0.3);
                 scene.tweens.add({ targets: rulesGlow, alpha: 0.6, scale: 1.5, duration: 800, yoyo: true, repeat: -1 });
@@ -279,7 +281,7 @@ function showRules(scene, mainMenu) {
         currentY += 35; 
     });
     currentY += 5;
-    const comboTip = scene.add.text(187, scrollAreaTop + currentY, TRANSLATIONS[lang].combo_tip || "⚡ COMBO: Evade obstacles to build, resets on hit!", { fontSize: '10px', fill: '#ffff00', fontFamily: fontUI, align: 'center', wordWrap: { width: 320 } }).setOrigin(0.5); contentContainer.add(comboTip); currentY += 25;
+    const comboTip = scene.add.text(187, scrollAreaTop + currentY, TRANSLATIONS[lang].combo_tip || '🔥 COMBO: Evade obstacles to build, resets on hit!', { fontSize: '10px', fill: '#ffff00', fontFamily: fontUI, align: 'center', wordWrap: { width: 320 } }).setOrigin(0.5); contentContainer.add(comboTip); currentY += 25;
     currentY += 15;
     const stagesTitle = scene.add.text(187, scrollAreaTop + currentY, TRANSLATIONS[lang].rules_alerts, { fontSize: '14px', fill: '#ff00ff', fontWeight: 'bold' }).setOrigin(0.5); contentContainer.add(stagesTitle); currentY += 28;
     const stagesBg = scene.add.rectangle(187, scrollAreaTop + currentY + 75, 340, 150, 0x110011, 0.8).setStrokeStyle(1, 0xff00ff, 0.5); contentContainer.add(stagesBg);
@@ -289,10 +291,10 @@ function showRules(scene, mainMenu) {
     const strategyBoxH = 55;
     const shopBox = scene.add.rectangle(187, scrollAreaTop + currentY + strategyBoxH/2, 310, strategyBoxH, 0x00ffff, 0.05).setStrokeStyle(1, 0x00ffff); const shopTxt = scene.add.text(187, scrollAreaTop + currentY + strategyBoxH/2, strategyText, { fontSize: '11px', fill: '#00ffff', align: 'center', fontFamily: fontUI, wordWrap: { width: 280 } }).setOrigin(0.5); contentContainer.add([shopBox, shopTxt]); currentY += strategyBoxH + 15;
     
-    const hTitle = scene.add.text(187, scrollAreaTop + currentY, lang === 'ru' ? "--- ПРОГРАММА ПРИВИЛЕГИЙ ---" : "--- PILOT PRIVILEGES ---", { fontSize: '14px', fill: '#ffff00', fontWeight: 'bold' }).setOrigin(0.5); contentContainer.add(hTitle); currentY += 30;
+    const hTitle = scene.add.text(187, scrollAreaTop + currentY, lang === 'ru' ? '--- ПИЛОТНЫЕ ПРИВИЛЕГИИ ---' : '--- PILOT PRIVILEGES ---', { fontSize: '14px', fill: '#ffff00', fontWeight: 'bold' }).setOrigin(0.5); contentContainer.add(hTitle); currentY += 30;
     const bonusText = (lang === 'ru' 
-        ? "• СООБЩЕСТВО: Скин ELITE + 1000 💰 за 💎\n• РЕФЕРАЛЫ: +1500 💰 за каждого друга!\n• ЛОГИН: Заходи 7 дней подряд - получи 3000 💰" 
-        : "• COMMUNITY: ELITE skin + 1000 💰 for 💎\n• REFERRALS: +1500 💰 per invited friend!\n• LOGIN: Enter 7 days in a row for 3000 💰");
+        ? '• СООБЩЕСТВО: скин ELITE + 1000 💰 за 💎\n• РЕФЕРАЛЫ: +1500 💰 за каждого друга!\n• ЛОГИН: заходи 7 дней подряд и получи 3000 💰'
+        : '• COMMUNITY: ELITE skin + 1000 💰 for 💎\n• REFERRALS: +1500 💰 per invited friend!\n• LOGIN: Enter 7 days in a row for 3000 💰');
     const bonusTxt = scene.add.text(187, scrollAreaTop + currentY, bonusText, { fontSize: '11px', fill: '#ffffff', fontFamily: fontUI, align: 'left', lineSpacing: 5 }).setOrigin(0.5); contentContainer.add(bonusTxt); currentY += 60;
 
     // --- ОБУЧЕНИЕ (РУКА) — внизу контента ---
@@ -337,7 +339,7 @@ function showGaryIntro(scene) {
     const heroShip = scene.add.sprite(187, 170, player.texture.key).setScale(2.2).setAngle(-5);
     scene.tweens.add({ targets: heroShip, y: 164, angle: 5, duration: 1350, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     const title = scene.add.text(187, 80, lang === 'ru' ? 'БЫСТРЫЙ СТАРТ' : 'QUICK START', { fontSize: '28px', fill: '#00ffff', fontWeight: 'bold', fontFamily: fontUI, stroke: '#00141e', strokeThickness: 4 }).setOrigin(0.5);
-    const subtitle = scene.add.text(187, 115, lang === 'ru' ? '30 секунд, и ты уже в арене' : '30 seconds and you are in the arena', { fontSize: '14px', fill: '#b5efff', fontFamily: fontUI }).setOrigin(0.5);
+    const subtitle = scene.add.text(187, 115, lang === 'ru' ? '30 секунд, и ты уже на арене' : '30 seconds and you are in the arena', { fontSize: '14px', fill: '#b5efff', fontFamily: fontUI }).setOrigin(0.5);
     const hand = scene.add.text(120, 430, '👆', { fontSize: '62px' }).setOrigin(0.5);
     scene.tweens.add({ targets: hand, x: { from: 120, to: 250 }, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
 
@@ -346,10 +348,10 @@ function showGaryIntro(scene) {
     const tip2Box = scene.add.rectangle(187, 315, 260, 48, 0x201b10, 0.85).setStrokeStyle(1, 0xffcc33, 0.45);
     const tip2 = scene.add.text(187, 315, lang === 'ru' ? 'КОРАБЛЬ СТРЕЛЯЕТ САМ' : 'AUTO-FIRE IS ON', { fontSize: '17px', fill: '#ffdd66', fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5);
     const tip3Box = scene.add.rectangle(187, 375, 260, 48, 0x112015, 0.85).setStrokeStyle(1, 0x00ff88, 0.45);
-    const tip3 = scene.add.text(187, 375, lang === 'ru' ? 'ПОБЕДИ ПЕРВОГО БОССА И ПОЛУЧИ НАБОР' : 'BEAT THE FIRST BOSS FOR A STARTER DROP', { fontSize: '14px', fill: '#88ffbf', fontWeight: 'bold', fontFamily: fontUI, align: 'center', wordWrap: { width: 230 } }).setOrigin(0.5);
+    const tip3 = scene.add.text(187, 375, lang === 'ru' ? 'ПОБЕДИ ПЕРВОГО БОССА И ПОЛУЧИ НАГРАДУ' : 'BEAT THE FIRST BOSS FOR A STARTER DROP', { fontSize: '14px', fill: '#88ffbf', fontWeight: 'bold', fontFamily: fontUI, align: 'center', wordWrap: { width: 230 } }).setOrigin(0.5);
 
     const closeBtn = scene.add.rectangle(187, 550, 228, 58, 0x00ff88).setInteractive().setStrokeStyle(3, 0xffffff, 0.9);
-    const closeTxt = scene.add.text(187, 550, lang === 'ru' ? "ВЛЕТЕТЬ В АРЕНУ" : "ENTER THE ARENA", { fontSize: '20px', fill: '#001d12', fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5);
+    const closeTxt = scene.add.text(187, 550, lang === 'ru' ? 'ВЛЕТЕТЬ В АРЕНУ' : 'ENTER THE ARENA', { fontSize: '20px', fill: '#001d12', fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5);
 
     intro.add([bg, glow, panel, heroFrame, heroShip, title, subtitle, tip1Box, tip1, tip2Box, tip2, tip3Box, tip3, hand, closeBtn, closeTxt]);
     scene.tweens.add({ targets: [closeBtn, glow], scaleX: 1.03, scaleY: 1.03, alpha: { from: 0.92, to: 1 }, duration: 700, yoyo: true, repeat: -1 });

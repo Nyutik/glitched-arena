@@ -73,6 +73,7 @@ let usedOverdriveOnly = false;
 let bossDamageTaken = 0;
 let overdriveUsedToKill = false;
 let dailyQuests = {};
+let starterContracts = { survive500: false, firstUpgrade: false, firstBoss: false };
 let lastDailyReset = null;
 let dailyLoginStreak = 0;
 let lastLoginDate = null;

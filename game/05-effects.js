@@ -1,7 +1,7 @@
 // ============================================
-// 05-EFFECTS.JS — Эффекты и визуал
+// 05-EFFECTS.JS РІР‚вЂќ Р В­РЎвЂћРЎвЂћР ВµР С”РЎвЂљРЎвЂ№ Р С‘ Р Р†Р С‘Р В·РЎС“Р В°Р В»
 // ============================================
-// За что отвечает:
+// Р вЂ”Р В° РЎвЂЎРЎвЂљР С• Р С•РЎвЂљР Р†Р ВµРЎвЂЎР В°Р ВµРЎвЂљ:
 // - showDamageText, showComboEffect
 // - triggerVictory, showRewardUI, showAdSafe
 // - applyGlitchEffect, startTitleGlitch
@@ -55,13 +55,14 @@ async function triggerVictory(scene) {
         upgradeLevels.helper_drone = Math.max(upgradeLevels.helper_drone || 0, 1);
         upgradeLevels.skin_gold = Math.max(upgradeLevels.skin_gold || 0, 1);
         currentSkin = 'gold';
+        if (typeof refreshPlayerAppearance === 'function') refreshPlayerAppearance(scene);
         coinsThisRun += 300;
-        rewardInfo = {
-            title: lang === 'ru' ? 'СТАРТОВЫЙ НАБОР РАЗБЛОКИРОВАН' : 'STARTER DROP UNLOCKED',
-            body: lang === 'ru'
-                ? 'ЗОЛОТОЙ ОБЛИК + БОЕВОЙ ДРОН + 300 КРЕДИТОВ'
-                : 'GOLD SKIN + COMBAT DRONE + 300 credits'
-        };
+            rewardInfo = {
+                title: lang === 'ru' ? 'СТАРТОВЫЙ НАБОР РАЗБЛОКИРОВАН' : 'STARTER DROP UNLOCKED',
+                body: lang === 'ru'
+                    ? 'ЗОЛОТОЙ ОБЛИК + БОЕВОЙ ДРОН + 300 КРЕДИТОВ'
+                    : 'GOLD SKIN + COMBAT DRONE + 300 credits'
+            };
     }
     saveProgress();
     if (hasTelegramUser()) submitScore({ level: level, best_level: bestLevel });
@@ -101,16 +102,16 @@ function showRewardUI(scene, rewardInfo = null) {
         rewardTitle = scene.add.text(187, 210, rewardInfo.title, { fontSize: '22px', fill: '#00ffff', fontWeight: 'bold', fontFamily: 'Arial', align: 'center', wordWrap: { width: 320 } }).setOrigin(0.5);
         rewardBody = scene.add.text(187, 258, rewardInfo.body, { fontSize: '16px', fill: '#ffffff', fontWeight: 'bold', fontFamily: 'Arial', align: 'center', wordWrap: { width: 320 } }).setOrigin(0.5);
     }
-    const info = scene.add.text(187, 330, `${lang === 'ru' ? 'ДОБЫТО' : 'COLLECTED'}: ${earnedAmount} 💰`, { fontSize: '24px', fill: '#ffff00', fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5);
+    const info = scene.add.text(187, 330, `${lang === 'ru' ? 'ДОБЫТО' : 'COLLECTED'}: ${earnedAmount} ${TRANSLATIONS[lang].credits}`, { fontSize: '24px', fill: '#ffff00', fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5);
     const doubleBtn = scene.add.text(187, 420, lang === 'ru' ? 'x2 ЗА РЕКЛАМУ' : 'x2 WITH AD', { fontSize: '20px', fill: '#ffffff', backgroundColor: '#004400', padding: { left: 15, right: 15, top: 10, bottom: 10 }, fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5).setInteractive();
     const collectBtn = scene.add.text(187, 500, lang === 'ru' ? 'ПРОСТО ЗАБРАТЬ' : 'JUST COLLECT', { fontSize: '16px', fill: '#aaaaaa', padding: { left: 10, right: 10, top: 8, bottom: 8 }, fontFamily: 'Arial' }).setOrigin(0.5).setInteractive();
-    const duelBtn = scene.add.text(187, 560, ` ⚔️ ${TRANSLATIONS[lang].share_duel} `, { fontSize: '14px', fill: '#00ffff', padding: 10 }).setOrigin(0.5).setInteractive();
+    const duelBtn = scene.add.text(187, 560, '[DUEL] ' + TRANSLATIONS[lang].share_duel, { fontSize: '14px', fill: '#00ffff', padding: 10, fontFamily: 'Arial' }).setOrigin(0.5).setInteractive();
     container.add([rewardPanel, rewardTitle, rewardBody, info, doubleBtn, collectBtn, duelBtn].filter(Boolean));
     if (rewardInfo) {
         info.setY(335);
         doubleBtn.setY(430);
         collectBtn.setY(505);
-        duelBtn.setY(565).setText(` ⚡ ${TRANSLATIONS[lang].share_duel} `);
+        duelBtn.setY(565).setText('[DUEL] ' + TRANSLATIONS[lang].share_duel);
     }
     duelBtn.on('pointerdown', () => shareDuel('win'));
     doubleBtn.on('pointerdown', () => { 
@@ -123,11 +124,11 @@ function showRewardUI(scene, rewardInfo = null) {
     });
 
     async function finalizeCollection(finalSum) {
-        // Сначала сохраняем в локальные монеты
+        // Р РЋР Р…Р В°РЎвЂЎР В°Р В»Р В° РЎРѓР С•РЎвЂ¦РЎР‚Р В°Р Р…РЎРЏР ВµР С Р Р† Р В»Р С•Р С”Р В°Р В»РЎРЉР Р…РЎвЂ№Р Вµ Р СР С•Р Р…Р ВµРЎвЂљРЎвЂ№
         const oldCoins = coins;
         coins += finalSum;
         
-        // Обнуляем "забег" только после того, как учли его в общем балансе
+        // Р С›Р В±Р Р…РЎС“Р В»РЎРЏР ВµР С "Р В·Р В°Р В±Р ВµР С–" РЎвЂљР С•Р В»РЎРЉР С”Р С• Р С—Р С•РЎРѓР В»Р Вµ РЎвЂљР С•Р С–Р С•, Р С”Р В°Р С” РЎС“РЎвЂЎР В»Р С‘ Р ВµР С–Р С• Р Р† Р С•Р В±РЎвЂ°Р ВµР С Р В±Р В°Р В»Р В°Р Р…РЎРѓР Вµ
         coinsThisRun = 0;
         
         if (coins >= 5000 && !achievements.rich) achievements.rich = true;
@@ -140,7 +141,7 @@ function showRewardUI(scene, rewardInfo = null) {
         
         saveProgress(); 
         
-        // Отправляем на сервер и ждем подтверждения
+        // Р С›РЎвЂљР С—РЎР‚Р В°Р Р†Р В»РЎРЏР ВµР С Р Р…Р В° РЎРѓР ВµРЎР‚Р Р†Р ВµРЎР‚ Р С‘ Р В¶Р Т‘Р ВµР С Р С—Р С•Р Т‘РЎвЂљР Р†Р ВµРЎР‚Р В¶Р Т‘Р ВµР Р…Р С‘РЎРЏ
         if (hasTelegramUser()) {
             try {
                 await submitScore();
@@ -161,7 +162,7 @@ async function showAdSafe(onDone) {
         if (!window.Telegram?.WebApp || !tgUser?.id) { console.log('Adsgram unavailable outside Telegram, skip ad'); onDone?.(); return; }
         if (!window.adController || typeof window.adController.show !== 'function') { console.log('Adsgram controller missing, skip ad'); onDone?.(); return; }
         const result = await window.adController.show();
-        if (result?.done) onDone?.(); else alert(lang === 'ru' ? 'Досмотри рекламу до конца!' : 'Watch till the end!');
+        if (result?.done) onDone?.(); else alert(lang === 'ru' ? 'Р вЂќР С•РЎРѓР СР С•РЎвЂљРЎР‚Р С‘ РЎР‚Р ВµР С”Р В»Р В°Р СРЎС“ Р Т‘Р С• Р С”Р С•Р Р…РЎвЂ Р В°!' : 'Watch till the end!');
     } catch (e) { console.log('Adsgram failure - silent bypass:', e); onDone?.(); }
 }
 

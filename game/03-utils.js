@@ -1,7 +1,7 @@
 // ============================================
-// 03-UTILS.JS — Утилиты и сохранения
+// 03-UTILS.JS — Вспомогательные функции
 // ============================================
-// За что отвечает:
+// Р В Р’В Р вЂ™Р’В Р В Р вЂ Р В РІР‚С™Р Р†Р вЂљРЎСљР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В° Р В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р В Р вЂ№Р В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р РЋРІвЂћСћР В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎС› Р В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎС›Р В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р РЋРІвЂћСћР В Р’В Р вЂ™Р’В Р В Р’В Р Р†Р вЂљР’В Р В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’ВµР В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р В Р вЂ№Р В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В°Р В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’ВµР В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р РЋРІвЂћСћ:
 // - playSound, safeHaptic, safeKillTweens, safeRemoveTimer
 // - ensureBgm, cleanupScreenFx, clearBattleTexts, resetBossPhrase
 // - hasTelegramUser, getTelegramUser
@@ -137,7 +137,7 @@ function showOfflineEarnings(scene, amount, hours) {
     const panel = scene.add.rectangle(187, 333, 308, 250, 0x10161f).setStrokeStyle(3, 0x00ff88, 0.9);
     const title = scene.add.text(187, 245, TRANSLATIONS[lang].offline_title || 'IDLE CREDITS', { fontSize: '22px', fontWeight: 'bold', fill: '#00ff88', fontFamily: 'Arial' }).setOrigin(0.5);
     const body = scene.add.text(187, 305, TRANSLATIONS[lang].offline_body || 'Your scripts kept mining while you were away.', { fontSize: '15px', fill: '#d8fff1', fontFamily: 'Arial', align: 'center', wordWrap: { width: 250 } }).setOrigin(0.5);
-    const rewardText = scene.add.text(187, 365, `+${amount} 💰`, { fontSize: '36px', fontWeight: 'bold', fill: '#ffffff', fontFamily: 'Arial' }).setOrigin(0.5);
+    const rewardText = scene.add.text(187, 365, `+${amount} ${TRANSLATIONS[lang].credits}`, { fontSize: '36px', fontWeight: 'bold', fill: '#ffffff', fontFamily: 'Arial' }).setOrigin(0.5);
     const hoursText = scene.add.text(187, 410, (TRANSLATIONS[lang].offline_hours || 'Offline: %hours%h').replace('%hours%', safeHours), { fontSize: '14px', fill: '#88ffcc', fontFamily: 'Arial' }).setOrigin(0.5);
     const claimBtn = scene.add.rectangle(187, 475, 210, 50, 0x00aa55).setInteractive();
     const claimTxt = scene.add.text(187, 475, TRANSLATIONS[lang].offline_claim || 'COLLECT', { fontSize: '20px', fontWeight: 'bold', fill: '#001a0c', fontFamily: 'Arial' }).setOrigin(0.5);
@@ -171,7 +171,7 @@ function showWelcomeBackGift(scene, amount, hours) {
     const panel = scene.add.rectangle(187, 333, 310, 280, 0x16120b).setStrokeStyle(3, 0xffcc33, 0.95);
     const title = scene.add.text(187, 225, TRANSLATIONS[lang].welcome_back_title || 'WELCOME BACK', { fontSize: '24px', fontWeight: 'bold', fill: '#ffdd55', fontFamily: 'Arial' }).setOrigin(0.5);
     const body = scene.add.text(187, 292, TRANSLATIONS[lang].welcome_back_body || 'Your return triggered a bonus cache from the arena core.', { fontSize: '15px', fill: '#fff4c2', fontFamily: 'Arial', align: 'center', wordWrap: { width: 250 } }).setOrigin(0.5);
-    const rewardText = scene.add.text(187, 362, `+${amount} 💰`, { fontSize: '38px', fontWeight: 'bold', fill: '#ffffff', fontFamily: 'Arial' }).setOrigin(0.5);
+    const rewardText = scene.add.text(187, 362, `+${amount} ${TRANSLATIONS[lang].credits}`, { fontSize: '38px', fontWeight: 'bold', fill: '#ffffff', fontFamily: 'Arial' }).setOrigin(0.5);
     const hoursText = scene.add.text(187, 408, (TRANSLATIONS[lang].welcome_back_hours || 'Away for %hours%h').replace('%hours%', safeHours), { fontSize: '14px', fill: '#ffd56f', fontFamily: 'Arial' }).setOrigin(0.5);
     const cacheOuter = scene.add.circle(187, 165, 18, 0xffcc33, 0.18).setStrokeStyle(2, 0xffdd88, 0.8);
     const cacheInner = scene.add.circle(187, 165, 8, 0xffeeaa, 0.95);
@@ -196,6 +196,43 @@ function showWelcomeBackGift(scene, amount, hours) {
     scene.tweens.add({ targets: overlay, alpha: 1, duration: 260 });
 }
 
+function getPurchasedUpgradeCount() {
+    let total = 0;
+    Object.keys(upgradeLevels || {}).forEach(key => {
+        total += upgradeLevels[key] || 0;
+    });
+    return total;
+}
+
+function getActiveStarterContract() {
+    if (!starterContracts.survive500) return { id: 'survive500', label: TRANSLATIONS[lang].contract_survive500, reward: 120 };
+    if (!starterContracts.firstUpgrade) return { id: 'firstUpgrade', label: TRANSLATIONS[lang].contract_firstUpgrade, reward: 150 };
+    if (!starterContracts.firstBoss) return { id: 'firstBoss', label: TRANSLATIONS[lang].contract_firstBoss, reward: 250 };
+    return null;
+}
+
+function processStarterContracts(scene) {
+    const checks = [
+        { id: 'survive500', done: bestDistance >= 500, reward: 120, label: TRANSLATIONS[lang].contract_survive500 },
+        { id: 'firstUpgrade', done: getPurchasedUpgradeCount() > 0, reward: 150, label: TRANSLATIONS[lang].contract_firstUpgrade },
+        { id: 'firstBoss', done: achievements.firstBossReward || bestLevel > 1, reward: 250, label: TRANSLATIONS[lang].contract_firstBoss }
+    ];
+
+    for (const contract of checks) {
+        if (!starterContracts[contract.id] && contract.done) {
+            starterContracts[contract.id] = true;
+            coins += contract.reward;
+            saveProgress();
+            if (scene) {
+                if (typeof updateHudTexts === 'function') updateHudTexts();
+                showQuestComplete(scene, contract.label, contract.reward);
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
 // --- СИСТЕМА СОХРАНЕНИЙ ---
 
 function saveProgress() {
@@ -205,7 +242,7 @@ function saveProgress() {
         level, lang, upgradeLevels, bestLevel, coins, bestDistance, maxPlayerHealth,
         isShieldActive, yOffset, currentShape, currentSkin, isDeadInSave: isDead,
         totalDistance, bossesKilled, achievements, currentExplosionColor, lastRunState,
-        dailyQuests, lastDailyReset, adWatchedPendingRevive, isDarkMode,
+        dailyQuests, starterContracts, lastDailyReset, adWatchedPendingRevive, isDarkMode,
         dailyLoginStreak, lastLoginDate, rankXP
     }));
 }
@@ -232,6 +269,7 @@ function loadProgress() {
                 currentExplosionColor = p.currentExplosionColor || 0xff0000;
                 upgradeLevels = { ...upgradeLevels, ...p.upgradeLevels };
                 dailyQuests = p.dailyQuests || {};
+                starterContracts = { ...starterContracts, ...(p.starterContracts || {}) };
                 lastDailyReset = p.lastDailyReset || 0;
                 dailyLoginStreak = p.dailyLoginStreak || 0;
                 lastLoginDate = p.lastLoginDate || null;
@@ -244,7 +282,7 @@ function loadProgress() {
     } catch(e) { console.log('[Load] Error:', e); }
 }
 
-// --- ЕЖЕДНЕВНЫЕ ЗАДАНИЯ И ЛОГИН ---
+// --- Р В Р’В Р вЂ™Р’В Р В Р вЂ Р В РІР‚С™Р РЋРЎвЂєР В Р’В Р вЂ™Р’В Р В Р вЂ Р В РІР‚С™Р Р†Р вЂљРЎС™Р В Р’В Р вЂ™Р’В Р В Р вЂ Р В РІР‚С™Р РЋРЎвЂєР В Р’В Р вЂ™Р’В Р В Р вЂ Р В РІР‚С™Р РЋРЎС™Р В Р’В Р вЂ™Р’В Р В Р Р‹Р РЋРЎв„ўР В Р’В Р вЂ™Р’В Р В Р вЂ Р В РІР‚С™Р РЋРЎвЂєР В Р’В Р вЂ™Р’В Р В Р вЂ Р В РІР‚С™Р Р†РІР‚С›РЎС›Р В Р’В Р вЂ™Р’В Р В Р Р‹Р РЋРЎв„ўР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В«Р В Р’В Р вЂ™Р’В Р В Р вЂ Р В РІР‚С™Р РЋРЎвЂє Р В Р’В Р вЂ™Р’В Р В Р вЂ Р В РІР‚С™Р Р†Р вЂљРЎСљР В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРІвЂћСћР В Р’В Р вЂ™Р’В Р В Р вЂ Р В РІР‚С™Р РЋРЎС™Р В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРІвЂћСћР В Р’В Р вЂ™Р’В Р В Р Р‹Р РЋРЎв„ўР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’ВР В Р’В Р вЂ™Р’В Р В Р’В Р Р†Р вЂљР Р‹ Р В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В Р В Р’В Р вЂ™Р’В Р В Р вЂ Р В РІР‚С™Р РЋРІР‚СњР В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎвЂќР В Р’В Р вЂ™Р’В Р В Р вЂ Р В РІР‚С™Р РЋРЎв„ўР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’ВР В Р’В Р вЂ™Р’В Р В Р Р‹Р РЋРЎв„ў ---
 
 function getTodayMidnight() {
     const now = new Date();
@@ -272,7 +310,7 @@ function initDailyLogin(scene) {
     if (lastLoginDate === yesterdayStr) {
         dailyLoginStreak = (dailyLoginStreak % 7) + 1;
     } else {
-        // Если пропущен день или первый вход - сбрасываем на 1
+        // Р В Р’В Р вЂ™Р’В Р В Р вЂ Р В РІР‚С™Р РЋРЎвЂєР В Р’В Р В Р вЂ№Р В Р’В Р РЋРІР‚СљР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В»Р В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљР’В Р В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРІР‚СњР В Р’В Р В Р вЂ№Р В Р’В Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎС›Р В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРІР‚СњР В Р’В Р В Р вЂ№Р В Р Р‹Р Р†Р вЂљРЎС™Р В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р вЂ™Р’В°Р В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’ВµР В Р’В Р вЂ™Р’В Р В Р’В Р Р†Р вЂљР’В¦ Р В Р’В Р вЂ™Р’В Р В РЎС›Р Р†Р вЂљР’ВР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’ВµР В Р’В Р вЂ™Р’В Р В Р’В Р Р†Р вЂљР’В¦Р В Р’В Р В Р вЂ№Р В Р’В Р В РІР‚В° Р В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљР’ВР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В»Р В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљР’В Р В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРІР‚СњР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’ВµР В Р’В Р В Р вЂ№Р В Р’В Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’В Р В Р’В Р Р†Р вЂљР’В Р В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р Р†РІР‚С›РІР‚вЂњР В Р’В Р вЂ™Р’В Р В Р вЂ Р Р†Р вЂљРЎвЂєР Р†Р вЂљРІР‚Сљ Р В Р’В Р вЂ™Р’В Р В Р’В Р Р†Р вЂљР’В Р В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р вЂ™Р’В¦Р В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎС›Р В Р’В Р вЂ™Р’В Р В РЎС›Р Р†Р вЂљР’В - Р В Р’В Р В Р вЂ№Р В Р’В Р РЋРІР‚СљР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В±Р В Р’В Р В Р вЂ№Р В Р’В Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В°Р В Р’В Р В Р вЂ№Р В Р’В Р РЋРІР‚СљР В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р Р†РІР‚С›РІР‚вЂњР В Р’В Р вЂ™Р’В Р В Р’В Р Р†Р вЂљР’В Р В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В°Р В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’ВµР В Р’В Р вЂ™Р’В Р В Р Р‹Р вЂ™Р’В Р В Р’В Р вЂ™Р’В Р В Р’В Р Р†Р вЂљР’В¦Р В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В° 1
         dailyLoginStreak = 1;
     }
 
@@ -281,7 +319,7 @@ function initDailyLogin(scene) {
     if (typeof submitScore === 'function') submitScore().catch(e => console.error('Sync error:', e));
     
     const rewards = [100, 250, 500, 750, 1000, 1500, 3000];
-    // Гарантируем, что день >= 1 для индекса
+    // Р В Р’В Р вЂ™Р’В Р В Р вЂ Р В РІР‚С™Р РЋРЎв„ўР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В°Р В Р’В Р В Р вЂ№Р В Р’В Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В°Р В Р’В Р вЂ™Р’В Р В Р’В Р Р†Р вЂљР’В¦Р В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р РЋРІвЂћСћР В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљР’ВР В Р’В Р В Р вЂ№Р В Р’В Р Р†Р вЂљРЎв„ўР В Р’В Р В Р вЂ№Р В Р Р‹Р Р†Р вЂљРЎС™Р В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’ВµР В Р’В Р вЂ™Р’В Р В Р Р‹Р вЂ™Р’В, Р В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р В Р вЂ№Р В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р РЋРІвЂћСћР В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎС› Р В Р’В Р вЂ™Р’В Р В РЎС›Р Р†Р вЂљР’ВР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’ВµР В Р’В Р вЂ™Р’В Р В Р’В Р Р†Р вЂљР’В¦Р В Р’В Р В Р вЂ№Р В Р’В Р В РІР‚В° >= 1 Р В Р’В Р вЂ™Р’В Р В РЎС›Р Р†Р вЂљР’ВР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В»Р В Р’В Р В Р вЂ№Р В Р’В Р В Р РЏ Р В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљР’ВР В Р’В Р вЂ™Р’В Р В Р’В Р Р†Р вЂљР’В¦Р В Р’В Р вЂ™Р’В Р В РЎС›Р Р†Р вЂљР’ВР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’ВµР В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎСљР В Р’В Р В Р вЂ№Р В Р’В Р РЋРІР‚СљР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В°
     const rewardIdx = Math.max(0, dailyLoginStreak - 1);
     const reward = rewards[rewardIdx] || 100;
 
@@ -291,7 +329,7 @@ function initDailyLogin(scene) {
 }
 
 function showDailyLoginBonus(scene, day, reward) {
-    const displayDay = day || 1; // Защита: если пришел 0, пишем 1
+    const displayDay = day || 1; // Р В Р’В Р вЂ™Р’В Р В Р вЂ Р В РІР‚С™Р Р†Р вЂљРЎСљР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В°Р В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р вЂ™Р’В°Р В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљР’ВР В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р РЋРІвЂћСћР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В°: Р В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’ВµР В Р’В Р В Р вЂ№Р В Р’В Р РЋРІР‚СљР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В»Р В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљР’В Р В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРІР‚СњР В Р’В Р В Р вЂ№Р В Р’В Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљР’ВР В Р’В Р В Р вЂ№Р В Р вЂ Р Р†Р вЂљРЎв„ўР вЂ™Р’В¬Р В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’ВµР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В» 0, Р В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРІР‚СњР В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљР’ВР В Р’В Р В Р вЂ№Р В Р вЂ Р Р†Р вЂљРЎв„ўР вЂ™Р’В¬Р В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’ВµР В Р’В Р вЂ™Р’В Р В Р Р‹Р вЂ™Р’В 1
     const overlay = scene.add.container(0, 0).setDepth(10000);
     const bg = scene.add.graphics().fillStyle(0x000000, 0.85).fillRect(0, 0, 375, 667);
     bg.setInteractive(new Phaser.Geom.Rectangle(0, 0, 375, 667), Phaser.Geom.Rectangle.Contains);
@@ -299,10 +337,10 @@ function showDailyLoginBonus(scene, day, reward) {
     const panel = scene.add.rectangle(187, 333, 300, 350, 0x111111).setStrokeStyle(3, 0x00ffff);
     const title = scene.add.text(187, 210, TRANSLATIONS[lang].daily_reward_title || "DAILY REWARD", { fontSize: '24px', fontWeight: 'bold', fill: '#00ffff', fontFamily: 'Arial' }).setOrigin(0.5);
     const dayText = scene.add.text(187, 250, (lang === 'ru' ? `ДЕНЬ ${displayDay}` : `DAY ${displayDay}`), { fontSize: '32px', fontWeight: 'bold', fill: '#ffff00', fontFamily: 'Arial' }).setOrigin(0.5);
-    const rewardText = scene.add.text(187, 320, `+${reward} 💰`, { fontSize: '40px', fontWeight: 'bold', fill: '#ffffff', fontFamily: 'Arial' }).setOrigin(0.5);
+    const rewardText = scene.add.text(187, 320, '+' + reward + ' ' + TRANSLATIONS[lang].credits, { fontSize: '40px', fontWeight: 'bold', fill: '#ffffff', fontFamily: 'Arial' }).setOrigin(0.5);
     
     const claimBtn = scene.add.rectangle(187, 420, 200, 50, 0x00ff00).setInteractive();
-    const claimTxt = scene.add.text(187, 420, TRANSLATIONS[lang].claim_btn || (lang === 'ru' ? "ЗАБРАТЬ" : "CLAIM"), { fontSize: '20px', fontWeight: 'bold', fill: '#000', fontFamily: 'Arial' }).setOrigin(0.5);
+    const claimTxt = scene.add.text(187, 420, TRANSLATIONS[lang].claim_btn || (lang === 'ru' ? 'ЗАБРАТЬ' : 'CLAIM'), { fontSize: '20px', fontWeight: 'bold', fill: '#000', fontFamily: 'Arial' }).setOrigin(0.5);
     
     claimBtn.on('pointerdown', () => {
         coins += reward;
@@ -406,7 +444,7 @@ function showQuestComplete(scene, questName, reward) {
     const questBg = scene.add.text(187, 80, '', { fontSize: '14px', fill: '#00ff00', backgroundColor: '#000000aa', padding: { x: 10, y: 6 }, fontFamily: 'Arial' }).setOrigin(0.5).setDepth(500);
     const titleText = (lang === 'ru' ? 'ЗАДАНИЕ ВЫПОЛНЕНО!' : 'QUEST COMPLETE!');
     const rewardAmount = (typeof reward === 'number' && reward > 0) ? reward : 150;
-    questBg.setText(`${titleText} +${rewardAmount} 💰`);
+    questBg.setText(titleText + ' +' + rewardAmount + ' ' + TRANSLATIONS[lang].credits);
     scene.tweens.add({ targets: questBg, y: 60, alpha: 0, delay: 2500, duration: 500, onComplete: () => questBg.destroy() });
     if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
 }
