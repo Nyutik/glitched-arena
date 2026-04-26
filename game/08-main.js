@@ -74,6 +74,14 @@ function create() {
     levelText = this.add.text(365, 15, `${TRANSLATIONS[lang].sector}: ${level}`, { fontFamily: fontUI, fontSize: '14px', fill: '#ff00ff' }).setOrigin(1, 0).setDepth(100);
     bestText = this.add.text(10, 35, `${TRANSLATIONS[lang].best}: ${bestLevel}`, { fontFamily: fontUI, fontSize: '10px', fill: '#00ff00' }).setDepth(100);
     bestDistText = this.add.text(187, 35, `${TRANSLATIONS[lang].max_dist}: ${bestDistance}m`, { fontFamily: fontUI, fontSize: '12px', fill: '#ffff00', fontWeight: 'bold' }).setOrigin(0.5, 0).setDepth(100);
+    
+    // --- МЕТКА РЕКОРДА ---
+    this.recordMarker = this.add.container(0, -100).setDepth(1);
+    const recLine = this.add.graphics().lineStyle(2, 0xffff00, 0.6).lineBetween(0, 0, 375, 0);
+    const recText = this.add.text(365, -12, TRANSLATIONS[lang].your_best, { fontSize: '10px', fill: '#ffff00', fontWeight: 'bold' }).setOrigin(1, 0.5);
+    this.recordMarker.add([recLine, recText]);
+    this.hasPassedRecord = false;
+
     let pauseBg = this.add.rectangle(335, 42, 60, 20, 0xff00ff, 0.2).setDepth(99).setInteractive();
     let pauseBtn = this.add.text(335, 42, TRANSLATIONS[lang].pause_text, { fontSize: '11px', fontFamily: fontUI, fill: '#fff' }).setOrigin(0.5).setDepth(100).setInteractive();
     const doPause = () => togglePause.call(this); pauseBtn.on('pointerdown', doPause); pauseBg.on('pointerdown', doPause);
@@ -248,6 +256,31 @@ function update(time, delta) {
         let prog = Math.min(distance / runGoal, 1); roadBar.clear().fillStyle(0xffffff, 0.2).fillRect(100, 50, 175, 2).fillStyle(0x00ffff, 1).fillRect(100, 50, prog * 175, 2);
         let toBoss = Math.max(0, Math.floor(runGoal - distance)); let label = level < 15 ? `${TRANSLATIONS[lang].to_mega_boss}: ${15 - level} ${TRANSLATIONS[lang].sector}` : `${TRANSLATIONS[lang].elite_phase}: ${level}`;
         distanceText.setY(105).setText(`${currentDist}m\n${label}\n${TRANSLATIONS[lang].distance_to}: ${toBoss}m`);
+        
+        // --- ОБНОВЛЕНИЕ МЕТКИ РЕКОРДА ---
+        if (bestDistance > 200 && !this.hasPassedRecord) {
+            const distToRecord = bestDistance - distance;
+            if (distToRecord < 150 && distToRecord > -50) {
+                this.recordMarker.setVisible(true);
+                // Р В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎС›Р В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р РЋРІвЂћСћР В Р’В Р вЂ™Р’В Р В Р Р‹Р вЂ™Р’ВР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’ВµР В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р РЋРІвЂћСћР В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎСљР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В° Р В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р В РвЂ№Р В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р РЋРІвЂћСћРВ Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎС› Р В Р’В Р В Р вЂ№Р В Р Р†Р вЂљРЎв„ўР В Р’В РвЂ™Р’В Р В РІР‚в„ўРвЂ™Р’ВµР В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎСљР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В»Р В Р’В РвЂ™Р’В РВ РІР‚в„ўР вЂ™Р’В°Р В Р’В РвЂ™Р’В Р В Р Р‹Р вЂ™Р’ВР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В° Р В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРІР‚СњР В Р’В Р В Р вЂ№РВ Р Р†Р вЂљРЎв„ўРВ Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎС›Р В Р’В РВ Р вЂ№РВ Р РЋРІР‚СљР В Р’В Р вЂ™Р’В Р В Р Р‹Р вЂ™Р’ВР В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎС›Р В Р’В Р В Р вЂ№РВ Р вЂ Р В РІР‚С™Р РЋРІвЂћСћРВ Р’В РВ Р вЂ№РВ Р Р†Р вЂљРЎв„ўРВ Р’В Р вЂ™Р’В Р В РІР‚в„ўРвЂ™Р’ВµР В Р’В Р вЂ™Р’В Р В Р’В Р Р†Р вЂљР’В¦Р В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В° Р В Р’В Р В РвЂ№Р В Р РЋРІР‚СљР В Р’В Р В РвЂ№РВ Р вЂ РВ РІР‚С™Р РЋРІвЂћСћР В Р’В Р В Р вЂ№Р В Р В РІР‚В° (Р В Р’В РвЂ™Р’В Р В РІР‚в„ўРвЂ™Р’В±Р В Р’В РВ Р вЂ№РВ Р вЂ Р В РІР‚С™РР†РІР‚С›РІР‚вЂњР В Р’В Р вЂ™Р’В Р В РІР‚в„ўРвЂ™Р’В»Р В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎС› 3.5 Р В Р’В РВ Р вЂ№Р В Р РЋРІР‚СљР В Р’В РВ Р вЂ№РВ Р вЂ Р В РІР‚С™Р РЋРІвЂћСћР В Р’В Р вЂ™Р’В Р В РІР‚в„ўРвЂ™Р’В°РВ Р’В РвЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В»РВ Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎС› 1 Р В Р’В Р В РвЂ№Р В Р Р‹Р Р†Р вЂљРЎС™Р В Р’В Р В Р вЂ№РВ Р Р†Р вЂљРЎв„ўР В Р’В РвЂ™Р’В Р В Р Р‹РР†Р вЂљРЎС›Р В Р’В Р вЂ™Р’В Р В Р’В РР†Р вЂљР’В РВ Р’В Р вЂ™Р’В Р В Р’В Р Р†Р вЂљР’В¦Р В Р’В Р В Р вЂ№РВ Р В Р РЏ).
+                const pixelsPerMeter = 3.5 / speedFactor * 0.1; // Р В Р’В Р вЂ™Р’В Р В Р вЂ РВ РІР‚С™Р Р†РІР‚С›РЎС› Р В Р’В РВ Р вЂ№Р В Р РЋРІР‚СљР В Р’В РВ Р вЂ№РВ Р вЂ Р В РІР‚С™Р РЋРІвЂћСћР В Р’В Р вЂ™Р’В Р В РІР‚в„ўРвЂ™Р’В°Р В Р’В РвЂ™Р’В Р В РІР‚в„ўРвЂ™Р’В»Р В Р’В Р вЂ™Р’В Р В Р Р‹РР†Р вЂљРЎС› Р В Р’В РВ Р вЂ№РВ Р РЋРІР‚СљР В Р’В РВ Р вЂ№РВ Р вЂ Р В РІР‚С™Р РЋРІвЂћСћР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В°Р В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В»Р В Р’В Р вЂ™Р’В Р В РР‹РР†Р вЂљРЎС› Р В Р’В Р В Р вЂ№Р В Р РЋРІР‚СљР В Р’В Р В Р вЂ№РВ Р вЂ Р В РІР‚С™Р РЋРІвЂћСћР В Р’В Р вЂ™Р’В РВ РІР‚в„ўРвЂ™Р’В°Р В Р’В Р вЂ™Р’В РВ РІР‚в„ўРвЂ™Р’В»Р В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎС›
+                this.recordMarker.y = player.y - (distToRecord * 4.5);
+                
+                if (distance >= bestDistance) {
+                    this.hasPassedRecord = true;
+                    this.cameras.main.flash(400, 255, 215, 0, 0.4);
+                    playSound(this, 'sfx_combo', { volume: 0.5 });
+                    if (glitchText) {
+                        glitchText.setText(TRANSLATIONS[lang].new_record).setFill('#ffff00').setAlpha(1);
+                        this.time.delayedCall(2000, () => { if (glitchText.text === TRANSLATIONS[lang].new_record) glitchText.setText(''); });
+                    }
+                    this.recordMarker.setVisible(false);
+                }
+            } else {
+                this.recordMarker.setVisible(false);
+            }
+        }
+
         if (distance >= runGoal) startBossFight(this);
         if (currentDist >= 5000 && !achievements.marathon) { achievements.marathon = true; saveProgress(); }
     } else {
@@ -359,6 +392,10 @@ function startRun(scene) {
     if (glitchText) glitchText.setText('').setBackgroundColor(null).setAlpha(1).setVisible(true);
     if (distanceText) distanceText.setText('').setVisible(true);
     if (pHealthLabel) pHealthLabel.setVisible(true); if (bHealthLabel) bHealthLabel.setText('').setVisible(false); if (overdriveBar) overdriveBar.setVisible(true); if (roadBar) roadBar.setVisible(true);
+    
+    // Сброс метки рекорда
+    if (scene.recordMarker) { scene.recordMarker.setVisible(false).setY(-100); scene.hasPassedRecord = false; }
+
     updateHudTexts(); ensureBgm(scene); scene.isFirstMove = false;
     scene.input.off('pointerdown'); scene.input.off('pointermove');
     scene.input.on('pointerdown', p => { if (!isStarted || isShopOpen || isDead || isPaused || !player?.active) return; if (p.y < 90) return; scene.isFirstMove = true; player.x = Phaser.Math.Clamp(p.x, 20, 355); player.y = Phaser.Math.Clamp(p.y + yOffset, 80, 620); if (shieldAura) shieldAura.setPosition(player.x, player.y); if (overdrive >= 100 && !isVictory && isBossFight) useOverdrive.call(scene); });
