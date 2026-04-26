@@ -13,7 +13,7 @@ function showAchievement(scene, key, name, desc) {
     const achOverlay = scene.add.container(0, 0).setDepth(8000);
     const bg = scene.add.graphics().fillStyle(0x000000, 0.8).fillRect(0, 200, 375, 150);
     const border = scene.add.rectangle(187, 275, 300, 100, 0x222222).setStrokeStyle(3, 0xffff00);
-    const icon = scene.add.text(60, 275, 'TROPHY', { fontSize: '20px', fill: '#ffff00', fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5);
+    const icon = scene.add.text(60, 275, '🏆', { fontSize: '40px', fontFamily: 'Arial' }).setOrigin(0.5);
     const titleTxt = scene.add.text(187, 240, TRANSLATIONS[lang].achievement_unlocked, { fontSize: '14px', fill: '#ffff00', fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5);
     const nameTxt = scene.add.text(187, 265, name, { fontSize: '18px', fill: '#ffffff', fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5);
     const descTxt = scene.add.text(187, 295, desc, { fontSize: '12px', fill: '#aaaaaa', fontFamily: 'Arial' }).setOrigin(0.5);
@@ -92,13 +92,13 @@ function handleDamage(scene, dmg) {
         scene.physics.world.timeScale = 2.5;
         scene.time.timeScale = 0.5;
         scene.cameras.main.flash(300, 255, 0, 0, 0.5);
-        if (glitchText) glitchText.setText("MATRIX AVOIDANCE!").setFill('#ff0000');
+        if (glitchText) glitchText.setText(TRANSLATIONS[lang].matrix_avoidance).setFill('#ff0000');
         scene.time.delayedCall(2500, () => {
             isSlowMoActive = false;
             slowMoCooldown = Date.now();
             scene.physics.world.timeScale = 1;
             scene.time.timeScale = 1;
-            if (glitchText && glitchText.text === "MATRIX AVOIDANCE!") glitchText.setText("");
+            if (glitchText && glitchText.text === TRANSLATIONS[lang].matrix_avoidance) glitchText.setText("");
         }, [], scene);
     }
     scene.cameras.main.flash(200, 255, 0, 0, 0.5);
@@ -525,7 +525,7 @@ function bossShoot() {
 }
 
 function hitBoss(b, bullet) {
-    if (isVictory) return;
+    if (isVictory || !isBossFight) return;
     if (bullet) bullet.destroy();
     let dmg = 10 * currentStats.atk;
     if (level >= 15) dmg += ((level - 14) * 0.25); // Auto-scaling damage for high sectors

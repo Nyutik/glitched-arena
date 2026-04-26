@@ -42,7 +42,8 @@ async function triggerVictory(scene) {
     try { bullets?.clear(true, true); playerBullets?.clear(true, true); minionBullets?.clear(true, true); minions?.clear(true, true); obstacles?.clear(true, true); bossShields?.clear(true, true); } catch (e) { console.warn("Group clear error:", e); }
     if (bossTurretL) { bossTurretL.destroy(); bossTurretL = null; } if (bossTurretR) { bossTurretR.destroy(); bossTurretR = null; }
     if (secondCore) { secondCore.destroy(); secondCore = null; } if (scene.dualCoreShootTimer) { scene.dualCoreShootTimer.remove(); scene.dualCoreShootTimer = null; }
-    const completedLevel = level; level++; bestLevel = Math.max(bestLevel, completedLevel); bossesKilled += 1; bossesSurvived += 1;
+    const completedLevel = level; level++; runGoal = 700 + (level - 1) * 100; 
+    bestLevel = Math.max(bestLevel, completedLevel); bossesKilled += 1; bossesSurvived += 1;
     if (typeof logMetric === 'function') logMetric('boss_killed', `sector:${completedLevel}`);
     awardRankXP(scene, 100, 'boss'); 
     if (bossDamageTaken === 0 && !achievements.flawless) { achievements.flawless = true; showAchievement(scene, 'flawless', TRANSLATIONS[lang].flawlesst, TRANSLATIONS[lang].boss_damage); }

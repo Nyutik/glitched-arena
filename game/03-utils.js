@@ -258,7 +258,9 @@ function loadProgress() {
             try {
                 const p = JSON.parse(saved);
                 if (p.lang) lang = p.lang;
-                level = p.level || 1; bestLevel = p.bestLevel || 1; bestDistance = p.bestDistance || 0;
+                level = Math.floor(p.level || 1); 
+                bestLevel = Math.floor(p.bestLevel || 1); 
+                bestDistance = p.bestDistance || 0;
                 coins = p.coins || 0; totalDistance = p.totalDistance || 0; bossesKilled = p.bossesKilled || 0;
                 achievements = { ...achievements, ...p.achievements };
                 maxPlayerHealth = p.maxPlayerHealth || 100; isShieldActive = p.isShieldActive || false;

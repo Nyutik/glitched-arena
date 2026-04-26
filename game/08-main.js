@@ -44,7 +44,6 @@ function create() {
     distance = 0; overdrive = 0; coinsThisRun = 0; playerHealth = bootHealth; maxPlayerHealth = bootHealth; isMagnetActive = false; isGlitchMode = false;
     if (this.physics?.world) this.physics.world.timeScale = 1;
     
-    // Р СћРЎвЂР СР Р…РЎвЂ№Р в„– РЎвЂћР С•Р Р… (Р С”Р В°Р С” Р В±РЎвЂ№Р В»Р С•)
     this.cameras.main.setBackgroundColor('#000000');
     
     const pTex = generatePlayerTexture(this);
@@ -61,7 +60,6 @@ function create() {
     const skin = SKINDATA[currentSkin] || SKINDATA.classic;
     trailEmitter = this.add.particles(0, 0, 'pixel', { speed: 60, scale: { start: 0.6, end: 0 }, alpha: { start: 0.4, end: 0 }, lifespan: 600, blendMode: 'ADD', follow: player, tint: skin.trail });
     
-    // Р С›Р С—РЎвЂљР С‘Р СР С‘Р В·Р С‘РЎР‚Р С•Р Р†Р В°Р Р…Р Р…РЎвЂ№Р в„– РЎРЊР СР С‘РЎвЂљРЎвЂљР ВµРЎР‚ Р Т‘Р В»РЎРЏ РЎвЂ¦Р Р†Р С•РЎРѓРЎвЂљР С•Р Р† Р С—РЎС“Р В»РЎРЉ
     bulletTrailEmitter = this.add.particles(0, 0, 'pixel', {
         scale: { start: 0.4, end: 0 },
         alpha: { start: 0.3, end: 0 },
@@ -85,10 +83,10 @@ function create() {
     distanceText = this.add.text(187, 105, '', { fontFamily: fontUI, fontSize: '14px', fill: '#00ffff', align: 'center' }).setOrigin(0.5, 0).setDepth(100);
     glitchText = this.add.text(187, 285, '', { fontFamily: fontUI, fontSize: '20px', stroke: '#000', strokeThickness: 6, align: 'center', wordWrap: { width: 320, useAdvancedWrap: true }, lineSpacing: 2 }).setOrigin(0.5).setDepth(100);
     overdriveBar = this.add.graphics().setDepth(100); roadBar = this.add.graphics().setDepth(100); this.overheadGfx = this.add.graphics().setDepth(11);
+    
     // --- ОБРАБОТКА ПОПАДАНИЙ В ПРЕПЯТСТВИЯ (ДЛЯ ЭЛИТНЫХ ВРАГОВ) ---
     this.physics.add.overlap(playerBullets, obstacles, (bullet, obs) => {
         bullet.destroy();
-        // Эффект искр при попадании
         let spark = this.add.circle(bullet.x, bullet.y, 3, 0x00ffff).setDepth(20);
         this.tweens.add({ targets: spark, scale: 2, alpha: 0, duration: 150, onComplete: () => spark.destroy() });
 
@@ -100,9 +98,9 @@ function create() {
                 let ox = obs.x; let oy = obs.y;
                 obs.destroy();
                 minionExplode(this, ox, oy);
-                coinsThisRun += 25; // Большая награда за элиту
+                coinsThisRun += 25; 
                 updateHudTexts();
-                if (glitchText) { glitchText.setText("ELITE DATA PURGED!").setFill('#00ffff'); this.time.delayedCall(800, () => { if (glitchText.text.includes('ELITE')) glitchText.setText(''); }); }
+                if (glitchText) { glitchText.setText(TRANSLATIONS[lang].elite_purged).setFill('#00ffff'); this.time.delayedCall(800, () => { if (glitchText.text === TRANSLATIONS[lang].elite_purged) glitchText.setText(''); }); }
             } else {
                 obs.setTint(0xffffff);
                 this.time.delayedCall(50, () => { if (obs.active) obs.setTint(0x00ffff); });
@@ -114,8 +112,8 @@ function create() {
         const earlyDifficulty = getEarlyRunDifficulty();
         if (currentShape === 'phase' && upgradeLevels.ship_phase > 0 && Math.random() < 0.10) {
             o.destroy();
-            if (glitchText) glitchText.setText("PHASE SHIFT!").setFill('#aa00ff');
-            this.time.delayedCall(500, () => { if (glitchText && glitchText.text === "PHASE SHIFT!") glitchText.setText(''); });
+            if (glitchText) glitchText.setText(TRANSLATIONS[lang].phase_shift).setFill('#aa00ff');
+            this.time.delayedCall(500, () => { if (glitchText && glitchText.text === TRANSLATIONS[lang].phase_shift) glitchText.setText(''); });
             this.cameras.main.flash(100, 170, 0, 255, 0.3);
             return;
         }
@@ -125,8 +123,8 @@ function create() {
         const earlyDifficulty = getEarlyRunDifficulty();
         if (currentSkin === 'void_skin' && Math.random() < 0.03) {
             b.destroy();
-            if (glitchText) glitchText.setText("VOID DODGE!").setFill('#aa00ff');
-            this.time.delayedCall(500, () => { if (glitchText && glitchText.text === "VOID DODGE!") glitchText.setText(''); });
+            if (glitchText) glitchText.setText(TRANSLATIONS[lang].void_dodge).setFill('#aa00ff');
+            this.time.delayedCall(500, () => { if (glitchText && glitchText.text === TRANSLATIONS[lang].void_dodge) glitchText.setText(''); });
             return;
         }
         if (level >= 70 && boss && boss.active) {
@@ -138,8 +136,8 @@ function create() {
                 const absorbFx = this.add.circle(b.x, b.y, 10, 0xaa00ff, 0.8).setDepth(150);
                 this.tweens.add({ targets: absorbFx, scale: 2, alpha: 0, duration: 300, onComplete: () => absorbFx.destroy() });
                 if (absorbedBullets % 5 === 0) {
-                    if (glitchText) glitchText.setText(`VOID CHARGE: ${absorbedBullets}`).setFill('#aa00ff');
-                    this.time.delayedCall(500, () => { if (glitchText && glitchText.text.includes('VOID CHARGE')) glitchText.setText(''); });
+                    if (glitchText) glitchText.setText(`${TRANSLATIONS[lang].void_charge}${absorbedBullets}`).setFill('#aa00ff');
+                    this.time.delayedCall(500, () => { if (glitchText && glitchText.text.includes(TRANSLATIONS[lang].void_charge)) glitchText.setText(''); });
                 }
                 return;
             }
@@ -152,8 +150,8 @@ function create() {
             const extraDmg = Math.min(absorbedBullets * 2, 30);
             dmg += extraDmg;
             absorbedBullets = 0;
-            if (glitchText) glitchText.setText("VOID STRIKE!").setFill('#ff0000');
-            this.time.delayedCall(500, () => { if (glitchText && glitchText.text === "VOID STRIKE!") glitchText.setText(''); });
+            if (glitchText) glitchText.setText(TRANSLATIONS[lang].void_strike).setFill('#ff0000');
+            this.time.delayedCall(500, () => { if (glitchText && glitchText.text === TRANSLATIONS[lang].void_strike) glitchText.setText(''); });
         }
         bossDamageTaken += dmg;
         handleDamage(this, dmg); 
@@ -212,7 +210,6 @@ function update(time, delta) {
             let target = null;
             if (isBossFight && boss && boss.active) target = boss;
             else if (minions.getLength() > 0) target = minions.getFirstAlive();
-            
             if (target) {
                 const angle = Phaser.Math.Angle.Between(m.x, m.y, target.x, target.y);
                 const currentAngle = m.body.velocity.angle();
@@ -229,7 +226,10 @@ function update(time, delta) {
     minions.children.each(m => { if (m && m.active) { m.getData('state') === 'hunting' ? m.body.setVelocity((player.x - m.x) * 3, 100) : m.body.setVelocity(0, 50); if (m.y > 750) m.destroy(); } });
     minionBullets.children.each(b => { if (b && b.y > 750) b.destroy(); });
     if (!isBossFight) {
-        let deltaDist = delta * (0.08 + level * 0.01 + upgradeLevels.speed * 0.03) * currentStats.spd; distance += deltaDist; totalDistance += deltaDist;
+        let actualDelta = (delta > 0 && delta < 1) ? delta * 1000 : delta;
+        let speedFactor = Math.max(0.01, 0.08 + level * 0.01 + (upgradeLevels.speed || 0) * 0.03);
+        let deltaDist = actualDelta * speedFactor * (currentStats.spd || 1); 
+        distance += deltaDist; totalDistance += deltaDist;
         rankXPDistanceAccum += deltaDist;
         if (rankXPDistanceAccum >= 50) { awardRankXP(this, 1, 'distance'); rankXPDistanceAccum -= 50; }
         let currentDist = Math.floor(distance);
@@ -299,13 +299,11 @@ function update(time, delta) {
     overdriveBar.clear().fillStyle(0x333333).fillRect(87, 645, 200, 8).fillStyle(0xffff00).fillRect(87, 645, (overdrive/100) * 200, 8);
     if (overdrive >= 100) { overdriveBar.setX(Math.sin(time * 0.1) * 3); if (!this.ovrText) { this.ovrText = this.add.text(player.x, player.y - 65, TRANSLATIONS[lang].tap_ultra, { fontFamily: fontUI, fontSize: '20px', fill: '#ffff00', fontWeight: 'bold', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setDepth(100); this.tweens.add({ targets: this.ovrText, alpha: 0.3, duration: 300, yoyo: true, repeat: -1 }); } this.ovrText.setPosition(player.x, player.y - 65); player.setTint(0xffff00); } else { if (this.ovrText) { this.ovrText.destroy(); this.ovrText = null; } player.clearTint(); }
     
-    // Р В­РЎвЂћРЎвЂћР ВµР С”РЎвЂљ РЎР‚Р В°Р Т‘РЎС“Р В¶Р Р…Р С•Р С–Р С• РЎРѓР С”Р С‘Р Р…Р В° (Р С•Р С—РЎвЂљР С‘Р СР С‘Р В·Р С‘РЎР‚Р С•Р Р†Р В°Р Р…Р С• РЎвЂЎР ВµРЎР‚Р ВµР В· Tint)
     if (currentSkin === 'rainbow' && player && player.active) {
         const t = Math.floor(time / 200) % rainbowColors.length;
         player.setTint(rainbowColors[t]);
     }
 
-    // Р вЂ™Р С•РЎРѓРЎРѓРЎвЂљР В°Р Р…Р С•Р Р†Р В»Р ВµР Р…Р Р…РЎвЂ№Р Вµ РЎРѓР В»Р ВµР Т‘РЎвЂ№ Р С—РЎС“Р В»РЎРЉ (Р С›Р СџР СћР ВР СљР ВР вЂ”Р ВР В Р С›Р вЂ™Р С’Р СњР С› Р В§Р вЂўР В Р вЂўР вЂ” Р В§Р С’Р РЋР СћР ВР В¦Р В«)
     [bullets, playerBullets, minionBullets].forEach(group => {
         group.children.each(b => {
             if (b && b.active && bulletTrailEmitter) {
@@ -356,8 +354,6 @@ function startRun(scene) {
     scene.input.on('pointerdown', p => { if (!isStarted || isShopOpen || isDead || isPaused || !player?.active) return; if (p.y < 90) return; scene.isFirstMove = true; player.x = Phaser.Math.Clamp(p.x, 20, 355); player.y = Phaser.Math.Clamp(p.y + yOffset, 80, 620); if (shieldAura) shieldAura.setPosition(player.x, player.y); if (overdrive >= 100 && !isVictory && isBossFight) useOverdrive.call(scene); });
     scene.input.on('pointermove', p => { if (!isStarted || isShopOpen || isDead || isPaused || !player?.active) return; if (scene.isFirstMove) { player.x = Phaser.Math.Clamp(p.x, 20, 355); player.y = Phaser.Math.Clamp(p.y + yOffset, 80, 620); if (shieldAura) shieldAura.setPosition(player.x, player.y); } });
     scene.obstacleTimer = scene.time.addEvent({ 
-        // Р вЂќР ВµР В»Р В°Р ВµР С РЎРѓР С—Р В°Р Р†Р Р… РЎвЂЎРЎС“РЎвЂљРЎРЉ Р В±Р С•Р В»Р ВµР Вµ РЎР‚Р ВµР Т‘Р С”Р С‘Р С (Р В±РЎвЂ№Р В»Р С• 1220 - level * 28, min 460)
-        // Р СћР ВµР С—Р ВµРЎР‚РЎРЉ Р Р…Р В° 1 РЎС“РЎР‚Р С•Р Р†Р Р…Р Вµ 1275Р СРЎРѓ, Р Р…Р В° 30 РЎС“РЎР‚Р С•Р Р†Р Р…Р Вµ 525Р СРЎРѓ
         delay: level <= 1 ? 1650 : level <= 3 ? 1500 : level <= 5 ? 1400 : Math.max(520, 1300 - level * 25), 
         callback: spawnObstacle, 
         callbackScope: scene, 
@@ -413,7 +409,7 @@ function startRun(scene) {
     if (scene.mercenaryTimer) scene.mercenaryTimer.remove();
     if (scene.mercenarySprite) { scene.mercenarySprite.destroy(); scene.mercenarySprite = null; }
     if (upgradeLevels.helper_mercenary > 0) {
-        upgradeLevels.helper_mercenary = 0; // Р СњР В°РЎвЂР СР Р…Р С‘Р С” РЎР‚Р В°Р В±Р С•РЎвЂљР В°Р ВµРЎвЂљ 1 Р С‘Р С–РЎР‚РЎС“
+        upgradeLevels.helper_mercenary = 0; 
         saveProgress();
         scene.mercenarySprite = scene.add.sprite(187, 600, 'pixel').setTint(0xff3333).setScale(2.5).setDepth(15);
         scene.tweens.add({ targets: scene.mercenarySprite, angle: 360, duration: 2000, repeat: -1, ease: 'Linear' });
@@ -477,7 +473,6 @@ async function syncUserData() {
         console.log('[Sync] Cloud data received:', cloudData);
         let shouldPushLocalBack = false;
         
-        // Р вЂР ВµР В·Р С•Р С—Р В°РЎРѓР Р…Р В°РЎРЏ Р С•Р В±РЎР‚Р В°Р В±Р С•РЎвЂљР С”Р В° Р СР С•Р Р…Р ВµРЎвЂљ - Р С—РЎР‚Р ВµР Т‘Р С•РЎвЂљР Р†РЎР‚Р В°РЎвЂ°Р В°Р ВµР С РЎС“Р СР ВµР Р…РЎРЉРЎв‚¬Р ВµР Р…Р С‘Р Вµ Р В±Р В°Р В»Р В°Р Р…РЎРѓР В°
         const cloudCoins = typeof cloudData.coins === 'number' && !isNaN(cloudData.coins) ? cloudData.coins : 0;
         const localCoins = coins || 0;
 
@@ -489,8 +484,14 @@ async function syncUserData() {
             shouldPushLocalBack = true;
         }
         
-        const cloudLevel = typeof cloudData.level === 'number' ? cloudData.level : 0;
-        if (cloudLevel > level) { level = cloudLevel; runGoal = 700 + (level - 1) * 100; } else if (level > cloudLevel) shouldPushLocalBack = true;
+        const cloudLevel = typeof cloudData.level === 'number' ? Math.floor(cloudData.level) : 0;
+        if (cloudLevel > level) { 
+            level = cloudLevel; 
+            runGoal = 700 + (level - 1) * 100; 
+        } else if (level > cloudLevel) {
+            shouldPushLocalBack = true;
+        }
+        runGoal = 700 + (level - 1) * 100;
         
         const cloudBestLevel = typeof cloudData.best_level === 'number' ? cloudData.best_level : 0;
         if (cloudBestLevel > bestLevel) bestLevel = cloudBestLevel; else if (bestLevel > cloudBestLevel) shouldPushLocalBack = true;
@@ -500,11 +501,9 @@ async function syncUserData() {
         
         if (cloudData.skin) currentSkin = cloudData.skin; if (cloudData.shape) currentShape = cloudData.shape; if (cloudData.ship_name) shipName = cloudData.ship_name;
         
-        // Р Р€Р СР Р…Р В°РЎРЏ РЎРѓР С‘Р Р…РЎвЂ¦РЎР‚Р С•Р Р…Р С‘Р В·Р В°РЎвЂ Р С‘РЎРЏ РЎвЂ Р Р†Р ВµРЎвЂљР В° Р Р†Р В·РЎР‚РЎвЂ№Р Р†Р В°: Р Р…Р Вµ Р В·Р В°РЎвЂљР С‘РЎР‚Р В°Р ВµР С Р В»Р С•Р С”Р В°Р В»РЎРЉР Р…РЎвЂ№Р в„– Р Р†РЎвЂ№Р В±Р С•РЎР‚, Р ВµРЎРѓР В»Р С‘ Р Р† Р С•Р В±Р В»Р В°Р С”Р Вµ Р С—РЎС“РЎРѓРЎвЂљР С• Р С‘Р В»Р С‘ 0
         if (typeof cloudData.explosion_color === 'number' && cloudData.explosion_color !== 0) {
             currentExplosionColor = cloudData.explosion_color;
         } else {
-            // Р вЂўРЎРѓР В»Р С‘ Р Р† Р С•Р В±Р В»Р В°Р С”Р Вµ Р С—РЎС“РЎРѓРЎвЂљР С•, Р В° РЎС“ Р Р…Р В°РЎРѓ Р ВµРЎРѓРЎвЂљРЎРЉ Р Р†РЎвЂ№Р В±Р С•РЎР‚ - Р С•РЎвЂљР С—РЎР‚Р В°Р Р†Р С‘Р С Р ВµР С–Р С• Р Р† Р С•Р В±Р В»Р В°Р С”Р С• Р С—РЎР‚Р С‘ РЎРѓР В»Р ВµР Т‘РЎС“РЎР‹РЎвЂ°Р ВµР С submitScore
             shouldPushLocalBack = true;
         }
         if (typeof cloudData.total_dist === 'number') totalDistance = Math.max(totalDistance, cloudData.total_dist);
@@ -528,16 +527,12 @@ async function syncUserData() {
             const cloudReset = cloudData.last_daily_reset;
             const localReset = lastDailyReset || 0;
             
-            console.log('[Sync] lastDailyReset check:', { cloudReset, localReset });
-            
             if (cloudReset > localReset) {
-                // Р С›Р В±Р В»Р В°Р С”Р С• РЎРѓР Р†Р ВµР В¶Р ВµР Вµ (Р Р…Р В°Р С—РЎР‚Р С‘Р СР ВµРЎР‚, Р В·Р В°РЎв‚¬Р В»Р С‘ РЎРѓ Р Т‘РЎР‚РЎС“Р С–Р С•Р С–Р С• РЎС“РЎРѓРЎвЂљРЎР‚Р С•Р в„–РЎРѓРЎвЂљР Р†Р В°)
                 lastDailyReset = cloudReset;
                 if (cloudData.daily_quests && typeof cloudData.daily_quests === 'object') {
                     dailyQuests = JSON.parse(JSON.stringify(cloudData.daily_quests));
                 }
             } else if (cloudReset === localReset) {
-                // Р С›Р Т‘Р С‘Р Р…Р В°Р С”Р С•Р Р†Р С•Р Вµ Р Р†РЎР‚Р ВµР СРЎРЏ, Р СР С•Р В¶Р Р…Р С• РЎРѓР СР ВµРЎР‚Р В¶Р С‘РЎвЂљРЎРЉ Р С—РЎР‚Р С•Р С–РЎР‚Р ВµРЎРѓРЎРѓ (Р Р…Р В° Р Р†РЎРѓРЎРЏР С”Р С‘Р в„– РЎРѓР В»РЎС“РЎвЂЎР В°Р в„–)
                 if (cloudData.daily_quests && typeof cloudData.daily_quests === 'object') {
                     for (const key in cloudData.daily_quests) {
                         if (!dailyQuests[key] || cloudData.daily_quests[key].completed) {
@@ -546,8 +541,6 @@ async function syncUserData() {
                     }
                 }
             } else {
-                // Р вЂєР С•Р С”Р В°Р В»РЎРЉР Р…Р С•Р Вµ Р Р†РЎР‚Р ВµР СРЎРЏ РЎРѓР Р†Р ВµР В¶Р ВµР Вµ (РЎвЂљР С•Р В»РЎРЉР С”Р С• РЎвЂЎРЎвЂљР С• Р В±РЎвЂ№Р В» РЎРѓР В±РЎР‚Р С•РЎРѓ), Р С‘Р С–Р Р…Р С•РЎР‚Р С‘РЎР‚РЎС“Р ВµР С РЎРѓРЎвЂљР В°РЎР‚РЎвЂ№Р Вµ Р С”Р Р†Р ВµРЎРѓРЎвЂљРЎвЂ№ Р С‘Р В· Р С•Р В±Р В»Р В°Р С”Р В°
-                console.log('[Sync] Local reset is newer than cloud, keeping local quests.');
                 shouldPushLocalBack = true;
             }
         }
@@ -556,7 +549,7 @@ async function syncUserData() {
         currentStats = getShipStats(); maxPlayerHealth = 100 + (upgradeLevels.meta_plating || 0) * 10 + (upgradeLevels.health || 0) * 25 + currentStats.hpBonus;
         saveProgress(); updateHudTexts();
         if (player && player.active) refreshPlayerAppearance(this);
-        if (shouldPushLocalBack) { await submitScore(); console.log('[Sync] Cloud updated from local', level, bestLevel, bestDistance, coins); }
+        if (shouldPushLocalBack) { await submitScore(); }
     } catch (e) { console.error('[Sync] syncUserData error', e); }
 }
 
@@ -605,12 +598,104 @@ async function submitScore(manualData = null) {
             lang: lang || 'en'
         };
         const response = await fetch(`${botUrl}/submit_score`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': initData }, body: JSON.stringify(payload) });
-        if (response.ok) { console.log('✓ Синхронизация успешна:', await response.json()); return true; }
+        if (response.ok) { return true; }
         return false;
     } catch (e) { console.error('✗ Ошибка submitScore:', e); return false; }
 }
 
-// === ЗАПУСК ИГРЫ ===
+function startBossFight(scene) {
+    resetBossPhrase(scene); clearBattleTexts(scene);
+    if (typeof logMetric === 'function') logMetric('boss_reached', `sector:${level}`);
+    obstacles.clear(true, true); bullets.clear(true, true); isBossFight = true;
+    scene.cameras.main.shake(1000, 0.02); scene.cameras.main.flash(500, 255, 0, 255, 0.3);
+    let alertText = scene.add.text(187, 333, TRANSLATIONS[lang].warning_boss, { fontSize: '32px', fontFamily: 'Arial', fontWeight: 'bold', fill: '#ff0000', align: 'center' }).setOrigin(0.5).setDepth(1000);
+    scene.tweens.add({ targets: alertText, alpha: 0, duration: 200, yoyo: true, repeat: 5, onComplete: () => alertText.destroy() });
+    boss.setVisible(true).setY(-100);
+    scene.tweens.add({ targets: boss, y: 100, duration: 2000, ease: 'Back.easeOut' });
+    bossTrail.setVisible(true); distanceText.setText(''); if (bHealthLabel) bHealthLabel.setVisible(true);
+    if (scene.obstacleTimer) scene.obstacleTimer.remove();
+    if (level >= 15) {
+        glitchText.setText(TRANSLATIONS[lang].boss_detected).setFill("#ff00ff");
+        bossTurretL = scene.add.rectangle(boss.x - 40, boss.y, 20, 20, 0x00ffff).setDepth(4);
+        bossTurretR = scene.add.rectangle(boss.x + 40, boss.y, 20, 20, 0x00ffff).setDepth(4);
+        scene.turretShootEvent = scene.time.addEvent({ delay: 1500, callback: () => {
+            if (!isVictory && !isDead) {
+                [bossTurretL, bossTurretR].forEach(t => {
+                    if (t && t.active) { let b = bullets.create(t.x, t.y, 'pixel').setTint(0x00ffff); scene.physics.moveToObject(b, player, 300); }
+                });
+            }
+        }, loop: true });
+    }
+    if (level >= 20) {
+        bossShields.clear(true, true);
+        for(let i = 0; i < 4; i++) { let s = bossShields.create(boss.x, boss.y, 'pixel').setTint(0xff00ff).setScale(4).setAlpha(0.7); s.body.setImmovable(true); }
+        glitchText.setText(TRANSLATIONS[lang].defense_engaged).setFill("#ff00ff");
+    }
+    scene.bossShootEvent = scene.time.addEvent({ delay: isPhase2 ? Math.max(800, 1300 - level * 30) : 1200, callback: bossShoot, callbackScope: scene, loop: true });
+    scene.phraseTimer = scene.time.addEvent({ delay: 3800, loop: true, callback: () => {
+        if (!isBossFight || isVictory || isDead) return;
+        const pool = isPhase2 ? TRANSLATIONS[lang].p2 : TRANSLATIONS[lang].p1;
+        const msg = Phaser.Utils.Array.GetRandom(pool);
+        const color = isPhase3 ? '#ffffff' : isPhase2 ? '#ff0033' : '#ff00ff';
+        const bg = isPhase3 ? '#440000' : null;
+        showBossPhrase(scene, msg, color, bg, 2500);
+    }});
+    scene.minionTimer = scene.time.addEvent({ delay: 4000, callback: spawnMinion, callbackScope: scene, loop: true });
+    if (level >= 10) { scene.tweens.add({ targets: boss, scale: { from: 1.2, to: 1.5 }, duration: 800, yoyo: true, repeat: -1, ease: 'Quad.easeInOut' }); } else { boss.setScale(1); }
+    
+    if (level >= 35) {
+        boss.setTint(0x00ff00).setScale(1.4); if (bossTrail) bossTrail.setParticleTint(0x00ff00);
+        glitchText.setText(TRANSLATIONS[lang].quantum_alert).setFill("#00ff00").setBackgroundColor("#002200");
+        scene.tweens.add({ targets: boss, x: '+=3', duration: 50, yoyo: true, repeat: -1 });
+        scene.teleportEvent = scene.time.addEvent({ delay: 1500, callback: () => {
+            if (isBossFight && !isVictory && !isDead && !isPaused) {
+                let trap = obstacles.create(boss.x, boss.y, 'pixel').setTint(0xff0000).setScale(4); trap.setData('isTrap', true);
+                scene.tweens.add({ targets: trap, alpha: {from: 1, to: 0.2}, duration: 2000, onComplete: () => trap.destroy() });
+                let ghost = scene.add.sprite(boss.x, boss.y, 'boss').setTint(0x00ff00).setAlpha(0.6);
+                scene.tweens.add({ targets: ghost, scale: 2, alpha: 0, duration: 400, onComplete: () => ghost.destroy() });
+                boss.x = Phaser.Math.Between(50, 325); boss.y = Phaser.Math.Between(100, 250);
+                scene.cameras.main.flash(150, 0, 255, 0, 0.3);
+            }
+        }, loop: true });
+    } else if (level >= 30) { boss.setTint(0xffffff); if (bossTrail) bossTrail.setParticleTint(0xff00ff); glitchText.setText(TRANSLATIONS[lang].boss_detected).setFill("#ff00ff"); }
+    
+    if (level >= 40) {
+        boss.setTint(0xff8800).setScale(1.6); if (bossTrail) bossTrail.setParticleTint(0xff8800);
+        glitchText.setText(TRANSLATIONS[lang].wall_detected).setFill("#ff8800").setBackgroundColor("#442200");
+        scene.tweens.add({ targets: boss, scale: { from: 1.4, to: 1.8 }, duration: 1000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        scene.wallZoneTimer = scene.time.addEvent({ delay: 3000, callback: () => {
+            if (isBossFight && !isVictory && !isDead && !isPaused) {
+                updateWallZone(scene);
+            }
+        }, loop: true });
+        updateWallZone(scene);
+    }
+    if (level >= 50) {
+        if (bossTrail) bossTrail.stop();
+        boss.setTint(0xff00ff).setScale(1.2);
+        bossHealth *= 1.5;
+        glitchText.setText(TRANSLATIONS[lang].dual_detected).setFill("#ff00ff").setBackgroundColor("#440044");
+        dualCoreAngle = 0;
+        secondCore = scene.add.circle(187, 160, 30, 0xff0000, 0.7).setStrokeStyle(3, 0xff6666).setDepth(150);
+        scene.tweens.add({ targets: boss, alpha: { from: 1, to: 0.3 }, duration: 500, yoyo: true, repeat: -1 });
+        scene.tweens.add({ targets: secondCore, alpha: { from: 0.7, to: 0.3 }, duration: 500, yoyo: true, repeat: -1 });
+        dualCores = [];
+    }
+    if (level >= 60) {
+        boss.setTint(0x00ffff).setScale(1.3);
+        glitchText.setText(TRANSLATIONS[lang].storm_approaches).setFill("#00ffff").setBackgroundColor("#004444");
+        bossHealth *= 1.05;
+        stormAngle = 0;
+        stormZoneCount = 3;
+    }
+    if (level >= 70) {
+        boss.setTint(0xaa00ff).setScale(1.5);
+        glitchText.setText(TRANSLATIONS[lang].void_rises).setFill("#aa00ff").setBackgroundColor("#220033");
+        bossHealth *= 1.5;
+        absorbedBullets = 0;
+    }
+}
+
 loadProgress();
 const config = { type: Phaser.AUTO, parent: 'game-container', backgroundColor: '#000000', scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: 375, height: 667 }, render: { pixelArt: false, antialias: true, roundPixels: true }, physics: { default: 'arcade', arcade: { gravity: { y: 0 } } }, scene: { preload, create, update } };
 const game = new Phaser.Game(config);
