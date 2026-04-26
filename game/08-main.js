@@ -201,7 +201,16 @@ function create() {
 
 function update(time, delta) {
     if (!isStarted || isShopOpen || isVictory || isDead || isPaused) return;
-    if (player && player.active && !isPaused) { const prevX = this._prevPlayerX ?? player.x; const driftX = player.x - prevX; this._prevPlayerX = player.x; let targetAngle = this.isFirstMove ? Phaser.Math.Clamp(driftX * 2.6, -14, 14) : Math.sin(time * 0.006) * 2.2; if (this.isFirstMove && Math.abs(targetAngle) < 3) targetAngle = Phaser.Math.Clamp((player.x - this.input.activePointer.x) * 0.12, -10, 10); player.angle = Phaser.Math.Linear(player.angle, targetAngle, 0.16); player.scaleX = Phaser.Math.Linear(player.scaleX, 1 - (Math.abs(player.angle) * 0.01), 0.2); player.scaleY = Phaser.Math.Linear(player.scaleY, 1 + (Math.abs(player.angle) * 0.004), 0.2); }
+    if (player && player.active && !isPaused) { 
+        const prevX = this._prevPlayerX ?? player.x; 
+        const driftX = player.x - prevX; 
+        this._prevPlayerX = player.x; 
+        let targetAngle = Phaser.Math.Clamp(driftX * 4, -18, 18);
+        if (Math.abs(driftX) < 0.1) targetAngle = Math.sin(time * 0.005) * 2;
+        player.angle = Phaser.Math.Linear(player.angle, targetAngle, 0.1); 
+        player.scaleX = Phaser.Math.Linear(player.scaleX, 1 - (Math.abs(player.angle) * 0.005), 0.1);
+        player.scaleY = Phaser.Math.Linear(player.scaleY, 1 + (Math.abs(player.angle) * 0.002), 0.1);
+    }
     const fontUI = 'Arial, sans-serif';
     bullets.children.each(b => { if (b && (b.y > 750 || b.y < -100)) b.destroy(); });
     playerBullets.children.each(b => { if (b && b.y < -100) b.destroy(); });
@@ -227,7 +236,8 @@ function update(time, delta) {
     minionBullets.children.each(b => { if (b && b.y > 750) b.destroy(); });
     if (!isBossFight) {
         let actualDelta = (delta > 0 && delta < 1) ? delta * 1000 : delta;
-        let speedFactor = Math.max(0.01, 0.08 + level * 0.01 + (upgradeLevels.speed || 0) * 0.03);
+        let comboBonus = 1 + (Math.min(combo, 50) * 0.01); 
+        let speedFactor = Math.max(0.01, 0.1 + level * 0.012 + (upgradeLevels.speed || 0) * 0.04) * comboBonus;
         let deltaDist = actualDelta * speedFactor * (currentStats.spd || 1); 
         distance += deltaDist; totalDistance += deltaDist;
         rankXPDistanceAccum += deltaDist;
