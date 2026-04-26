@@ -43,6 +43,37 @@ function safeRemoveTimer(timer) {
     return null;
 }
 
+function createSciFiPanel(scene, x, y, width, height, fillColor = 0x0a1119, fillAlpha = 0.9, cornerCut = 12) {
+    const points = [
+        cornerCut, 0,
+        width, 0,
+        width, height - cornerCut,
+        width - cornerCut, height,
+        0, height,
+        0, cornerCut
+    ];
+    const poly = scene.add.polygon(x, y, points, fillColor, fillAlpha);
+    poly.setDisplayOrigin(width / 2, height / 2);
+    poly.isSciFiPanel = true;
+    return poly;
+}
+
+function createSciFiButton(scene, x, y, text, width, height, mainColor = 0x00ffff, onClick) {
+    const bg = createSciFiPanel(scene, x, y, width, height, PALETTE.panel, 0.9).setStrokeStyle(1, mainColor, 0.7);
+    const hexColor = '#' + mainColor.toString(16).padStart(6, '0');
+    const txt = scene.add.text(x, y, text, { fontSize: '15px', fontFamily: '"Orbitron", sans-serif', fill: '#ffffff', fontWeight: 'bold' }).setOrigin(0.5);
+    
+    bg.setInteractive();
+    
+    bg.on('pointerdown', () => {
+        scene.tweens.add({ targets: [bg, txt], scaleX: 0.95, scaleY: 0.95, duration: 60, yoyo: true });
+        safeHaptic('impact', 'light');
+        if (onClick) scene.time.delayedCall(80, onClick);
+    });
+    
+    return [bg, txt];
+}
+
 function ensureBgm(scene) {
     if (!scene || !scene.sound) return;
     const bgm = scene.sound.get('bgm');

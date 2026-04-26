@@ -59,7 +59,8 @@ function showMenu(scene) {
     startTitleGlitch(scene, title);
     scene.glitchTimer = scene.time.addEvent({ delay: 2000, callback: () => applyGlitchEffect(scene, title), callbackScope: scene, loop: true });
     const closeMenu = () => { if (scene.glitchTimer) scene.glitchTimer.remove(); menu.setVisible(false); };
-    const profileBtn = scene.add.text(187, 126, TRANSLATIONS[lang].profile, { fontSize: '16px', fontFamily: fontUI, fill: '#00ffff', fontWeight: 'bold' }).setOrigin(0.5).setInteractive();
+    const profileBtnBg = createSciFiPanel(scene, 187, 126, 120, 24, PALETTE.panel, 0.8).setStrokeStyle(1, PALETTE.cyan, 0.5).setInteractive();
+    const profileBtn = scene.add.text(187, 126, TRANSLATIONS[lang].profile, { fontSize: '14px', fontFamily: fontUI, fill: STR_PALETTE.cyan, fontWeight: 'bold' }).setOrigin(0.5);
     const showcaseTrail = scene.add.ellipse(187, 235, 105, 18, 0x00ffff, 0.12);
     const showcaseShip = scene.add.sprite(187, 205, player?.texture?.key || 'pixel').setScale(2.45).setAlpha(0.98).setAngle(-4);
     const loadoutLabel = scene.add.text(187, 270, lang === 'ru' ? 'АКТИВНАЯ СБОРКА' : 'ACTIVE LOADOUT', { fontSize: '10px', fontFamily: fontUI, fill: '#88ffee', fontWeight: 'bold', letterSpacing: 1 }).setOrigin(0.5);
@@ -80,19 +81,23 @@ function showMenu(scene) {
     });
     scene.tweens.add({ targets: [heroGlow, heroAura], alpha: { from: 0.08, to: 0.2 }, scaleX: 1.04, scaleY: 1.06, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     scene.tweens.add({ targets: showcaseTrail, alpha: { from: 0.08, to: 0.22 }, width: 125, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    profileBtn.on('pointerdown', () => { closeMenu(); showProfile(scene, menu); });
+    profileBtnBg.on('pointerdown', () => { closeMenu(); showProfile(scene, menu); });
     const startY = 360;
     const hangarY = 430;
     const shopY = 500;
     const settingsY = 570;
-    const questsBtn = scene.add.text(320, 135, '📋', { fontSize: '18px', fill: '#ffffff', backgroundColor: '#222', padding: 8, fontFamily: fontUI }).setOrigin(0.5).setInteractive();
-    questsBtn.on('pointerdown', () => { closeMenu(); showDailyQuests(scene, menu); });
     
-    const langBtn = scene.add.text(320, 35, lang.toUpperCase(), { fontSize: '14px', fill: '#ffff00', backgroundColor: '#222', padding: 8, fontFamily: fontUI }).setOrigin(0.5).setInteractive();
-    langBtn.on('pointerdown', () => { lang = (lang === 'ru') ? 'en' : 'ru'; saveProgress(); if (scene.glitchTimer) scene.glitchTimer.remove(); menu.destroy(); showMenu(scene); });
+    const questsBtnBg = createSciFiPanel(scene, 320, 135, 36, 36, PALETTE.panel, 0.9).setStrokeStyle(1, PALETTE.cyan, 0.5).setInteractive();
+    const questsBtn = scene.add.text(320, 135, '📋', { fontSize: '18px', fill: '#ffffff', fontFamily: fontUI }).setOrigin(0.5);
+    questsBtnBg.on('pointerdown', () => { closeMenu(); showDailyQuests(scene, menu); });
     
-    const communityBtn = scene.add.text(320, 85, '💎', { fontSize: '18px', fill: '#ffffff', backgroundColor: '#222', padding: 8, fontFamily: fontUI }).setOrigin(0.5).setInteractive();
-    communityBtn.on('pointerdown', async () => { 
+    const langBtnBg = createSciFiPanel(scene, 320, 35, 46, 36, PALETTE.panel, 0.9).setStrokeStyle(1, PALETTE.yellow, 0.5).setInteractive();
+    const langBtn = scene.add.text(320, 35, lang.toUpperCase(), { fontSize: '14px', fill: STR_PALETTE.yellow, fontFamily: fontUI }).setOrigin(0.5);
+    langBtnBg.on('pointerdown', () => { lang = (lang === 'ru') ? 'en' : 'ru'; saveProgress(); if (scene.glitchTimer) scene.glitchTimer.remove(); menu.destroy(); showMenu(scene); });
+    
+    const communityBtnBg = createSciFiPanel(scene, 320, 85, 36, 36, PALETTE.panel, 0.9).setStrokeStyle(1, PALETTE.magenta, 0.5).setInteractive();
+    const communityBtn = scene.add.text(320, 85, '💎', { fontSize: '18px', fill: '#ffffff', fontFamily: fontUI }).setOrigin(0.5);
+    communityBtnBg.on('pointerdown', async () => { 
         const url = 'https://t.me/GlitchedArenaCommunity';
         if (window.Telegram?.WebApp) { Telegram.WebApp.openTelegramLink(url); } else { window.open(url, '_blank'); }
         
@@ -120,18 +125,8 @@ function showMenu(scene) {
             } catch (e) { console.error('Check community error:', e); }
         });
     });
-    const btnStyle = { fontSize: '18px', fill: '#fff', backgroundColor: '#222', padding: 10, fontFamily: fontUI, fontWeight: 'bold' };
-    const startPulse = scene.add.rectangle(187, startY, 276, 54, 0x00d7ff, 0.14).setStrokeStyle(2, 0x00ffff, 0.95);
-    const startBtn = scene.add.text(187, startY, TRANSLATIONS[lang].start, { fontSize: '19px', fill: '#ffffff', backgroundColor: '#003746', padding: { left: 18, right: 18, top: 10, bottom: 10 }, fontFamily: fontUI, fontWeight: 'bold' }).setOrigin(0.5).setInteractive();
-    const hangarBtn = scene.add.text(187, hangarY, TRANSLATIONS[lang].hangar, btnStyle).setOrigin(0.5).setInteractive();
-    const shopBtn = scene.add.text(187, shopY, TRANSLATIONS[lang].shop, btnStyle).setOrigin(0.5).setInteractive();
-    const setBtn = scene.add.text(187, settingsY, TRANSLATIONS[lang].settings, btnStyle).setOrigin(0.5).setInteractive();
-    const soundBtn = scene.add.text(320, 185, isSoundOn ? '🔊' : '🔇', { fontSize: '18px', fill: '#ffffff', backgroundColor: '#222', padding: 8, fontFamily: fontUI }).setOrigin(0.5).setInteractive();
-    const rulesBtn = scene.add.text(102, 633, TRANSLATIONS[lang].rules, { fontSize: '13px', fill: '#d3b4ff', backgroundColor: '#23142f', padding: 8, fontFamily: fontUI, fontWeight: 'bold' }).setOrigin(0.5).setInteractive();
-    const topBtn = scene.add.text(274, 633, TRANSLATIONS[lang].top, { fontSize: '13px', fill: '#ffff00', backgroundColor: '#333300', padding: 8, fontFamily: fontUI, fontWeight: 'bold' }).setOrigin(0.5).setInteractive();
-    scene.tweens.add({ targets: [startPulse, startBtn], scaleX: 1.03, scaleY: 1.03, alpha: { from: 0.92, to: 1 }, duration: 850, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    startBtn.on('pointerdown', () => { 
-        // Сначала проверяем флаг просмотра рекламы
+    const startPulse = createSciFiPanel(scene, 187, startY, 286, 64, PALETTE.cyan, 0.14).setStrokeStyle(2, PALETTE.cyan, 0.95);
+    const [startBtnBg, startBtn] = createSciFiButton(scene, 187, startY, TRANSLATIONS[lang].start, 260, 48, PALETTE.cyan, () => {
         if (adWatchedPendingRevive) {
             adWatchedPendingRevive = false;
             lastRunState = { isDead: false, pendingDeath: false };
@@ -140,11 +135,17 @@ function showMenu(scene) {
             closeMenu(); startRun(scene); 
             return;
         }
-        // Иначе стандартная логика
         if (lastRunState.pendingDeath) { closeMenu(); triggerDeath(scene); return; } 
         closeMenu(); startRun(scene); 
     });
-    soundBtn.on('pointerdown', () => { 
+    
+    const [hangarBtnBg, hangarBtn] = createSciFiButton(scene, 187, hangarY, TRANSLATIONS[lang].hangar, 240, 44, PALETTE.magenta, () => { closeMenu(); showHangar(scene, menu); });
+    const [shopBtnBg, shopBtn] = createSciFiButton(scene, 187, shopY, TRANSLATIONS[lang].shop, 240, 44, PALETTE.yellow, () => { closeMenu(); showShop(scene, menu); });
+    const [setBtnBg, setBtn] = createSciFiButton(scene, 187, settingsY, TRANSLATIONS[lang].settings, 240, 44, PALETTE.green, () => { closeMenu(); showSettings(scene, menu); });
+    
+    const soundBtnBg = createSciFiPanel(scene, 320, 185, 36, 36, PALETTE.panel, 0.9).setStrokeStyle(1, PALETTE.cyan, 0.5).setInteractive();
+    const soundBtn = scene.add.text(320, 185, isSoundOn ? '🔊' : '🔇', { fontSize: '18px', fill: '#ffffff', fontFamily: fontUI }).setOrigin(0.5);
+    soundBtnBg.on('pointerdown', () => { 
         isSoundOn = !isSoundOn; 
         soundBtn.setText(isSoundOn ? '🔊' : '🔇'); 
         if (!isSoundOn) scene.sound.stopAll(); 
@@ -152,12 +153,13 @@ function showMenu(scene) {
         saveProgress(); 
         if (typeof submitScore === 'function') submitScore().catch(e => {});
     });
-    hangarBtn.on('pointerdown', () => { closeMenu(); showHangar(scene, menu); });
-    shopBtn.on('pointerdown', () => { closeMenu(); showShop(scene, menu); });
-    setBtn.on('pointerdown', () => { closeMenu(); showSettings(scene, menu); });
-    rulesBtn.on('pointerdown', () => { closeMenu(); showRules(scene, menu); });
-    topBtn.on('pointerdown', () => { closeMenu(); showLeaderboard(scene, menu); });
-    menu.add([bg, decoLines, topGlow, heroGlow, heroAura, heroFrame, showcaseTrail, showcaseShip, title, langBtn, communityBtn, profileBtn, loadoutLabel, loadoutStats, flavorText, startPulse, startBtn, hangarBtn, shopBtn, setBtn, soundBtn, rulesBtn, topBtn, questsBtn]);
+
+    const [rulesBtnBg, rulesBtn] = createSciFiButton(scene, 102, 633, TRANSLATIONS[lang].rules, 170, 34, PALETTE.magenta, () => { closeMenu(); showRules(scene, menu); });
+    const [topBtnBg, topBtn] = createSciFiButton(scene, 274, 633, TRANSLATIONS[lang].top, 170, 34, PALETTE.yellow, () => { closeMenu(); showLeaderboard(scene, menu); });
+
+    scene.tweens.add({ targets: [startPulse, startBtn, startBtnBg], scaleX: 1.03, scaleY: 1.03, alpha: { from: 0.92, to: 1 }, duration: 850, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+
+    menu.add([bg, decoLines, topGlow, heroGlow, heroAura, heroFrame, showcaseTrail, showcaseShip, title, langBtnBg, langBtn, communityBtnBg, communityBtn, profileBtnBg, profileBtn, loadoutLabel, loadoutStats, flavorText, startPulse, startBtnBg, startBtn, hangarBtnBg, hangarBtn, shopBtnBg, shopBtn, setBtnBg, setBtn, soundBtnBg, soundBtn, rulesBtnBg, rulesBtn, topBtnBg, topBtn, questsBtnBg, questsBtn]);
     if (droneOrbit) menu.add(droneOrbit);
     menu.setAlpha(0);
     menu.iterate(child => {

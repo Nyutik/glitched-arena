@@ -16,6 +16,29 @@ const ASSETS = {
     SFX_NUKE: 'assets/Star_Wars-Siren.mp3'
 };
 
+// Global Sci-Fi Palette
+const PALETTE = {
+    cyan: 0x00ffff,
+    magenta: 0xff00ff,
+    yellow: 0xffff00,
+    green: 0x00ff88,
+    red: 0xff0055,
+    bg: 0x04070d,
+    panel: 0x0a1119,
+    border: 0x004444
+};
+
+const STR_PALETTE = {
+    cyan: '#00ffff',
+    magenta: '#ff00ff',
+    yellow: '#ffff00',
+    green: '#00ff88',
+    red: '#ff0055',
+    bg: '#04070d',
+    white: '#ffffff',
+    gray: '#888888'
+};
+
 const rainbowColors = [0xff0000, 0xff7700, 0xffff00, 0x00ff00, 0x00ffff, 0x0077ff, 0xff00ff];
 
 const SKIN_DATA = {

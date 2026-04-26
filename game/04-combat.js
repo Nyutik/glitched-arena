@@ -204,7 +204,7 @@ function processRevive(scene) {
 }
 
 function showConfirmRevive(scene) {
-    adWatchedPendingRevive = true; // Р В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎС›Р В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р РЋРІвЂћСћР В Р’В Р вЂ™Р’В Р В Р Р‹Р вЂ™Р’ВР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’ВµР В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р РЋРІвЂћСћР В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎСљР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В° Р В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р В Р вЂ№Р В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р РЋРІвЂћСћР В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎС› Р В Р’В Р В Р вЂ№Р В Р’В Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’ВµР В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎСљР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В»Р В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В°Р В Р’В Р вЂ™Р’В Р В Р Р‹Р вЂ™Р’ВР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В° Р В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРІР‚СњР В Р’В Р В Р вЂ№Р В Р’В Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎС›Р В Р’В Р В Р вЂ№Р В Р’В Р РЋРІР‚СљР В Р’В Р вЂ™Р’В Р В Р Р‹Р вЂ™Р’ВР В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎС›Р В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р РЋРІвЂћСћР В Р’В Р В Р вЂ№Р В Р’В Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’ВµР В Р’В Р вЂ™Р’В Р В Р’В Р Р†Р вЂљР’В¦Р В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В°
+    adWatchedPendingRevive = true; // запоминаем, чтобы при возврате запустить игру
     saveProgress();
     
     const overlay = scene.add.container(0, 0).setDepth(6000);
@@ -228,7 +228,7 @@ function showConfirmRevive(scene) {
     overlay.add(descText);
     
     const readyBtn = scene.add.rectangle(187, 360, 220, 50, 0x004444).setInteractive().setStrokeStyle(2, 0x00ffff);
-    const readyText = scene.add.text(187, 360, lang === 'ru' ? '>> Р В РІР‚вЂќР В РЎвЂ™Р В РЎСџР В Р в‚¬Р В Р Р‹Р В РЎв„ў <<' : '>> LAUNCH <<', { 
+    const readyText = scene.add.text(187, 360, lang === 'ru' ? '>> ПРОДОЛЖИТЬ <<' : '>> LAUNCH <<', { 
         fontSize: '20px', fill: '#00ffff', fontWeight: 'bold', fontFamily: '"Orbitron", sans-serif' 
     }).setOrigin(0.5);
     overlay.add([readyBtn, readyText]);
@@ -270,7 +270,7 @@ function showHardResetConfirm(scene) {
     const yesBtn = scene.add.rectangle(125, 390, 110, 44, 0x661111).setInteractive().setStrokeStyle(1, 0xff6666);
     const yesTxt = scene.add.text(125, 390, lang === 'ru' ? 'СБРОСИТЬ' : 'RESET', { fontSize: '16px', fill: '#ffffff', fontWeight: 'bold', fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5);
     const noBtn = scene.add.rectangle(249, 390, 110, 44, 0x222222).setInteractive().setStrokeStyle(1, 0xaaaaaa);
-    const noTxt = scene.add.text(249, 390, lang === 'ru' ? 'Р В РЎСљР В РЎвЂ™Р В РІР‚вЂќР В РЎвЂ™Р В РІР‚Сњ' : 'BACK', { fontSize: '16px', fill: '#ffffff', fontWeight: 'bold', fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5);
+    const noTxt = scene.add.text(249, 390, lang === 'ru' ? 'НАЗАД' : 'BACK', { fontSize: '16px', fill: '#ffffff', fontWeight: 'bold', fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5);
     yesBtn.on('pointerdown', () => {
         level = 1;
         distance = 0;

@@ -363,12 +363,21 @@ function showHangar(scene, mainMenu) {
     const contentContainer = scene.add.container(0, 0); scrollWindow.add(contentContainer);
     const mask = scene.make.graphics().fillRect(0, scrollAreaTop, 375, scrollHeight).createGeometryMask(); scrollWindow.setMask(mask);
     const title = scene.add.text(187, 30, TRANSLATIONS[lang].hangar_title, { fontSize: '22px', fill: '#00ffff', fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5); overlay.add(title);
-    const stats = getShipStats(); const statsBox = scene.add.rectangle(187, 58, 330, 24, 0x222222).setStrokeStyle(1, 0xffff00); const statsText = scene.add.text(187, 58, stats.label, { fontSize: '10px', fill: '#ffff00', fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5); overlay.add([statsBox, statsText]);
-    const previewSprite = scene.add.sprite(285, 190, player.texture.key).setScale(3.5);
-    const glow = scene.add.circle(285, 190, 42, 0x00ffff, 0.15).setDepth(previewSprite.depth - 1);
-    scene.tweens.add({ targets: previewSprite, y: 184, angle: 5, duration: 1450, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    scene.tweens.add({ targets: glow, alpha: { from: 0.08, to: 0.2 }, scaleX: 1.08, scaleY: 1.08, duration: 1050, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    overlay.add([glow, previewSprite]);
+    const stats = getShipStats(); const statsBox = createSciFiPanel(scene, 187, 58, 330, 24, PALETTE.panel, 0.8).setStrokeStyle(1, PALETTE.yellow); const statsText = scene.add.text(187, 58, stats.label, { fontSize: '10px', fill: STR_PALETTE.yellow, fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5); overlay.add([statsBox, statsText]);
+    
+    // 3D Showcase
+    const showcaseBg = createSciFiPanel(scene, 285, 190, 150, 150, 0x050a10, 0.95, 20).setStrokeStyle(2, PALETTE.cyan, 0.4);
+    const platform = scene.add.ellipse(285, 245, 110, 30, PALETTE.cyan, 0.15).setStrokeStyle(1, PALETTE.cyan, 0.4);
+    const gridLines = scene.add.graphics();
+    gridLines.lineStyle(1, PALETTE.cyan, 0.3);
+    for(let i=-40; i<=40; i+=20) { gridLines.lineBetween(285+i, 235, 285+i*1.5, 255); }
+    gridLines.lineBetween(240, 245, 330, 245);
+    const glow = scene.add.circle(285, 190, 50, PALETTE.cyan, 0.15);
+    const previewSprite = scene.add.sprite(285, 180, player.texture.key).setScale(3.5).setDepth(4010);
+    glow.setDepth(4009);
+    scene.tweens.add({ targets: previewSprite, y: 170, angle: 5, duration: 1450, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    scene.tweens.add({ targets: glow, alpha: { from: 0.08, to: 0.25 }, scaleX: 1.15, scaleY: 1.15, duration: 1050, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    overlay.add([showcaseBg, platform, gridLines, glow, previewSprite]);
     let currentY = 0;
     const leftX = 15;
     contentContainer.add(scene.add.text(leftX, scrollAreaTop + currentY, TRANSLATIONS[lang].hull_type, { fontSize: '13px', fill: '#ff00ff', fontWeight: 'bold', fontFamily: fontUI })); currentY += 28;
