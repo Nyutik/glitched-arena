@@ -59,7 +59,6 @@ function checkAchievements(scene) {
 function handleDamage(scene, dmg) {
     if (isDead || isVictory || !isStarted) return;
     combo = 0;
-    resetGlitchMode(scene);
     if (upgradeLevels.helper_autoshield > 0 && !isShieldActive && upgradeLevels.helper_autoshield_used !== true) {
         upgradeLevels.helper_autoshield_used = true;
         isShieldActive = true;
@@ -143,7 +142,7 @@ function triggerDeath(scene) {
         scene.cameras.main.shake(300, 0.03);
     }
     cleanupScreenFx(scene);
-    isMagnetActive = false; isGlitchMode = false; coinsThisRun = 0;
+    isMagnetActive = false; coinsThisRun = 0;
     scoreText.setText(`${TRANSLATIONS[lang].credits}: ${coins}`);
     for(let i = 0; i < 25; i++) {
         let expCol = currentExplosionColor;
@@ -668,7 +667,7 @@ function collectItem(p, item) {
     if (type === 'magnet') { isMagnetActive = true; glitchText.setText(TRANSLATIONS[lang].magnet_on).setFill('#ff00ff'); this.time.delayedCall(8000, () => { isMagnetActive = false; if (glitchText?.active && glitchText.text === TRANSLATIONS[lang].magnet_on) glitchText.setText(''); }); return; }
     if (type === 'heart') { playerHealth = Math.min(maxPlayerHealth, playerHealth + 25); let txt = this.add.text(player.x, player.y, '+25 ' + TRANSLATIONS[lang].hp_label, { fontFamily: '"Orbitron", sans-serif', fontSize: '18px', fill: '#00ff00', fontWeight: 'bold', stroke: '#000', strokeThickness: 3 }).setDepth(100); this.tweens.add({ targets: txt, y: player.y - 100, alpha: 0, duration: 800, onComplete: () => txt.destroy() }); glitchText.setText(TRANSLATIONS[lang].integrity_restored).setFill('#ff0088'); this.time.delayedCall(1000, () => { if (glitchText?.active && glitchText.text === TRANSLATIONS[lang].integrity_restored) glitchText.setText(''); }); this.cameras.main.flash(300, 255, 0, 136, 0.4); return; }
     if (type === 'nuke') { playSound(this, 'sfx_nuke', { volume: 0.5, stopOnTerminate: true }); this.time.delayedCall(2000, () => { this.sound.stopByKey('sfx_nuke'); }); let wave = this.add.circle(player.x, player.y, 20, 0xff00ff, 0.7).setDepth(2000); this.tweens.add({ targets: wave, radius: 1100, alpha: 0, duration: 1000, ease: 'Expo.easeOut', onComplete: () => wave.destroy() }); this.cameras.main.flash(500, 255, 0, 255, 0.4); this.cameras.main.shake(850, 0.035); obstacles.children.each(obs => { if (!obs || !obs.active) return; for (let i = 0; i < 10; i++) { let frag = this.add.rectangle(obs.x, obs.y, Phaser.Math.Between(4, 9), Phaser.Math.Between(4, 9), 0xff00ff).setDepth(5); this.physics.add.existing(frag); frag.body.setVelocity(Phaser.Math.Between(-650, 650), Phaser.Math.Between(-650, 650)); frag.body.setAngularVelocity(Phaser.Math.Between(-500, 500)); this.tweens.add({ targets: frag, alpha: 0, scaleX: 0, scaleY: 0, duration: Phaser.Math.Between(650, 1100), ease: 'Quad.easeOut', onComplete: () => frag.destroy() }); } }); obstacles.clear(true, true); glitchText.setText(TRANSLATIONS[lang].purified).setFill('#ff00ff'); this.time.delayedCall(1500, () => { if (glitchText?.active && glitchText.text === TRANSLATIONS[lang].purified) glitchText.setText(''); }); return; }
-    if (type === 'coin') { coinsThisRun += isGlitchMode ? 30 : 10; updateHudTexts(); return; }
+    if (type === 'coin') { coinsThisRun += 10; updateHudTexts(); return; }
     if (type === 'slowmo') { 
         glitchText.setText(TRANSLATIONS[lang].time_warp).setFill('#00ff00'); 
         this.physics.world.timeScale = 2; 
