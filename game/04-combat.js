@@ -135,8 +135,10 @@ function triggerDeath(scene) {
         bossHealth -= bombDmg;
         showDamageText(scene, boss.x, boss.y, Math.floor(bombDmg), '#ff00ff', '22px');
         scene.cameras.main.flash(300, 255, 0, 255, 0.5);
-        if (bullets) bullets.clear(true, true);
-        if (bossShields) bossShields.clear(true, true);
+    if (bullets) bullets.clear(true, true);
+    if (playerBullets) playerBullets.clear(true, true);
+    if (playerMissiles) playerMissiles.clear(true, true);
+    if (bossShields) bossShields.clear(true, true);
         scene.cameras.main.shake(300, 0.03);
     }
     cleanupScreenFx(scene);
@@ -165,6 +167,10 @@ function triggerDeath(scene) {
     scene.physics.pause();
     if (scene.obstacleTimer) scene.obstacleTimer.remove();
     if (scene.shootEvent) scene.shootEvent.remove();
+    if (scene.droneTimer) scene.droneTimer.remove();
+    if (scene.missileTimer) scene.missileTimer.remove();
+    if (scene.mercenaryTimer) scene.mercenaryTimer.remove();
+    if (scene.healTimer) scene.healTimer.remove();
     const overlay = scene.add.container(0, 0).setDepth(5000);
     const deathBg = scene.add.graphics().fillStyle(0x000000, 0.9).fillRect(0, 0, 375, 667);
     deathBg.setInteractive(new Phaser.Geom.Rectangle(0, 0, 375, 667), Phaser.Geom.Rectangle.Contains);

@@ -39,7 +39,8 @@ async function triggerVictory(scene) {
     if (player) player.setVisible(false); if (trailEmitter) trailEmitter.stop();
     if (bossTrail) { bossTrail.stop(); bossTrail.setVisible(false); }
     scene.shootEvent = safeRemoveTimer(scene.shootEvent); scene.bossShootEvent = safeRemoveTimer(scene.bossShootEvent); scene.turretShootEvent = safeRemoveTimer(scene.turretShootEvent); scene.minionTimer = safeRemoveTimer(scene.minionTimer); scene.phraseTimer = safeRemoveTimer(scene.phraseTimer); scene.teleportEvent = safeRemoveTimer(scene.teleportEvent); scene.itemTimer = safeRemoveTimer(scene.itemTimer); itemsTimer = safeRemoveTimer(itemsTimer); victoryTextJitter = safeRemoveTimer(victoryTextJitter);
-    try { bullets?.clear(true, true); playerBullets?.clear(true, true); minionBullets?.clear(true, true); minions?.clear(true, true); obstacles?.clear(true, true); bossShields?.clear(true, true); } catch (e) { console.warn("Group clear error:", e); }
+    scene.droneTimer = safeRemoveTimer(scene.droneTimer); scene.missileTimer = safeRemoveTimer(scene.missileTimer); scene.mercenaryTimer = safeRemoveTimer(scene.mercenaryTimer); scene.healTimer = safeRemoveTimer(scene.healTimer);
+    try { bullets?.clear(true, true); playerBullets?.clear(true, true); playerMissiles?.clear(true, true); minionBullets?.clear(true, true); minions?.clear(true, true); obstacles?.clear(true, true); bossShields?.clear(true, true); } catch (e) { console.warn("Group clear error:", e); }
     if (bossTurretL) { bossTurretL.destroy(); bossTurretL = null; } if (bossTurretR) { bossTurretR.destroy(); bossTurretR = null; }
     if (secondCore) { secondCore.destroy(); secondCore = null; } if (scene.dualCoreShootTimer) { scene.dualCoreShootTimer.remove(); scene.dualCoreShootTimer = null; }
     const completedLevel = level; level++; runGoal = 700 + (level - 1) * 100; 
