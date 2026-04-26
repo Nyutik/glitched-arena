@@ -360,7 +360,6 @@ function update(time, delta) {
     if (isGlitchMode) {
         if (this.bgGrid) {
             this.bgGrid.setAlpha(0.08 + Math.sin(time * 0.01) * 0.05);
-            this.bgGrid.setFillStyle(0xff0055, 0.08 + Math.sin(time * 0.01) * 0.05);
         }
         if (Math.random() < 0.05) {
             this.cameras.main.setScroll(Phaser.Math.Between(-2, 2), Phaser.Math.Between(-2, 2));
@@ -370,7 +369,6 @@ function update(time, delta) {
     } else {
         if (this.bgGrid) {
             this.bgGrid.setAlpha(0.03);
-            this.bgGrid.setFillStyle(0x00ffff, 0.03);
         }
         this.cameras.main.setScroll(0, 0);
     }
@@ -437,7 +435,7 @@ function startRun(scene) {
     scene.input.on('pointerdown', p => { if (!isStarted || isShopOpen || isDead || isPaused || !player?.active) return; if (p.y < 90) return; scene.isFirstMove = true; player.x = Phaser.Math.Clamp(p.x, 20, 355); player.y = Phaser.Math.Clamp(p.y + yOffset, 80, 620); if (shieldAura) shieldAura.setPosition(player.x, player.y); if (overdrive >= 100 && !isVictory && isBossFight) useOverdrive.call(scene); });
     scene.input.on('pointermove', p => { if (!isStarted || isShopOpen || isDead || isPaused || !player?.active) return; if (scene.isFirstMove) { player.x = Phaser.Math.Clamp(p.x, 20, 355); player.y = Phaser.Math.Clamp(p.y + yOffset, 80, 620); if (shieldAura) shieldAura.setPosition(player.x, player.y); } });
     scene.obstacleTimer = scene.time.addEvent({ 
-        delay: level <= 1 ? 1650 : level <= 3 ? 1500 : level <= 5 ? 1400 : Math.max(520, 1300 - level * 25), 
+        delay: level <= 1 ? 1200 : level <= 3 ? 1050 : level <= 5 ? 900 : Math.max(450, 1100 - level * 25), 
         callback: spawnObstacle, 
         callbackScope: scene, 
         loop: true 
