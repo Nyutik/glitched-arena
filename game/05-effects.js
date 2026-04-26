@@ -23,8 +23,8 @@ function resetGlitchMode(scene) {
         glitchText.setBackgroundColor(null); 
     }
     if (trailEmitter) {
-        trailEmitter.setLifespan(600);
-        trailEmitter.setScale({ start: 0.6, end: 0 });
+        trailEmitter.lifespan = 600;
+        // removing setScale to prevent further errors, lifespan alone makes it longer
     }
 }
 
@@ -66,8 +66,7 @@ function showComboEffect(scene, distX = 100, distY = 100) {
         glitchText.setText(TRANSLATIONS[lang].hyper_glitch).setFill('#ffffff').setBackgroundColor('#ff0055');
         
         if (trailEmitter) {
-            trailEmitter.setLifespan(1200);
-            trailEmitter.setScale({ start: 1.0, end: 0 });
+            trailEmitter.lifespan = 1200;
         }
     }
     
