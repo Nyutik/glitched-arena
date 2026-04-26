@@ -53,9 +53,6 @@ class ScoreData(BaseModel):
     daily_login_streak: Optional[int] = 0
     last_login_date: Optional[str] = None
     lang: Optional[str] = 'en'
-    is_metric: Optional[bool] = False
-    event_type: Optional[str] = None
-    extra: Optional[str] = None
 
 class MetricData(BaseModel):
     telegram_id: int
@@ -78,17 +75,20 @@ async def log_metric(data: MetricData):
 
 @app.get("/get_invoice")
 async def get_invoice(item_type: str, user_id: int, username: str):
+    # --- СНИЖЕННЫЕ ЦЕНЫ (STARS) ---
     prices_map = {
-        "skin_gold": 200, "skin_ghost": 200, "skin_crimson": 300, "skin_void": 300,
-        "skin_plasma": 300, "skin_solar": 300, "skin_frost": 300,
-        "skin_rainbow": 350, "skin_void_premium": 400, "skin_crystal": 350,
-        "skin_striker": 1500, "ship_tank": 1200, "ship_dart": 1000, "ship_viper": 1500, "ship_phase": 1800,
-        "bundle_starter": 100, "bundle_warrior": 250, "bundle_legend": 500,
-        "omega": 100, "buy_coins": 50, "fx_blue": 100, "fx_pink": 100, "fx_gold": 150, "fx_green": 150, "fx_red": 150,
-        "helper_drone": 500, "helper_autoshield": 400, "helper_autobomb": 600, "helper_autoheal": 350,
-        "up_extralife": 800, "up_doubleDMG": 700, "up_enhanced": 1500
+        "skin_gold": 49, "skin_ghost": 49, "skin_crimson": 75, "skin_void": 75,
+        "skin_plasma": 75, "skin_solar": 75, "skin_frost": 75,
+        "skin_rainbow": 99, "skin_void_premium": 149, "skin_crystal": 125,
+        "skin_striker": 299, 
+        "ship_tank": 199, "ship_dart": 149, "ship_viper": 299, "ship_phase": 349,
+        "bundle_starter": 49, "bundle_warrior": 99, "bundle_legend": 199,
+        "omega": 99, "buy_coins": 25, 
+        "fx_blue": 30, "fx_pink": 30, "fx_gold": 50, "fx_green": 50, "fx_red": 50,
+        "helper_drone": 149, "helper_autoshield": 99, "helper_autobomb": 199, "helper_autoheal": 125,
+        "up_extralife": 299, "up_doubleDMG": 249, "up_enhanced": 499
     }
-    amount = prices_map.get(item_type, 100)
+    amount = prices_map.get(item_type, 49)
     print(f"[Invoice] item={item_type}, amount={amount}")
 
     payload = f"{item_type}:{user_id}"
@@ -106,171 +106,93 @@ async def get_invoice(item_type: str, user_id: int, username: str):
 
 @app.get("/check_community/{user_id}")
 async def check_community(user_id: int):
-    print(f"[Community] Checking subscription for {user_id}")
     try:
-        # 1. Проверяем подписку в Telegram
         try:
             member = await bot.get_chat_member(chat_id="@GlitchedArenaCommunity", user_id=user_id)
-            print(f"[Community] Status for {user_id}: {member.status}")
-        except Exception as tg_err:
-            print(f"[Community] Telegram API Error: {tg_err}")
+        except Exception:
             return {"status": "error", "message": "Could not verify subscription"}
         
         if member.status in ["member", "administrator", "creator"]:
-            # 2. Проверяем в БД
             res = supabase.table("leaderboard").select("upgrades, coins").eq("telegram_id", user_id).execute()
-            if not res.data:
-                print(f"[Community] User {user_id} not found in DB")
-                return {"status": "error", "message": "User not found"}
+            if not res.data: return {"status": "error", "message": "User not found"}
             
             user_data = res.data[0]
             upgrades = user_data.get("upgrades") or {}
+            if upgrades.get("skin_elite"): return {"status": "already_claimed"}
             
-            if upgrades.get("skin_elite"):
-                return {"status": "already_claimed", "message": "Already claimed!"}
-            
-            # 3. Выдаем бонус
             upgrades["skin_elite"] = 1
-            current_coins = user_data.get("coins", 0)
-            
-            supabase.table("leaderboard").update({
-                "upgrades": upgrades,
-                "coins": current_coins + 1000,
-                "skin": "elite"
-            }).eq("telegram_id", user_id).execute()
-            
-            print(f"[Community] Bonus granted to {user_id}")
-            return {"status": "success", "message": "Elite skin + 1000 coins granted!"}
+            supabase.table("leaderboard").update({"upgrades": upgrades, "coins": user_data.get("coins", 0) + 1000, "skin": "elite"}).eq("telegram_id", user_id).execute()
+            return {"status": "success"}
         else:
-            return {"status": "not_member", "message": "Join @GlitchedArenaCommunity first!"}
+            return {"status": "not_member"}
     except Exception as e:
-        print(f"[Community] Critical Error: {e}")
         return {"status": "error", "message": str(e)}
 
 @app.post("/submit_score")
 async def submit_score(data: ScoreData):
     try:
         current_date = datetime.now().isoformat()
-        # Проверяем наличие пользователя перед обновлением
         res = supabase.table("leaderboard").select("*").eq("telegram_id", data.telegram_id).execute()
         
         if not res.data:
-            # Создаем нового пользователя
-            print(f"[Sync] Creating new pilot: {data.username}")
+            # Новый пилот
             supabase.table("leaderboard").insert({
-                "telegram_id": data.telegram_id,
-                "username": data.username,
-                "score": data.score,
-                "level": data.level,
-                "best_level": data.best_level,
-                "coins": data.coins,
-                "upgrades": data.upgrades,
-                "skin": data.skin,
-                "shape": data.shape,
-                "explosion_color": data.explosion_color,
+                "telegram_id": data.telegram_id, "username": data.username,
+                "score": data.score, "level": data.level, "best_level": data.best_level,
+                "coins": data.coins, "upgrades": data.upgrades, "skin": data.skin,
+                "shape": data.shape, "explosion_color": data.explosion_color,
+                "achievements": data.achievements, "total_dist": data.total_dist,
+                "bosses_killed": data.bosses_killed, "rank_xp": data.rank_xp,
                 "score_date": current_date
             }).execute()
         else:
-            # Обновляем существующего
             old = res.data[0]
-            # Логика объединения данных (берем максимум)
-            new_coins = max(data.coins, old.get("coins", 0))
-            new_best = max(data.best_level, old.get("best_level", 1))
             
-            supabase.table("leaderboard").update({
-                "username": data.username,
+            # --- УМНОЕ ОБЪЕДИНЕНИЕ ДАННЫХ ---
+            # 1. Улучшения (Upgrades) - никогда не затираем покупку!
+            old_upgrades = old.get("upgrades") or {}
+            new_upgrades = data.upgrades or {}
+            merged_upgrades = old_upgrades.copy()
+            for key, val in new_upgrades.items():
+                merged_upgrades[key] = max(int(val or 0), int(old_upgrades.get(key, 0)))
+
+            # 2. Достижения (Achievements)
+            old_ach = old.get("achievements") or {}
+            new_ach = data.achievements or {}
+            merged_ach = {**old_ach, **new_ach}
+
+            # 3. Основные статы (берем MAX)
+            merged_payload = {
+                "username": data.username or old.get("username"),
                 "score": max(data.score, old.get("score", 0)),
-                "level": data.level,
-                "best_level": new_best,
-                "coins": new_coins,
-                "upgrades": data.upgrades,
-                "skin": data.skin,
-                "shape": data.shape,
-                "explosion_color": data.explosion_color,
-                "score_date": current_date
-            }).eq("telegram_id", data.telegram_id).execute()
+                "level": max(data.level, old.get("level", 1)),
+                "best_level": max(data.best_level, old.get("best_level", 1)),
+                "coins": max(data.coins, old.get("coins", 0)),
+                "upgrades": merged_upgrades,
+                "achievements": merged_ach,
+                "total_dist": max(data.total_dist or 0, old.get("total_dist", 0)),
+                "bosses_killed": max(data.bosses_killed or 0, old.get("bosses_killed", 0)),
+                "rank_xp": max(data.rank_xp or 0, old.get("rank_xp", 0)),
+                "skin": data.skin if data.skin != "classic" else (old.get("skin") or "classic"),
+                "shape": data.shape if data.shape != "classic" else (old.get("shape") or "classic"),
+                "explosion_color": data.explosion_color if data.explosion_color != 0xff0000 else (old.get("explosion_color") or 0xff0000),
+                "score_date": current_date,
+                "lang": data.lang or old.get("lang", "en")
+            }
+            
+            supabase.table("leaderboard").update(merged_payload).eq("telegram_id", data.telegram_id).execute()
             
         return {"status": "ok"}
     except Exception as e:
         print(f"[Sync] Error: {e}")
         return {"status": "error", "message": str(e)}
 
-        old_upgrades = old.get("upgrades") or {}
-        new_upgrades = data.upgrades or {}
-        merged_upgrades = old_upgrades.copy()
-
-        for key, val in new_upgrades.items():
-            try:
-                old_val = merged_upgrades.get(key)
-                if old_val is None: old_val = 0
-                new_val_int = int(val) if val is not None else 0
-                old_val_int = int(old_val)
-                merged_upgrades[key] = max(new_val_int, old_val_int)
-            except:
-                merged_upgrades[key] = val if val is not None else merged_upgrades.get(key, 0)
-        
-        old_achievements = old.get("achievements") or {}
-        new_achievements = data.achievements or {}
-        merged_achievements = {**old_achievements, **new_achievements}
-
-        def safe_int(val):
-            if val is None: return 0
-            try: return int(val)
-            except: return 0
-
-        db_level = safe_int(old.get("level"))
-        db_best = safe_int(old.get("best_level"))
-        db_score = safe_int(old.get("score"))
-        db_coins = safe_int(old.get("coins"))
-        db_total_dist = safe_int(old.get("total_dist"))
-        db_bosses_killed = safe_int(old.get("bosses_killed"))
-
-        merged_level = max(safe_int(data.level), db_level)
-        merged_best_level = max(safe_int(data.best_level), db_best, merged_level)
-
-        payload = {
-            "telegram_id": data.telegram_id,
-            "username": data.username or old.get("username") or "PILOT",
-            "score": max(safe_int(data.score), db_score),
-            "level": merged_level,
-            "best_level": merged_best_level,
-            "explosion_color": data.explosion_color or old.get("explosion_color") or 0xff0000,
-            "skin": data.skin or old.get("skin") or "classic",
-            "shape": data.shape or old.get("shape") or "classic",
-            "coins": max(safe_int(data.coins), db_coins),
-            "upgrades": merged_upgrades,
-            "achievements": merged_achievements,
-            "total_dist": max(safe_int(data.total_dist), db_total_dist),
-            "bosses_killed": max(safe_int(data.bosses_killed), db_bosses_killed),
-            "ship_name": data.ship_name or old.get("ship_name") or "RAZOR-01",
-            "rank_xp": max(safe_int(data.rank_xp), safe_int(old.get("rank_xp"))),
-            "daily_quests": data.daily_quests or old.get("daily_quests") or {},
-            "last_daily_reset": data.last_daily_reset if data.last_daily_reset else old.get("last_daily_reset", 0),
-            "daily_login_streak": data.daily_login_streak if data.daily_login_streak is not None else old.get("daily_login_streak", 0),
-            "last_login_date": data.last_login_date or old.get("last_login_date"),
-            "lang": data.lang or old.get("lang") or "en",
-            "score_date": current_date
-        }
-
-        supabase.table("leaderboard").upsert(payload, on_conflict="telegram_id").execute()
-        
-        return {
-            "status": "ok",
-            "merged_level": payload["level"],
-            "merged_best_level": payload["best_level"],
-            "merged_score": payload["score"]
-        }
-    except Exception as e:
-        print(f"❌ Ошибка submit_score: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
 @app.get("/get_leaderboard")
 async def get_leaderboard():
     try:
         res = supabase.table('leaderboard').select('*').order('level', desc=True).order('score', desc=True).limit(50).execute()
         return res.data
-    except Exception as e:
-        return {"error": str(e)}
+    except Exception as e: return {"error": str(e)}
 
 # --- ТЕЛЕГРАМ ОБРАБОТЧИКИ ---
 
@@ -283,7 +205,7 @@ def merge_user_upgrades(tg_id: int, patch: dict):
     old = res.data[0] if res.data else {}
     upgrades = old.get("upgrades") or {}
     for key, val in patch.items():
-        upgrades[key] = max(val, upgrades.get(key, 0))
+        upgrades[key] = max(int(val), int(upgrades.get(key, 0)))
 
     payload = {
         "telegram_id": tg_id,
@@ -347,23 +269,14 @@ async def got_payment(message: types.Message):
 async def cmd_start(message: types.Message):
     args = message.text.split()
     referrer_id = None
-    traffic_source = "organic"
-    if len(args) > 1:
-        traffic_source = args[1]
-        if args[1].startswith("ref_"):
-            try: referrer_id = int(args[1].replace("ref_", ""))
-            except: pass
+    if len(args) > 1 and args[1].startswith("ref_"):
+        try: referrer_id = int(args[1].replace("ref_", ""))
+        except: pass
 
     tg_id = message.from_user.id
     username = message.from_user.first_name or "PILOT"
     user_lang = message.from_user.language_code or 'en'
     if user_lang != 'ru': user_lang = 'en'
-
-    try:
-        with open("traffic_sources.log", "a", encoding="utf-8") as f:
-            f.write(f"{datetime.now().isoformat()} | User: {tg_id} ({username}) | Source: {traffic_source}\n")
-    except Exception as e:
-        pass
 
     user_res = supabase.table("leaderboard").select("*").eq("telegram_id", tg_id).execute()
     is_new_user = len(user_res.data) == 0
@@ -374,20 +287,12 @@ async def cmd_start(message: types.Message):
             try:
                 ref_res = supabase.table("leaderboard").select("coins").eq("telegram_id", referrer_id).execute()
                 if ref_res.data:
-                    old_coins = ref_res.data[0].get("coins", 0)
-                    supabase.table("leaderboard").update({"coins": old_coins + 1500}).eq("telegram_id", referrer_id).execute()
-                    await bot.send_message(referrer_id, f"⚡ Новый пилот в твоей эскадрилье! +1500 💰 за приглашение {username}.")
-            except Exception as e: print(f"Error rewarding referrer: {e}")
+                    supabase.table("leaderboard").update({"coins": ref_res.data[0].get("coins", 0) + 1500}).eq("telegram_id", referrer_id).execute()
+                    await bot.send_message(referrer_id, f"⚡ +1500 💰 за приглашение {username}!")
+            except Exception: pass
 
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🎮 GLITCHED ARENA", web_app=WebAppInfo(url="https://glitched-arena.myftp.org"))]])
-    
-    if user_lang == 'ru':
-        welcome_msg = f"Привет, {username}! 🚀\n\nДобро пожаловать в Glitched Arena!\n🦾 Прокачивай корабль\n👾 Уничтожай боссов\nТвой стартовый бонус: 500 💰"
-        if not is_new_user: welcome_msg = f"С возвращением, {username}! Твои системы готовы к бою. 🦾"
-    else:
-        welcome_msg = f"Hello, {username}! 🚀\n\nWelcome to Glitched Arena!\n🦾 Upgrade your ship\n👾 Destroy bosses\nYour starting bonus: 500 💰"
-        if not is_new_user: welcome_msg = f"Welcome back, {username}! Your systems are combat-ready. 🦾"
-        
+    welcome_msg = f"Привет, {username}! 🚀\n\nWelcome to Glitched Arena!"
     await message.answer(welcome_msg, reply_markup=kb)
 
 @app.get("/get_user_personal/{tg_id}")
@@ -401,65 +306,13 @@ async def get_user_personal(tg_id: int):
         return user_data
     except Exception as e: return {"error": str(e)}
 
-@dp.message(F.text & ~F.text.startswith('/'))
-async def handle_user_message(message: types.Message):
-    with open("bot_messages.log", "a", encoding="utf-8") as f:
-        f.write(f"{datetime.now().isoformat()} | User: {message.from_user.id} (@{message.from_user.username}): {message.text}\n")
-    
-    # Пересылаем сообщение тебе (Админу)
-    ADMIN_ID = 1448811620
-    if message.from_user.id != ADMIN_ID:
-        username_str = f"@{message.from_user.username}" if message.from_user.username else f"ID: {message.from_user.id}"
-        try:
-            await bot.send_message(ADMIN_ID, f"💬 Новое сообщение от игрока {username_str}:\n\n{message.text}\n\n<i>(Оно также сохранено в лог-файл)</i>", parse_mode="HTML")
-        except Exception as e:
-            print(f"Не удалось переслать сообщение админу: {e}")
-
-    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🎮 ИГРАТЬ", web_app=WebAppInfo(url="https://glitched-arena.myftp.org"))]])
-    await message.answer("Прием! Я бортовой компьютер Арены 🤖\nМоя главная задача — отправлять пилотов в бой. Нажимай кнопку ниже и погнали!", reply_markup=kb)
-
 app.mount("/", StaticFiles(directory=".", html=True), name="static")
-
-async def retention_worker():
-    from datetime import timedelta
-    # Словарь переводов для уведомлений
-    RETENTION_MSGS = {
-        "ru": "👾 Капитан, ядро снова нестабильно! Вернитесь на Арену и заберите ежедневный бонус.",
-        "en": "👾 Captain, the core is unstable again! Return to the Arena and claim your daily bonus."
-    }
-    
-    while True:
-        try:
-            await asyncio.sleep(3600)  # Проверяем каждый час
-            print("[Retention] Checking for inactive players...")
-            now = datetime.now()
-            # Добавляем lang в выборку
-            res = supabase.table('leaderboard').select('telegram_id, last_login_date, coins, lang').execute()
-            for user in res.data:
-                last_login = user.get('last_login_date')
-                if last_login:
-                    try:
-                        last_dt = datetime.fromisoformat(last_login)
-                        diff = now - last_dt
-                        # Отправляем пуш тем, кто отсутствовал от 23 до 25 часов
-                        if timedelta(hours=23) <= diff <= timedelta(hours=25):
-                            kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🎮 ИГРАТЬ", web_app=WebAppInfo(url="https://glitched-arena.myftp.org"))]])
-                            user_lang = user.get('lang', 'en')
-                            if user_lang not in RETENTION_MSGS: user_lang = 'en'
-                            msg = RETENTION_MSGS[user_lang]
-                            await bot.send_message(user['telegram_id'], msg, reply_markup=kb)
-                    except Exception as e_msg:
-                        # Игнорируем ошибки отправки (например, юзер заблокировал бота)
-                        pass
-        except Exception as e:
-            print(f"[Retention] error: {e}")
 
 async def main():
     port = int(os.getenv("PORT", 8000))
     config = uvicorn.Config(app, host="0.0.0.0", port=port)
     server = uvicorn.Server(config)
-    asyncio.create_task(retention_worker())
-    await asyncio.gather(server.serve(), dp.start_polling(bot))
+    await server.serve()
 
 if __name__ == "__main__":
     asyncio.run(main())
