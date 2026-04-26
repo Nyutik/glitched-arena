@@ -41,7 +41,7 @@ function showMenu(scene) {
     if (scene.physics && scene.physics.world) scene.physics.world.timeScale = 1;
     const menu = scene.add.container(0, 0).setDepth(3000);
     const bg = scene.add.graphics().fillStyle(0x04070d, 1).fillRect(0, 0, 375, 667);
-    const fontUI = 'Arial, sans-serif';
+    const fontUI = '"Orbitron", sans-serif';
     const topGlow = scene.add.ellipse(187, 85, 300, 115, 0x00e5ff, 0.12);
     const heroGlow = scene.add.ellipse(187, 205, 230, 150, 0xff00aa, 0.11);
     const heroAura = scene.add.circle(187, 205, 58, 0x00ffff, 0.12).setStrokeStyle(2, 0x00ffff, 0.35);
@@ -81,11 +81,10 @@ function showMenu(scene) {
     scene.tweens.add({ targets: [heroGlow, heroAura], alpha: { from: 0.08, to: 0.2 }, scaleX: 1.04, scaleY: 1.06, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     scene.tweens.add({ targets: showcaseTrail, alpha: { from: 0.08, to: 0.22 }, width: 125, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     profileBtn.on('pointerdown', () => { closeMenu(); showProfile(scene, menu); });
-    const startY = 352;
-    const hangarY = 410;
-    const shopY = 462;
-    const settingsY = 514;
-    const soundY = 556;
+    const startY = 360;
+    const hangarY = 430;
+    const shopY = 500;
+    const settingsY = 570;
     const questsBtn = scene.add.text(320, 135, '📋', { fontSize: '18px', fill: '#ffffff', backgroundColor: '#222', padding: 8, fontFamily: fontUI }).setOrigin(0.5).setInteractive();
     questsBtn.on('pointerdown', () => { closeMenu(); showDailyQuests(scene, menu); });
     
@@ -127,8 +126,7 @@ function showMenu(scene) {
     const hangarBtn = scene.add.text(187, hangarY, TRANSLATIONS[lang].hangar, btnStyle).setOrigin(0.5).setInteractive();
     const shopBtn = scene.add.text(187, shopY, TRANSLATIONS[lang].shop, btnStyle).setOrigin(0.5).setInteractive();
     const setBtn = scene.add.text(187, settingsY, TRANSLATIONS[lang].settings, btnStyle).setOrigin(0.5).setInteractive();
-    let audioState = isSoundOn ? TRANSLATIONS[lang].v_on : TRANSLATIONS[lang].v_off;
-    const soundBtn = scene.add.text(187, soundY, `>> ${TRANSLATIONS[lang].audio}: ${audioState}`, { fontSize: '15px', fill: '#fff', backgroundColor: '#222', padding: 8, fontFamily: fontUI, fontWeight: 'bold' }).setOrigin(0.5).setInteractive();
+    const soundBtn = scene.add.text(320, 185, isSoundOn ? '🔊' : '🔇', { fontSize: '18px', fill: '#ffffff', backgroundColor: '#222', padding: 8, fontFamily: fontUI }).setOrigin(0.5).setInteractive();
     const rulesBtn = scene.add.text(102, 633, TRANSLATIONS[lang].rules, { fontSize: '13px', fill: '#d3b4ff', backgroundColor: '#23142f', padding: 8, fontFamily: fontUI, fontWeight: 'bold' }).setOrigin(0.5).setInteractive();
     const topBtn = scene.add.text(274, 633, TRANSLATIONS[lang].top, { fontSize: '13px', fill: '#ffff00', backgroundColor: '#333300', padding: 8, fontFamily: fontUI, fontWeight: 'bold' }).setOrigin(0.5).setInteractive();
     scene.tweens.add({ targets: [startPulse, startBtn], scaleX: 1.03, scaleY: 1.03, alpha: { from: 0.92, to: 1 }, duration: 850, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
@@ -146,7 +144,14 @@ function showMenu(scene) {
         if (lastRunState.pendingDeath) { closeMenu(); triggerDeath(scene); return; } 
         closeMenu(); startRun(scene); 
     });
-    soundBtn.on('pointerdown', () => { isSoundOn = !isSoundOn; soundBtn.setText(`>> ${TRANSLATIONS[lang].audio}: ${isSoundOn ? TRANSLATIONS[lang].v_on : TRANSLATIONS[lang].v_off}`); if (!isSoundOn) scene.sound.stopAll(); });
+    soundBtn.on('pointerdown', () => { 
+        isSoundOn = !isSoundOn; 
+        soundBtn.setText(isSoundOn ? '🔊' : '🔇'); 
+        if (!isSoundOn) scene.sound.stopAll(); 
+        else ensureBgm(scene);
+        saveProgress(); 
+        if (typeof submitScore === 'function') submitScore().catch(e => {});
+    });
     hangarBtn.on('pointerdown', () => { closeMenu(); showHangar(scene, menu); });
     shopBtn.on('pointerdown', () => { closeMenu(); showShop(scene, menu); });
     setBtn.on('pointerdown', () => { closeMenu(); showSettings(scene, menu); });
@@ -179,7 +184,7 @@ function showMenu(scene) {
 function showDailyQuests(scene, mainMenu) {
     const overlay = scene.add.container(0, 0).setDepth(4000);
     const bg = scene.add.graphics().fillStyle(0x000000, 0.98).fillRect(0, 0, 375, 667);
-    const fontUI = 'Arial, sans-serif';
+    const fontUI = '"Orbitron", sans-serif';
     const title = scene.add.text(187, 50, TRANSLATIONS[lang].daily_quests, { fontSize: '22px', fill: '#ffaa00', fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5);
     overlay.add([bg, title]);
     const quests = [
@@ -217,7 +222,7 @@ function showDailyQuests(scene, mainMenu) {
 function showSettings(scene, mainMenu) {
     const overlay = scene.add.container(0, 0).setDepth(4000);
     const bg = scene.add.graphics().fillStyle(0x000000, 0.98).fillRect(0, 0, 375, 667);
-    const fontUI = 'Arial, sans-serif';
+    const fontUI = '"Orbitron", sans-serif';
     const title = scene.add.text(187, 60, TRANSLATIONS[lang].settings, { fontSize: '24px', fill: '#00ffff', fontWeight: 'bold' }).setOrigin(0.5);
     overlay.add([bg, title]);
     const finger = scene.add.circle(187, 350, 15, 0xffffff, 0.3).setStrokeStyle(2, 0xffffff);
@@ -239,7 +244,7 @@ function showRules(scene, mainMenu) {
     const rulesOverlay = scene.add.container(0, 0).setDepth(4000);
     const bg = scene.add.graphics().fillStyle(0x000000, 0.98).fillRect(0, 0, 375, 667);
     rulesOverlay.add(bg);
-    const fontUI = 'Arial, sans-serif';
+    const fontUI = '"Orbitron", sans-serif';
     const scrollAreaTop = 70; const scrollAreaBottom = 570; const scrollHeight = scrollAreaBottom - scrollAreaTop;
     const scrollWindow = scene.add.container(0, 0).setDepth(4001); rulesOverlay.add(scrollWindow);
     const contentContainer = scene.add.container(0, 0); scrollWindow.add(contentContainer);
@@ -332,7 +337,7 @@ function showGaryIntro(scene) {
     const intro = scene.add.container(0, 0).setDepth(7000);
     const bg = scene.add.graphics().fillStyle(0x03060b, 0.92).fillRect(0, 0, 375, 667);
     bg.setInteractive(new Phaser.Geom.Rectangle(0, 0, 375, 667), Phaser.Geom.Rectangle.Contains);
-    const fontUI = 'Arial, sans-serif';
+    const fontUI = '"Orbitron", sans-serif';
     const glow = scene.add.ellipse(187, 150, 280, 130, 0x00e5ff, 0.12);
     const panel = scene.add.rectangle(187, 325, 320, 430, 0x0a1119, 0.92).setStrokeStyle(2, 0x00ffff, 0.8);
     const heroFrame = scene.add.rectangle(187, 170, 170, 95, 0x08141d, 0.9).setStrokeStyle(2, 0xff00ff, 0.55);
@@ -359,6 +364,6 @@ function showGaryIntro(scene) {
     closeBtn.on('pointerdown', () => { 
         intro.destroy(); 
         localStorage.setItem('GLITCHED_ARENA_INTRO_DONE', 'true'); 
-        if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+        safeHaptic('notification', '');
     });
 }

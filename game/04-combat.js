@@ -13,13 +13,13 @@ function showAchievement(scene, key, name, desc) {
     const achOverlay = scene.add.container(0, 0).setDepth(8000);
     const bg = scene.add.graphics().fillStyle(0x000000, 0.8).fillRect(0, 200, 375, 150);
     const border = scene.add.rectangle(187, 275, 300, 100, 0x222222).setStrokeStyle(3, 0xffff00);
-    const icon = scene.add.text(60, 275, '🏆', { fontSize: '40px', fontFamily: 'Arial' }).setOrigin(0.5);
-    const titleTxt = scene.add.text(187, 240, TRANSLATIONS[lang].achievement_unlocked, { fontSize: '14px', fill: '#ffff00', fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5);
-    const nameTxt = scene.add.text(187, 265, name, { fontSize: '18px', fill: '#ffffff', fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5);
-    const descTxt = scene.add.text(187, 295, desc, { fontSize: '12px', fill: '#aaaaaa', fontFamily: 'Arial' }).setOrigin(0.5);
+    const icon = scene.add.text(60, 275, '🏆', { fontSize: '40px', fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5);
+    const titleTxt = scene.add.text(187, 240, TRANSLATIONS[lang].achievement_unlocked, { fontSize: '14px', fill: '#ffff00', fontWeight: 'bold', fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5);
+    const nameTxt = scene.add.text(187, 265, name, { fontSize: '18px', fill: '#ffffff', fontWeight: 'bold', fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5);
+    const descTxt = scene.add.text(187, 295, desc, { fontSize: '12px', fill: '#aaaaaa', fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5);
     achOverlay.add([bg, border, icon, titleTxt, nameTxt, descTxt]);
     scene.cameras.main.shake(200, 0.01);
-    if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+    safeHaptic('notification', '');
     scene.tweens.add({ targets: achOverlay, alpha: 0, delay: 2500, duration: 500, onComplete: () => achOverlay.destroy() });
 }
 
@@ -64,7 +64,7 @@ function handleDamage(scene, dmg) {
         isShieldActive = true;
         saveProgress();
         scene.cameras.main.flash(200, 0, 255, 255);
-        if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+        safeHaptic('notification', '');
         return;
     }
     let isCrit = playerHealth < 20;
@@ -83,7 +83,7 @@ function handleDamage(scene, dmg) {
         scene.cameras.main.flash(500, 255, 255, 0, 0.8);
         scene.physics.world.timeScale = 2;
         scene.time.delayedCall(1000, () => { scene.physics.world.timeScale = 1; glitchText.setText(""); });
-        if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('warning');
+        safeHaptic('notification', '');
         return;
     }
     playerHealth -= dmg;
@@ -107,7 +107,7 @@ function handleDamage(scene, dmg) {
         glitchText.setText(TRANSLATIONS[lang].sys_failure).setFill("#ff0000");
         scene.time.delayedCall(1000, () => glitchText.setText(""));
     }
-    if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+    safeHaptic('impact', '');
     if (playerHealth <= 0) triggerDeath(scene);
 }
 
@@ -127,7 +127,7 @@ function triggerDeath(scene) {
         saveProgress();
         glitchText.setText(lang === 'ru' ? 'ВОСКРЕШЕНИЕ!' : 'RESURRECT!').setFill('#00ff00');
         scene.time.delayedCall(1500, () => glitchText.setText(''));
-        if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+        safeHaptic('notification', '');
         return;
     }
     if (upgradeLevels.helper_autobomb > 0 && isBossFight && boss && boss.active) {
@@ -216,26 +216,26 @@ function showConfirmRevive(scene) {
     overlay.add(panel);
     
     const titleText = scene.add.text(187, 230, lang === 'ru' ? 'ГОТОВЫ К ВЫЛЕТУ?' : 'READY TO FLY?', { 
-        fontSize: '24px', fill: '#00ffff', fontWeight: 'bold', fontFamily: 'Arial' 
+        fontSize: '24px', fill: '#00ffff', fontWeight: 'bold', fontFamily: '"Orbitron", sans-serif' 
     }).setOrigin(0.5);
     overlay.add(titleText);
     
     const descText = scene.add.text(187, 275, lang === 'ru' 
         ? 'Нажмите, когда будете готовы\nпродолжить прохождение'
         : 'Press when ready to\ncontinue the run', { 
-        fontSize: '14px', fill: '#aaaaaa', fontFamily: 'Arial', align: 'center', lineSpacing: 4 
+        fontSize: '14px', fill: '#aaaaaa', fontFamily: '"Orbitron", sans-serif', align: 'center', lineSpacing: 4 
     }).setOrigin(0.5);
     overlay.add(descText);
     
     const readyBtn = scene.add.rectangle(187, 360, 220, 50, 0x004444).setInteractive().setStrokeStyle(2, 0x00ffff);
     const readyText = scene.add.text(187, 360, lang === 'ru' ? '>> Р В РІР‚вЂќР В РЎвЂ™Р В РЎСџР В Р в‚¬Р В Р Р‹Р В РЎв„ў <<' : '>> LAUNCH <<', { 
-        fontSize: '20px', fill: '#00ffff', fontWeight: 'bold', fontFamily: 'Arial' 
+        fontSize: '20px', fill: '#00ffff', fontWeight: 'bold', fontFamily: '"Orbitron", sans-serif' 
     }).setOrigin(0.5);
     overlay.add([readyBtn, readyText]);
     
     const backBtn = scene.add.rectangle(187, 430, 180, 40, 0x222222).setInteractive().setStrokeStyle(1, 0xff6666);
     const backText = scene.add.text(187, 430, lang === 'ru' ? 'В МЕНЮ' : 'MENU', { 
-        fontSize: '16px', fill: '#ff6666', fontFamily: 'Arial' 
+        fontSize: '16px', fill: '#ff6666', fontFamily: '"Orbitron", sans-serif' 
     }).setOrigin(0.5);
     overlay.add([backBtn, backText]);
     
@@ -254,7 +254,7 @@ function showConfirmRevive(scene) {
     });
     
     if (window.Telegram?.WebApp) {
-        Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+        safeHaptic('notification', 'success');
     }
 }
 
@@ -263,14 +263,14 @@ function showHardResetConfirm(scene) {
     const bg = scene.add.graphics().fillStyle(0x000000, 0.95).fillRect(0, 0, 375, 667);
     bg.setInteractive(new Phaser.Geom.Rectangle(0, 0, 375, 667), Phaser.Geom.Rectangle.Contains);
     const panel = scene.add.rectangle(187, 320, 300, 230, 0x1a0d0d).setStrokeStyle(2, 0xff5555);
-    const title = scene.add.text(187, 245, lang === 'ru' ? 'ПОДТВЕРДИТЬ СБРОС' : 'CONFIRM RESET', { fontSize: '22px', fill: '#ff6666', fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5);
+    const title = scene.add.text(187, 245, lang === 'ru' ? 'ПОДТВЕРДИТЬ СБРОС' : 'CONFIRM RESET', { fontSize: '22px', fill: '#ff6666', fontWeight: 'bold', fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5);
     const desc = scene.add.text(187, 305, lang === 'ru'
         ? 'Это полностью сбросит прогресс,\nкредиты, корабли и улучшения.'
-        : 'This will fully reset progress,\ncredits, ships, and upgrades.', { fontSize: '15px', fill: '#ffcccc', fontFamily: 'Arial', align: 'center', lineSpacing: 4 }).setOrigin(0.5);
+        : 'This will fully reset progress,\ncredits, ships, and upgrades.', { fontSize: '15px', fill: '#ffcccc', fontFamily: '"Orbitron", sans-serif', align: 'center', lineSpacing: 4 }).setOrigin(0.5);
     const yesBtn = scene.add.rectangle(125, 390, 110, 44, 0x661111).setInteractive().setStrokeStyle(1, 0xff6666);
-    const yesTxt = scene.add.text(125, 390, lang === 'ru' ? 'СБРОСИТЬ' : 'RESET', { fontSize: '16px', fill: '#ffffff', fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5);
+    const yesTxt = scene.add.text(125, 390, lang === 'ru' ? 'СБРОСИТЬ' : 'RESET', { fontSize: '16px', fill: '#ffffff', fontWeight: 'bold', fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5);
     const noBtn = scene.add.rectangle(249, 390, 110, 44, 0x222222).setInteractive().setStrokeStyle(1, 0xaaaaaa);
-    const noTxt = scene.add.text(249, 390, lang === 'ru' ? 'Р В РЎСљР В РЎвЂ™Р В РІР‚вЂќР В РЎвЂ™Р В РІР‚Сњ' : 'BACK', { fontSize: '16px', fill: '#ffffff', fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5);
+    const noTxt = scene.add.text(249, 390, lang === 'ru' ? 'Р В РЎСљР В РЎвЂ™Р В РІР‚вЂќР В РЎвЂ™Р В РІР‚Сњ' : 'BACK', { fontSize: '16px', fill: '#ffffff', fontWeight: 'bold', fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5);
     yesBtn.on('pointerdown', () => {
         level = 1;
         distance = 0;
@@ -372,7 +372,7 @@ function startBossFight(scene) {
     if (typeof logMetric === 'function') logMetric('boss_reached', `sector:${level}`);
     obstacles.clear(true, true); bullets.clear(true, true); isBossFight = true;
     scene.cameras.main.shake(1000, 0.02); scene.cameras.main.flash(500, 255, 0, 255, 0.3);
-    let alertText = scene.add.text(187, 333, TRANSLATIONS[lang].warning_boss, { fontSize: '32px', fontFamily: 'Arial', fontWeight: 'bold', fill: '#ff0000', align: 'center' }).setOrigin(0.5).setDepth(1000);
+    let alertText = scene.add.text(187, 333, TRANSLATIONS[lang].warning_boss, { fontSize: '32px', fontFamily: '"Orbitron", sans-serif', fontWeight: 'bold', fill: '#ff0000', align: 'center' }).setOrigin(0.5).setDepth(1000);
     scene.tweens.add({ targets: alertText, alpha: 0, duration: 200, yoyo: true, repeat: 5, onComplete: () => alertText.destroy() });
     boss.setVisible(true).setY(-100);
     scene.tweens.add({ targets: boss, y: 100, duration: 2000, ease: 'Back.easeOut' });
@@ -579,7 +579,7 @@ function hitBoss(b, bullet) {
         isPhase3 = true; resetBossPhrase(this);
         glitchText.setText(TRANSLATIONS[lang].system_halt).setFill('#ffffff').setBackgroundColor('#440000').setAlpha(1);
         this.cameras.main.shake(500, 0.05);
-        if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('error');
+        safeHaptic('notification', '');
     }
     if (bossHealth <= 0) { bossHealth = 0; triggerVictory(this); }
 }
@@ -588,7 +588,7 @@ function showBossPhrase(scene, msg, color = '#ff00ff', bgColor = null, duration 
     if (!scene || !isBossFight || isVictory || isDead || !msg) return;
     bossPhraseHideCall = safeRemoveTimer(bossPhraseHideCall);
     if (!bossPhraseText || !bossPhraseText.active) {
-        bossPhraseText = scene.add.text(187, 250, '', { fontFamily: 'Arial, sans-serif', fontSize: '20px', fill: color, fontWeight: 'bold', stroke: '#000000', strokeThickness: 6, align: 'center', wordWrap: { width: 300, useAdvancedWrap: true }, lineSpacing: 4 }).setOrigin(0.5).setDepth(130);
+        bossPhraseText = scene.add.text(187, 250, '', { fontFamily: '"Orbitron", sans-serif', fontSize: '20px', fill: color, fontWeight: 'bold', stroke: '#000000', strokeThickness: 6, align: 'center', wordWrap: { width: 300, useAdvancedWrap: true }, lineSpacing: 4 }).setOrigin(0.5).setDepth(130);
     }
     safeKillTweens(scene, bossPhraseText);
     bossPhraseText.setText(msg).setFill(color).setBackgroundColor(bgColor).setAlpha(1).setVisible(true).setScale(1.1);
@@ -664,7 +664,7 @@ function spawnItem() {
 function collectItem(p, item) {
     const type = item.getData('type'); item.destroy();
     if (type === 'magnet') { isMagnetActive = true; glitchText.setText(TRANSLATIONS[lang].magnet_on).setFill('#ff00ff'); this.time.delayedCall(8000, () => { isMagnetActive = false; if (glitchText?.active && glitchText.text === TRANSLATIONS[lang].magnet_on) glitchText.setText(''); }); return; }
-    if (type === 'heart') { playerHealth = Math.min(maxPlayerHealth, playerHealth + 25); let txt = this.add.text(player.x, player.y, '+25 ' + TRANSLATIONS[lang].hp_label, { fontFamily: 'Arial, sans-serif', fontSize: '18px', fill: '#00ff00', fontWeight: 'bold', stroke: '#000', strokeThickness: 3 }).setDepth(100); this.tweens.add({ targets: txt, y: player.y - 100, alpha: 0, duration: 800, onComplete: () => txt.destroy() }); glitchText.setText(TRANSLATIONS[lang].integrity_restored).setFill('#ff0088'); this.time.delayedCall(1000, () => { if (glitchText?.active && glitchText.text === TRANSLATIONS[lang].integrity_restored) glitchText.setText(''); }); this.cameras.main.flash(300, 255, 0, 136, 0.4); return; }
+    if (type === 'heart') { playerHealth = Math.min(maxPlayerHealth, playerHealth + 25); let txt = this.add.text(player.x, player.y, '+25 ' + TRANSLATIONS[lang].hp_label, { fontFamily: '"Orbitron", sans-serif', fontSize: '18px', fill: '#00ff00', fontWeight: 'bold', stroke: '#000', strokeThickness: 3 }).setDepth(100); this.tweens.add({ targets: txt, y: player.y - 100, alpha: 0, duration: 800, onComplete: () => txt.destroy() }); glitchText.setText(TRANSLATIONS[lang].integrity_restored).setFill('#ff0088'); this.time.delayedCall(1000, () => { if (glitchText?.active && glitchText.text === TRANSLATIONS[lang].integrity_restored) glitchText.setText(''); }); this.cameras.main.flash(300, 255, 0, 136, 0.4); return; }
     if (type === 'nuke') { playSound(this, 'sfx_nuke', { volume: 0.5, stopOnTerminate: true }); this.time.delayedCall(2000, () => { this.sound.stopByKey('sfx_nuke'); }); let wave = this.add.circle(player.x, player.y, 20, 0xff00ff, 0.7).setDepth(2000); this.tweens.add({ targets: wave, radius: 1100, alpha: 0, duration: 1000, ease: 'Expo.easeOut', onComplete: () => wave.destroy() }); this.cameras.main.flash(500, 255, 0, 255, 0.4); this.cameras.main.shake(850, 0.035); obstacles.children.each(obs => { if (!obs || !obs.active) return; for (let i = 0; i < 10; i++) { let frag = this.add.rectangle(obs.x, obs.y, Phaser.Math.Between(4, 9), Phaser.Math.Between(4, 9), 0xff00ff).setDepth(5); this.physics.add.existing(frag); frag.body.setVelocity(Phaser.Math.Between(-650, 650), Phaser.Math.Between(-650, 650)); frag.body.setAngularVelocity(Phaser.Math.Between(-500, 500)); this.tweens.add({ targets: frag, alpha: 0, scaleX: 0, scaleY: 0, duration: Phaser.Math.Between(650, 1100), ease: 'Quad.easeOut', onComplete: () => frag.destroy() }); } }); obstacles.clear(true, true); glitchText.setText(TRANSLATIONS[lang].purified).setFill('#ff00ff'); this.time.delayedCall(1500, () => { if (glitchText?.active && glitchText.text === TRANSLATIONS[lang].purified) glitchText.setText(''); }); return; }
     if (type === 'coin') { coinsThisRun += isGlitchMode ? 30 : 10; updateHudTexts(); return; }
     if (type === 'slowmo') { 

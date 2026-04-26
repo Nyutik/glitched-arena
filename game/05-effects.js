@@ -8,7 +8,7 @@
 // ============================================
 
 function showDamageText(scene, x, y, damage, color = '#00ff00', size = '16px') {
-    let txt = scene.add.text(x, y, `-${Math.floor(damage)}`, { fontFamily: 'Arial, sans-serif', fontSize: size, fill: color, fontWeight: 'bold', stroke: '#000', strokeThickness: 3, padding: 5 }).setDepth(100);
+    let txt = scene.add.text(x, y, `-${Math.floor(damage)}`, { fontFamily: '"Orbitron", sans-serif', fontSize: size, fill: color, fontWeight: 'bold', stroke: '#000', strokeThickness: 3, padding: 5 }).setDepth(100);
     scene.tweens.add({ targets: txt, y: y - 100, x: x + Phaser.Math.Between(-40, 40), alpha: 0, scale: size === '26px' ? 1.5 : 1.2, duration: 900, onComplete: () => txt.destroy() });
 }
 
@@ -101,13 +101,13 @@ function showRewardUI(scene, rewardInfo = null) {
     let rewardBody = null;
     if (rewardInfo) {
         rewardPanel = scene.add.rectangle(187, 252, 345, 132, 0x002233, 0.45).setStrokeStyle(2, 0x00ffff, 0.7);
-        rewardTitle = scene.add.text(187, 210, rewardInfo.title, { fontSize: '22px', fill: '#00ffff', fontWeight: 'bold', fontFamily: 'Arial', align: 'center', wordWrap: { width: 320 } }).setOrigin(0.5);
-        rewardBody = scene.add.text(187, 258, rewardInfo.body, { fontSize: '16px', fill: '#ffffff', fontWeight: 'bold', fontFamily: 'Arial', align: 'center', wordWrap: { width: 320 } }).setOrigin(0.5);
+        rewardTitle = scene.add.text(187, 210, rewardInfo.title, { fontSize: '22px', fill: '#00ffff', fontWeight: 'bold', fontFamily: '"Orbitron", sans-serif', align: 'center', wordWrap: { width: 320 } }).setOrigin(0.5);
+        rewardBody = scene.add.text(187, 258, rewardInfo.body, { fontSize: '16px', fill: '#ffffff', fontWeight: 'bold', fontFamily: '"Orbitron", sans-serif', align: 'center', wordWrap: { width: 320 } }).setOrigin(0.5);
     }
-    const info = scene.add.text(187, 330, `${lang === 'ru' ? 'ДОБЫТО' : 'COLLECTED'}: ${earnedAmount} ${TRANSLATIONS[lang].credits}`, { fontSize: '24px', fill: '#ffff00', fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5);
-    const doubleBtn = scene.add.text(187, 420, lang === 'ru' ? 'x2 ЗА РЕКЛАМУ' : 'x2 WITH AD', { fontSize: '20px', fill: '#ffffff', backgroundColor: '#004400', padding: { left: 15, right: 15, top: 10, bottom: 10 }, fontWeight: 'bold', fontFamily: 'Arial' }).setOrigin(0.5).setInteractive();
-    const collectBtn = scene.add.text(187, 500, lang === 'ru' ? 'ПРОСТО ЗАБРАТЬ' : 'JUST COLLECT', { fontSize: '16px', fill: '#aaaaaa', padding: { left: 10, right: 10, top: 8, bottom: 8 }, fontFamily: 'Arial' }).setOrigin(0.5).setInteractive();
-    const duelBtn = scene.add.text(187, 560, TRANSLATIONS[lang].share_duel, { fontSize: '14px', fill: '#00ffff', padding: 10, fontFamily: 'Arial' }).setOrigin(0.5).setInteractive();
+    const info = scene.add.text(187, 330, `${lang === 'ru' ? 'ДОБЫТО' : 'COLLECTED'}: ${earnedAmount} ${TRANSLATIONS[lang].credits}`, { fontSize: '24px', fill: '#ffff00', fontWeight: 'bold', fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5);
+    const doubleBtn = scene.add.text(187, 420, lang === 'ru' ? 'x2 ЗА РЕКЛАМУ' : 'x2 WITH AD', { fontSize: '20px', fill: '#ffffff', backgroundColor: '#004400', padding: { left: 15, right: 15, top: 10, bottom: 10 }, fontWeight: 'bold', fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5).setInteractive();
+    const collectBtn = scene.add.text(187, 500, lang === 'ru' ? 'ПРОСТО ЗАБРАТЬ' : 'JUST COLLECT', { fontSize: '16px', fill: '#aaaaaa', padding: { left: 10, right: 10, top: 8, bottom: 8 }, fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5).setInteractive();
+    const duelBtn = scene.add.text(187, 560, TRANSLATIONS[lang].share_duel, { fontSize: '14px', fill: '#00ffff', padding: 10, fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5).setInteractive();
     container.add([rewardPanel, rewardTitle, rewardBody, info, doubleBtn, collectBtn, duelBtn].filter(Boolean));
     if (rewardInfo) {
         info.setY(335);

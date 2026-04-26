@@ -69,7 +69,7 @@ function create() {
     });
     boss = this.physics.add.sprite(187, -200, 'boss').setDepth(5).setImmovable(true).setVisible(false).clearTint();
     bossTrail = this.add.particles(0, 0, 'pixel', { speed: 40, scale: { start: 0.9, end: 0 }, alpha: { start: 0.5, end: 0 }, lifespan: 700, blendMode: 'ADD', tint: 0xff00ff, follow: boss }); bossTrail.setParticleTint(0xff00ff); bossTrail.setVisible(false);
-    const fontUI = 'Arial, sans-serif';
+    const fontUI = '"Orbitron", sans-serif';
     scoreText = this.add.text(10, 15, `${TRANSLATIONS[lang].credits}: ${coins}`, { fontFamily: fontUI, fontSize: '14px', fill: '#ffff00' }).setDepth(100);
     levelText = this.add.text(365, 15, `${TRANSLATIONS[lang].sector}: ${level}`, { fontFamily: fontUI, fontSize: '14px', fill: '#ff00ff' }).setOrigin(1, 0).setDepth(100);
     bestText = this.add.text(10, 35, `${TRANSLATIONS[lang].best}: ${bestLevel}`, { fontFamily: fontUI, fontSize: '10px', fill: '#00ff00' }).setDepth(100);
@@ -185,7 +185,7 @@ function create() {
             if (isStarted && !isDead && player && player.active && playerHealth < maxPlayerHealth) {
                 playerHealth = Math.min(maxPlayerHealth, playerHealth + 5);
                 updateHudTexts();
-                if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.impactOccurred('light');
+                safeHaptic('impact', '');
             }
         }, loop: true });
     }
@@ -219,7 +219,7 @@ function update(time, delta) {
         player.scaleX = Phaser.Math.Linear(player.scaleX, 1 - (Math.abs(player.angle) * 0.005), 0.1);
         player.scaleY = Phaser.Math.Linear(player.scaleY, 1 + (Math.abs(player.angle) * 0.002), 0.1);
     }
-    const fontUI = 'Arial, sans-serif';
+    const fontUI = '"Orbitron", sans-serif';
     bullets.children.each(b => { if (b && (b.y > 750 || b.y < -100)) b.destroy(); });
     playerBullets.children.each(b => { if (b && b.y < -100) b.destroy(); });
     playerMissiles.children.each(m => { 
@@ -555,7 +555,16 @@ async function syncUserData() {
         }
         if (typeof cloudData.total_dist === 'number') totalDistance = Math.max(totalDistance, cloudData.total_dist);
         if (typeof cloudData.bosses_killed === 'number') bossesKilled = Math.max(bossesKilled, cloudData.bosses_killed);
-        if (cloudData.upgrades && typeof cloudData.upgrades === 'object') { for (const key in cloudData.upgrades) { if (key === 'helper_mercenary') continue; upgradeLevels[key] = Math.max(upgradeLevels[key] || 0, cloudData.upgrades[key] || 0); } }
+        if (cloudData.upgrades && typeof cloudData.upgrades === 'object') { 
+            if (cloudData.upgrades.is_sound_on !== undefined) {
+                isSoundOn = cloudData.upgrades.is_sound_on === 1;
+            }
+            for (const key in cloudData.upgrades) { 
+                if (key === 'helper_mercenary') continue; 
+                if (key === 'is_sound_on') continue;
+                upgradeLevels[key] = Math.max(upgradeLevels[key] || 0, cloudData.upgrades[key] || 0); 
+            } 
+        }
         if (cloudData.achievements && typeof cloudData.achievements === 'object') { for (const key in cloudData.achievements) if (cloudData.achievements[key]) achievements[key] = true; }
         if (typeof cloudData.rank_xp === 'number') rankXP = Math.max(rankXP || 0, cloudData.rank_xp);
         
@@ -655,7 +664,7 @@ function startBossFight(scene) {
     if (typeof logMetric === 'function') logMetric('boss_reached', `sector:${level}`);
     obstacles.clear(true, true); bullets.clear(true, true); isBossFight = true;
     scene.cameras.main.shake(1000, 0.02); scene.cameras.main.flash(500, 255, 0, 255, 0.3);
-    let alertText = scene.add.text(187, 333, TRANSLATIONS[lang].warning_boss, { fontSize: '32px', fontFamily: 'Arial', fontWeight: 'bold', fill: '#ff0000', align: 'center' }).setOrigin(0.5).setDepth(1000);
+    let alertText = scene.add.text(187, 333, TRANSLATIONS[lang].warning_boss, { fontSize: '32px', fontFamily: '"Orbitron", sans-serif', fontWeight: 'bold', fill: '#ff0000', align: 'center' }).setOrigin(0.5).setDepth(1000);
     scene.tweens.add({ targets: alertText, alpha: 0, duration: 200, yoyo: true, repeat: 5, onComplete: () => alertText.destroy() });
     boss.setVisible(true).setY(-100);
     scene.tweens.add({ targets: boss, y: 100, duration: 2000, ease: 'Back.easeOut' });

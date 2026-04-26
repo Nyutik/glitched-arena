@@ -13,7 +13,7 @@ function showShop(scene, mainMenu, fromVictory = false) {
     if (distanceText) distanceText.setVisible(false); if (pHealthLabel) pHealthLabel.setVisible(false); if (bHealthLabel) bHealthLabel.setVisible(false); if (overdriveBar) overdriveBar.setVisible(false); if (roadBar) roadBar.setVisible(false);
     const overlay = scene.add.container(0, 0).setDepth(4000);
     const bg = scene.add.graphics().fillStyle(0x000000, 0.98).fillRect(0, 0, 375, 667); overlay.add(bg);
-    const fontUI = 'Arial, sans-serif';
+    const fontUI = '"Orbitron", sans-serif';
     const creds = scene.add.text(187, 25, `${TRANSLATIONS[lang].credits}: ${coins}`, { fill: '#ffff00', fontSize: '20px', fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5);
     const stats = scene.add.text(187, 45, `${TRANSLATIONS[lang].best}: S${bestLevel} | ${bestDistance}m`, { fill: '#00ff00', fontSize: '11px', fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5);
     overlay.add([creds, stats]);
@@ -223,7 +223,7 @@ function showShop(scene, mainMenu, fromVictory = false) {
                 saveProgress();
                 creds.setText(`${TRANSLATIONS[lang].credits}: ${coins}`);
                 scene.cameras.main.flash(200, 255, 255, 0, 0.5);
-                if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                safeHaptic('notification', '');
             }
         }).catch(e => {
             adBg.setInteractive();
@@ -260,7 +260,7 @@ function showShop(scene, mainMenu, fromVictory = false) {
 function showProfile(scene, mainMenu) {
     const overlay = scene.add.container(0, 0).setDepth(4000);
     const bg = scene.add.graphics().fillStyle(0x000000, 0.98).fillRect(0, 0, 375, 667); overlay.add(bg);
-    const fontUI = 'Arial, sans-serif';
+    const fontUI = '"Orbitron", sans-serif';
     overlay.add(scene.add.text(187, 60, lang === 'ru' ? "ДОСЬЕ ПИЛОТА" : "PILOT DOSSIER", { fontSize: '24px', fontFamily: fontUI, fill: '#00ffff', fontWeight: 'bold' }).setOrigin(0.5));
     const scrollWindowHeight = 350; const scrollContainer = scene.add.container(0, 170); overlay.add(scrollContainer);
     const maskShape = scene.make.graphics(); maskShape.fillStyle(0xffffff, 1).fillRect(0, 170, 375, scrollWindowHeight); scrollContainer.setMask(maskShape.createGeometryMask());
@@ -305,7 +305,7 @@ function showProfile(scene, mainMenu) {
 async function showLeaderboard(scene, mainMenu) {
     const overlay = scene.add.container(0, 0).setDepth(4000);
     const bg = scene.add.graphics().fillStyle(0x000000, 0.98).fillRect(0, 0, 375, 667); overlay.add(bg);
-    const fontUI = 'Arial, sans-serif';
+    const fontUI = '"Orbitron", sans-serif';
     const title = scene.add.text(187, 45, TRANSLATIONS[lang].top, { fontSize: '24px', fill: '#ffff00', fontWeight: 'bold', fontFamily: fontUI }).setOrigin(0.5); overlay.add(title);
     const backBtn = scene.add.rectangle(187, 615, 200, 45, 0x330033).setInteractive().setStrokeStyle(1, 0xff00ff, 0.5);
     const backLabel = scene.add.text(187, 615, TRANSLATIONS[lang].back, { fontSize: '15px', fontFamily: fontUI, fill: '#ff00ff', fontWeight: 'bold' }).setOrigin(0.5);
@@ -329,7 +329,7 @@ async function showLeaderboard(scene, mainMenu) {
             const isCustom = entry.ship_name && entry.ship_name !== 'RAZOR-01'; const displayName = (isCustom ? entry.ship_name : (entry.username || 'PILOT')).toUpperCase().substring(0, 10);
             const nameTxt = scene.add.text(75, y, displayName, { fontSize: '13px', fontFamily: fontUI, fill: isCustom ? '#ffff00' : color, fontWeight: isCustom ? 'bold' : 'normal' });
             const dateStr = entry.score_date ? new Date(entry.score_date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '--.--.--';
-            const dateTxt = scene.add.text(170, y + 2, dateStr, { fontSize: '9px', fontFamily: fontUI, fill: color, alpha: 0.5 });
+            const dateTxt = scene.add.text(195, y + 2, dateStr, { fontSize: '9px', fontFamily: fontUI, fill: color, alpha: 0.5 });
             const sectorTxt = scene.add.text(285, y, `S${entry.level || 0}`, { fontSize: '11px', fontFamily: fontUI, fill: color }).setOrigin(1, 0);
             const scoreTxt = scene.add.text(360, y, `${entry.score || 0}m`, { fontSize: '12px', fontFamily: fontUI, fill: color, fontWeight: 'bold' }).setOrigin(1, 0);
             listContainer.add([rankTxt, shipIcon, nameTxt, dateTxt, sectorTxt, scoreTxt]);
@@ -342,7 +342,8 @@ async function showLeaderboard(scene, mainMenu) {
                 const yDots = 125 + data.length * 45; listContainer.add(scene.add.text(187, yDots, '. . .', { fontSize: '20px', fontFamily: fontUI, fill: '#555' }).setOrigin(0.5));
                 const yMe = yDots + 40; const centerY = yMe + 8; listContainer.add(scene.add.rectangle(187, centerY, 350, 38, 0x00ffff, 0.2).setOrigin(0.5));
                 const myRank = myP.rank ? `#${myP.rank}` : '-'; const myLvl = myP.level ?? level; const myScore = myP.score ?? bestDistance;
-                listContainer.add([scene.add.text(15, yMe, myRank, { fontSize: '13px', fontFamily: fontUI, fill: '#00ffff', fontWeight: 'bold' }), scene.add.text(75, yMe, myFirstName.toUpperCase().substring(0, 12), { fontSize: '13px', fontFamily: fontUI, fill: '#00ffff' }), scene.add.text(285, yMe, `S${myLvl}`, { fontSize: '11px', fontFamily: fontUI, fill: '#00ffff' }).setOrigin(1, 0), scene.add.text(360, yMe, `${myScore}m`, { fontSize: '12px', fontFamily: fontUI, fill: '#00ffff', fontWeight: 'bold' }).setOrigin(1, 0)]);
+                let myDisp = myFirstName.toUpperCase(); if (myDisp.length > 9) myDisp = myDisp.substring(0, 8) + '…';
+                listContainer.add([scene.add.text(15, yMe, myRank, { fontSize: '13px', fontFamily: fontUI, fill: '#00ffff', fontWeight: 'bold' }), scene.add.text(75, yMe, myDisp, { fontSize: '13px', fontFamily: fontUI, fill: '#00ffff' }), scene.add.text(285, yMe, `S${myLvl}`, { fontSize: '11px', fontFamily: fontUI, fill: '#00ffff' }).setOrigin(1, 0), scene.add.text(360, yMe, `${myScore}m`, { fontSize: '12px', fontFamily: fontUI, fill: '#00ffff', fontWeight: 'bold' }).setOrigin(1, 0)]);
             }
         }
         const listHeight = Math.max(0, (data.length + 3) * 45); const maxY = Math.max(0, listHeight - 420);
@@ -356,7 +357,7 @@ async function showLeaderboard(scene, mainMenu) {
 function showHangar(scene, mainMenu) {
     const overlay = scene.add.container(0, 0).setDepth(4000);
     const bg = scene.add.graphics().fillStyle(0x000000, 0.98).fillRect(0, 0, 375, 667); overlay.add(bg);
-    const fontUI = 'Arial, sans-serif';
+    const fontUI = '"Orbitron", sans-serif';
     const scrollAreaTop = 90; const scrollAreaBottom = 590; const scrollHeight = scrollAreaBottom - scrollAreaTop;
     const scrollWindow = scene.add.container(0, 0).setDepth(4001); overlay.add(scrollWindow);
     const contentContainer = scene.add.container(0, 0); scrollWindow.add(contentContainer);
@@ -495,11 +496,11 @@ function awardRankXP(scene, amount, source = 'kill') {
 }
 
 function showRankUp(scene, newRank) {
-    const rankBg = scene.add.text(187, 100, '', { fontSize: '16px', fill: newRank.color, backgroundColor: '#000000aa', padding: { x: 12, y: 8 }, fontFamily: 'Arial' }).setOrigin(0.5).setDepth(500);
+    const rankBg = scene.add.text(187, 100, '', { fontSize: '16px', fill: newRank.color, backgroundColor: '#000000aa', padding: { x: 12, y: 8 }, fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5).setDepth(500);
     rankBg.setText(`⭐ ${TRANSLATIONS[lang].rank_up || 'RANK UP!'} ${newRank.name[lang]} ⭐`);
     scene.tweens.add({ targets: rankBg, y: 70, alpha: 0, delay: 2500, duration: 500, onComplete: () => rankBg.destroy() });
     scene.cameras.main.shake(150, 0.008);
-    if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+    safeHaptic('notification', '');
 }
 
 function refreshPlayerAppearance(scene) {
@@ -514,3 +515,4 @@ function refreshPlayerAppearance(scene) {
     playerHealth = playerHealth + (maxPlayerHealth - oldMaxHp);
     if (playerHealth > maxPlayerHealth) playerHealth = maxPlayerHealth;
 }
+

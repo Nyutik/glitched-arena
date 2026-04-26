@@ -135,12 +135,12 @@ function showOfflineEarnings(scene, amount, hours) {
     const bg = scene.add.graphics().fillStyle(0x000000, 0.86).fillRect(0, 0, 375, 667);
     bg.setInteractive(new Phaser.Geom.Rectangle(0, 0, 375, 667), Phaser.Geom.Rectangle.Contains);
     const panel = scene.add.rectangle(187, 333, 308, 250, 0x10161f).setStrokeStyle(3, 0x00ff88, 0.9);
-    const title = scene.add.text(187, 245, TRANSLATIONS[lang].offline_title || 'IDLE CREDITS', { fontSize: '22px', fontWeight: 'bold', fill: '#00ff88', fontFamily: 'Arial' }).setOrigin(0.5);
-    const body = scene.add.text(187, 305, TRANSLATIONS[lang].offline_body || 'Your scripts kept mining while you were away.', { fontSize: '15px', fill: '#d8fff1', fontFamily: 'Arial', align: 'center', wordWrap: { width: 250 } }).setOrigin(0.5);
-    const rewardText = scene.add.text(187, 365, `+${amount} ${TRANSLATIONS[lang].credits}`, { fontSize: '36px', fontWeight: 'bold', fill: '#ffffff', fontFamily: 'Arial' }).setOrigin(0.5);
-    const hoursText = scene.add.text(187, 410, (TRANSLATIONS[lang].offline_hours || 'Offline: %hours%h').replace('%hours%', safeHours), { fontSize: '14px', fill: '#88ffcc', fontFamily: 'Arial' }).setOrigin(0.5);
+    const title = scene.add.text(187, 245, TRANSLATIONS[lang].offline_title || 'IDLE CREDITS', { fontSize: '22px', fontWeight: 'bold', fill: '#00ff88', fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5);
+    const body = scene.add.text(187, 305, TRANSLATIONS[lang].offline_body || 'Your scripts kept mining while you were away.', { fontSize: '15px', fill: '#d8fff1', fontFamily: '"Orbitron", sans-serif', align: 'center', wordWrap: { width: 250 } }).setOrigin(0.5);
+    const rewardText = scene.add.text(187, 365, `+${amount} ${TRANSLATIONS[lang].credits}`, { fontSize: '36px', fontWeight: 'bold', fill: '#ffffff', fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5);
+    const hoursText = scene.add.text(187, 410, (TRANSLATIONS[lang].offline_hours || 'Offline: %hours%h').replace('%hours%', safeHours), { fontSize: '14px', fill: '#88ffcc', fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5);
     const claimBtn = scene.add.rectangle(187, 475, 210, 50, 0x00aa55).setInteractive();
-    const claimTxt = scene.add.text(187, 475, TRANSLATIONS[lang].offline_claim || 'COLLECT', { fontSize: '20px', fontWeight: 'bold', fill: '#001a0c', fontFamily: 'Arial' }).setOrigin(0.5);
+    const claimTxt = scene.add.text(187, 475, TRANSLATIONS[lang].offline_claim || 'COLLECT', { fontSize: '20px', fontWeight: 'bold', fill: '#001a0c', fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5);
 
     claimBtn.on('pointerdown', () => {
         coins += amount;
@@ -169,15 +169,15 @@ function showWelcomeBackGift(scene, amount, hours) {
     bg.setInteractive(new Phaser.Geom.Rectangle(0, 0, 375, 667), Phaser.Geom.Rectangle.Contains);
     const glow = scene.add.ellipse(187, 255, 260, 140, 0xffcc33, 0.12);
     const panel = scene.add.rectangle(187, 333, 310, 280, 0x16120b).setStrokeStyle(3, 0xffcc33, 0.95);
-    const title = scene.add.text(187, 225, TRANSLATIONS[lang].welcome_back_title || 'WELCOME BACK', { fontSize: '24px', fontWeight: 'bold', fill: '#ffdd55', fontFamily: 'Arial' }).setOrigin(0.5);
-    const body = scene.add.text(187, 292, TRANSLATIONS[lang].welcome_back_body || 'Your return triggered a bonus cache from the arena core.', { fontSize: '15px', fill: '#fff4c2', fontFamily: 'Arial', align: 'center', wordWrap: { width: 250 } }).setOrigin(0.5);
-    const rewardText = scene.add.text(187, 362, `+${amount} ${TRANSLATIONS[lang].credits}`, { fontSize: '38px', fontWeight: 'bold', fill: '#ffffff', fontFamily: 'Arial' }).setOrigin(0.5);
-    const hoursText = scene.add.text(187, 408, (TRANSLATIONS[lang].welcome_back_hours || 'Away for %hours%h').replace('%hours%', safeHours), { fontSize: '14px', fill: '#ffd56f', fontFamily: 'Arial' }).setOrigin(0.5);
+    const title = scene.add.text(187, 225, TRANSLATIONS[lang].welcome_back_title || 'WELCOME BACK', { fontSize: '24px', fontWeight: 'bold', fill: '#ffdd55', fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5);
+    const body = scene.add.text(187, 292, TRANSLATIONS[lang].welcome_back_body || 'Your return triggered a bonus cache from the arena core.', { fontSize: '15px', fill: '#fff4c2', fontFamily: '"Orbitron", sans-serif', align: 'center', wordWrap: { width: 250 } }).setOrigin(0.5);
+    const rewardText = scene.add.text(187, 362, `+${amount} ${TRANSLATIONS[lang].credits}`, { fontSize: '38px', fontWeight: 'bold', fill: '#ffffff', fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5);
+    const hoursText = scene.add.text(187, 408, (TRANSLATIONS[lang].welcome_back_hours || 'Away for %hours%h').replace('%hours%', safeHours), { fontSize: '14px', fill: '#ffd56f', fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5);
     const cacheOuter = scene.add.circle(187, 165, 18, 0xffcc33, 0.18).setStrokeStyle(2, 0xffdd88, 0.8);
     const cacheInner = scene.add.circle(187, 165, 8, 0xffeeaa, 0.95);
     scene.tweens.add({ targets: [glow, cacheOuter], alpha: { from: 0.1, to: 0.24 }, scaleX: 1.08, scaleY: 1.08, duration: 950, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     const claimBtn = scene.add.rectangle(187, 475, 220, 52, 0xffcc33).setInteractive();
-    const claimTxt = scene.add.text(187, 475, TRANSLATIONS[lang].welcome_back_claim || 'OPEN CACHE', { fontSize: '20px', fontWeight: 'bold', fill: '#2a1e00', fontFamily: 'Arial' }).setOrigin(0.5);
+    const claimTxt = scene.add.text(187, 475, TRANSLATIONS[lang].welcome_back_claim || 'OPEN CACHE', { fontSize: '20px', fontWeight: 'bold', fill: '#2a1e00', fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5);
 
     claimBtn.on('pointerdown', () => {
         coins += amount;
@@ -243,7 +243,7 @@ function saveProgress() {
         isShieldActive, yOffset, currentShape, currentSkin, isDeadInSave: isDead,
         totalDistance, bossesKilled, achievements, currentExplosionColor, lastRunState,
         dailyQuests, starterContracts, lastDailyReset, adWatchedPendingRevive, isDarkMode,
-        dailyLoginStreak, lastLoginDate, rankXP
+        dailyLoginStreak, lastLoginDate, rankXP, isSoundOn
     }));
 }
 
@@ -277,6 +277,7 @@ function loadProgress() {
                 lastLoginDate = p.lastLoginDate || null;
                 rankXP = p.rankXP || 0;
                 isDarkMode = p.isDarkMode || false;
+                if (p.isSoundOn !== undefined) isSoundOn = p.isSoundOn;
                 runGoal = 700 + (level - 1) * 100;
             } catch(e) { console.log('[Load] JSON parse error:', e); }
         }
@@ -337,19 +338,19 @@ function showDailyLoginBonus(scene, day, reward) {
     bg.setInteractive(new Phaser.Geom.Rectangle(0, 0, 375, 667), Phaser.Geom.Rectangle.Contains);
     
     const panel = scene.add.rectangle(187, 333, 300, 350, 0x111111).setStrokeStyle(3, 0x00ffff);
-    const title = scene.add.text(187, 210, TRANSLATIONS[lang].daily_reward_title || "DAILY REWARD", { fontSize: '24px', fontWeight: 'bold', fill: '#00ffff', fontFamily: 'Arial' }).setOrigin(0.5);
-    const dayText = scene.add.text(187, 250, (lang === 'ru' ? `ДЕНЬ ${displayDay}` : `DAY ${displayDay}`), { fontSize: '32px', fontWeight: 'bold', fill: '#ffff00', fontFamily: 'Arial' }).setOrigin(0.5);
-    const rewardText = scene.add.text(187, 320, '+' + reward + ' ' + TRANSLATIONS[lang].credits, { fontSize: '40px', fontWeight: 'bold', fill: '#ffffff', fontFamily: 'Arial' }).setOrigin(0.5);
+    const title = scene.add.text(187, 210, TRANSLATIONS[lang].daily_reward_title || "DAILY REWARD", { fontSize: '24px', fontWeight: 'bold', fill: '#00ffff', fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5);
+    const dayText = scene.add.text(187, 250, (lang === 'ru' ? `ДЕНЬ ${displayDay}` : `DAY ${displayDay}`), { fontSize: '32px', fontWeight: 'bold', fill: '#ffff00', fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5);
+    const rewardText = scene.add.text(187, 320, '+' + reward + ' ' + TRANSLATIONS[lang].credits, { fontSize: '40px', fontWeight: 'bold', fill: '#ffffff', fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5);
     
     const claimBtn = scene.add.rectangle(187, 420, 200, 50, 0x00ff00).setInteractive();
-    const claimTxt = scene.add.text(187, 420, TRANSLATIONS[lang].claim_btn || (lang === 'ru' ? 'ЗАБРАТЬ' : 'CLAIM'), { fontSize: '20px', fontWeight: 'bold', fill: '#000', fontFamily: 'Arial' }).setOrigin(0.5);
+    const claimTxt = scene.add.text(187, 420, TRANSLATIONS[lang].claim_btn || (lang === 'ru' ? 'ЗАБРАТЬ' : 'CLAIM'), { fontSize: '20px', fontWeight: 'bold', fill: '#000', fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5);
     
     claimBtn.on('pointerdown', () => {
         coins += reward;
         saveProgress();
         if (typeof updateHudTexts === 'function') updateHudTexts();
         scene.cameras.main.flash(500, 0, 255, 0, 0.3);
-        if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+        safeHaptic('notification', '');
         overlay.destroy();
         if (pendingOfflineCredits > 0) scene.time.delayedCall(220, () => maybeShowOfflineEarnings(scene));
         else if (pendingWelcomeBackCredits > 0) scene.time.delayedCall(220, () => maybeShowWelcomeBackGift(scene));
@@ -443,12 +444,12 @@ function showToast(scene, title, message) {
 }
 
 function showQuestComplete(scene, questName, reward) {
-    const questBg = scene.add.text(187, 80, '', { fontSize: '14px', fill: '#00ff00', backgroundColor: '#000000aa', padding: { x: 10, y: 6 }, fontFamily: 'Arial' }).setOrigin(0.5).setDepth(500);
+    const questBg = scene.add.text(187, 80, '', { fontSize: '14px', fill: '#00ff00', backgroundColor: '#000000aa', padding: { x: 10, y: 6 }, fontFamily: '"Orbitron", sans-serif' }).setOrigin(0.5).setDepth(500);
     const titleText = (lang === 'ru' ? 'ЗАДАНИЕ ВЫПОЛНЕНО!' : 'QUEST COMPLETE!');
     const rewardAmount = (typeof reward === 'number' && reward > 0) ? reward : 150;
     questBg.setText(titleText + ' +' + rewardAmount + ' ' + TRANSLATIONS[lang].credits);
     scene.tweens.add({ targets: questBg, y: 60, alpha: 0, delay: 2500, duration: 500, onComplete: () => questBg.destroy() });
-    if (window.Telegram?.WebApp) Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+    safeHaptic('notification', '');
 }
 
 // Adsgram init

@@ -18,3 +18,4 @@ DEV_NOTES.md
 nginx_glitched.conf
 CHAT_SESSION_*.md
 test_api.py
+.local_roadmap.md

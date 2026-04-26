@@ -154,7 +154,10 @@ async def submit_score(data: ScoreData):
             new_upgrades = data.upgrades or {}
             merged_upgrades = old_upgrades.copy()
             for key, val in new_upgrades.items():
-                merged_upgrades[key] = max(int(val or 0), int(old_upgrades.get(key, 0)))
+                if key == "is_sound_on":
+                    merged_upgrades[key] = int(val or 0)
+                else:
+                    merged_upgrades[key] = max(int(val or 0), int(old_upgrades.get(key, 0)))
 
             # 2. Достижения (Achievements)
             old_ach = old.get("achievements") or {}
