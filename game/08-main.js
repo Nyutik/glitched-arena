@@ -52,7 +52,7 @@ function create() {
     this.starsSlow = this.add.particles(0, 0, 'pixel', { x: { min: 0, max: 375 }, y: -10, speedY: { min: 20, max: 50 }, scale: 0.2, alpha: 0.3, lifespan: 10000, frequency: 100, tint: 0x5555ff });
     this.starsMed = this.add.particles(0, 0, 'pixel', { x: { min: 0, max: 375 }, y: -10, speedY: { min: 80, max: 150 }, scale: 0.4, alpha: 0.6, lifespan: 5000, frequency: 200, tint: 0x00ffff });
     this.starsFast = this.add.particles(0, 0, 'fast_streak', { x: { min: -50, max: 425 }, y: -50, speedY: { min: 600, max: 1200 }, scaleY: { start: 1, end: 1.5, ease: 'Quad.easeIn' }, scaleX: { min: 0.1, max: 0.3 }, alpha: { start: 0.6, end: 0 }, lifespan: 1500, frequency: 30, tint: 0xccffff, blendMode: 'ADD' });
-    this.add.grid(187, 333, 800, 1200, 40, 40, 0x00ffff, 0.03);
+    this.bgGrid = this.add.grid(187, 333, 800, 1200, 40, 40, 0x00ffff, 0.03);
     obstacles = this.physics.add.group(); bullets = this.physics.add.group(); playerBullets = this.physics.add.group(); playerMissiles = this.physics.add.group(); bossShields = this.physics.add.group(); items = this.physics.add.group(); minions = this.physics.add.group(); minionBullets = this.physics.add.group();
     this.isFirstMove = false;
     this.input.on('pointerdown', p => { if (!isStarted || isShopOpen || isDead || isPaused || !player?.active) return; const isHudTap = p.y < 90; if (isHudTap) return; if (!this.isFirstMove) this.isFirstMove = true; player.x = Phaser.Math.Clamp(p.x, 20, 355); player.y = Phaser.Math.Clamp(p.y + yOffset, 80, 620); if (shieldAura) shieldAura.setPosition(player.x, player.y); if (overdrive >= 100 && !isVictory && isBossFight) useOverdrive.call(this); });
@@ -357,6 +357,24 @@ function update(time, delta) {
         }
         distanceText.setText("");
     }
+    if (isGlitchMode) {
+        if (this.bgGrid) {
+            this.bgGrid.setAlpha(0.08 + Math.sin(time * 0.01) * 0.05);
+            this.bgGrid.setFillStyle(0xff0055, 0.08 + Math.sin(time * 0.01) * 0.05);
+        }
+        if (Math.random() < 0.05) {
+            this.cameras.main.setScroll(Phaser.Math.Between(-2, 2), Phaser.Math.Between(-2, 2));
+        } else {
+            this.cameras.main.setScroll(0, 0);
+        }
+    } else {
+        if (this.bgGrid) {
+            this.bgGrid.setAlpha(0.03);
+            this.bgGrid.setFillStyle(0x00ffff, 0.03);
+        }
+        this.cameras.main.setScroll(0, 0);
+    }
+    
     overdriveBar.clear().fillStyle(0x333333).fillRect(87, 645, 200, 8).fillStyle(0xffff00).fillRect(87, 645, (overdrive/100) * 200, 8);
     if (overdrive >= 100) { overdriveBar.setX(Math.sin(time * 0.1) * 3); if (!this.ovrText) { this.ovrText = this.add.text(player.x, player.y - 65, TRANSLATIONS[lang].tap_ultra, { fontFamily: fontUI, fontSize: '20px', fill: '#ffff00', fontWeight: 'bold', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setDepth(100); this.tweens.add({ targets: this.ovrText, alpha: 0.3, duration: 300, yoyo: true, repeat: -1 }); } this.ovrText.setPosition(player.x, player.y - 65); player.setTint(0xffff00); } else { if (this.ovrText) { this.ovrText.destroy(); this.ovrText = null; } player.clearTint(); }
     
@@ -396,7 +414,7 @@ function startRun(scene) {
     if (wallZoneGraphics) { wallZoneGraphics.destroy(); wallZoneGraphics = null; }
     if (secondCore) { secondCore.destroy(); secondCore = null; }
     if (stormZoneGraphics) { stormZoneGraphics.destroy(); stormZoneGraphics = null; }
-    if (this.stormZoneTimer) { this.stormZoneTimer.remove(); this.stormZoneTimer = null; } bossHealth = 400 * (1 + (level >= 30 ? (30 * 0.45 + (level - 30) * 0.22) : level * 0.45)); isMagnetActive = false; isGlitchMode = false; scene.isFirstMove = false; isSlowMoActive = false; slowMoCooldown = 0; lastEmpTime = 0;
+    if (this.stormZoneTimer) { this.stormZoneTimer.remove(); this.stormZoneTimer = null; } bossHealth = 400 * (1 + (level >= 30 ? (30 * 0.45 + (level - 30) * 0.22) : level * 0.45)); isMagnetActive = false; resetGlitchMode(scene); scene.isFirstMove = false; isSlowMoActive = false; slowMoCooldown = 0; lastEmpTime = 0;
     if (scene.physics?.world) { scene.physics.resume(); scene.physics.world.timeScale = 1; }
     if (scene.time) { scene.time.paused = false; scene.time.timeScale = 1; }
     scene.obstacleTimer?.remove(); scene.shootEvent?.remove(); scene.itemTimer?.remove(); scene.bossShootEvent?.remove(); scene.turretShootEvent?.remove(); scene.minionTimer?.remove(); scene.phraseTimer?.remove(); scene.teleportEvent?.remove();

@@ -59,6 +59,7 @@ function checkAchievements(scene) {
 function handleDamage(scene, dmg) {
     if (isDead || isVictory || !isStarted) return;
     combo = 0;
+    resetGlitchMode(scene);
     if (upgradeLevels.helper_autoshield > 0 && !isShieldActive && upgradeLevels.helper_autoshield_used !== true) {
         upgradeLevels.helper_autoshield_used = true;
         isShieldActive = true;

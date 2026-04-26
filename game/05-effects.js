@@ -12,6 +12,22 @@ function showDamageText(scene, x, y, damage, color = '#00ff00', size = '16px') {
     scene.tweens.add({ targets: txt, y: y - 100, x: x + Phaser.Math.Between(-40, 40), alpha: 0, scale: size === '26px' ? 1.5 : 1.2, duration: 900, onComplete: () => txt.destroy() });
 }
 
+function resetGlitchMode(scene) {
+    if (!isGlitchMode) return;
+    isGlitchMode = false;
+    if (scene && scene.cameras && scene.cameras.main) {
+        scene.cameras.main.setBackgroundColor('#000000');
+    }
+    if (glitchText && glitchText.active && glitchText.text === TRANSLATIONS[lang].hyper_glitch) { 
+        glitchText.setText(''); 
+        glitchText.setBackgroundColor(null); 
+    }
+    if (trailEmitter) {
+        trailEmitter.setLifespan(600);
+        trailEmitter.setScale({ start: 0.6, end: 0 });
+    }
+}
+
 function showComboEffect(scene, distX = 100, distY = 100) {
     if (!scene || !scene.cameras || !scene.cameras.main || !comboPopText || !player) return;
     
@@ -41,15 +57,20 @@ function showComboEffect(scene, distX = 100, distY = 100) {
     checkDailyQuest(scene, 'combo15');
     playSound(scene, 'sfx_combo', { volume: 0.3 });
     comboPopText.setPosition(player.x, player.y - 60).setText(`+${TRANSLATIONS[lang].combo_text} x${combo}`).setAlpha(1).setScale(1.2).setFill(combo >= 10 ? '#ff0000' : '#00ff00');
-    if (combo === 10 && !isGlitchMode) {
-        isGlitchMode = true; scene.cameras.main.setBackgroundColor('#ffffff'); scene.cameras.main.shake(5000, 0.007);
-        glitchText.setText(TRANSLATIONS[lang].hyper_glitch).setFill('#000000').setBackgroundColor('#ff0000');
-        scene.time.delayedCall(5000, () => {
-            isGlitchMode = false;
-            if (scene.cameras?.main) scene.cameras.main.setBackgroundColor('#000000');
-            if (glitchText && glitchText.active && glitchText.text === TRANSLATIONS[lang].hyper_glitch) { glitchText.setText(''); glitchText.setBackgroundColor(null); }
-        });
+    
+    if (combo >= 10 && !isGlitchMode) {
+        isGlitchMode = true; 
+        safeHaptic('impact', 'heavy');
+        scene.cameras.main.setBackgroundColor('#1a000a'); // Dark intense red/magenta instead of full white
+        scene.cameras.main.shake(400, 0.01);
+        glitchText.setText(TRANSLATIONS[lang].hyper_glitch).setFill('#ffffff').setBackgroundColor('#ff0055');
+        
+        if (trailEmitter) {
+            trailEmitter.setLifespan(1200);
+            trailEmitter.setScale({ start: 1.0, end: 0 });
+        }
     }
+    
     scene.tweens.killTweensOf(comboPopText);
     scene.tweens.add({ targets: comboPopText, y: player.y - 120, alpha: 0, scale: combo >= 10 ? 2 : 1.6, duration: 600, ease: 'Quad.easeOut' });
     if (combo % 5 === 0) { const reward = isGlitchMode ? 45 : 15; coinsThisRun += reward; updateHudTexts(); scene.cameras.main.flash(100, 255, 255, 255, 0.3); }
