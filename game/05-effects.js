@@ -12,8 +12,31 @@ function showDamageText(scene, x, y, damage, color = '#00ff00', size = '16px') {
     scene.tweens.add({ targets: txt, y: y - 100, x: x + Phaser.Math.Between(-40, 40), alpha: 0, scale: size === '26px' ? 1.5 : 1.2, duration: 900, onComplete: () => txt.destroy() });
 }
 
-function showComboEffect(scene) {
+function showComboEffect(scene, distX = 100, distY = 100) {
     if (!scene || !scene.cameras || !scene.cameras.main || !comboPopText || !player) return;
+    
+    // Near-miss / Hit-stop mechanics
+    if (distX < 45 && distY < 30 && scene.physics && scene.physics.world) {
+        // Замедляем время (hit-stop)
+        const originalTimeScale = scene.physics.world.timeScale;
+        scene.physics.world.timeScale = 4; // 4x slower physics
+        scene.time.delayedCall(120, () => {
+            if (scene && scene.physics && scene.physics.world.timeScale === 4) {
+                scene.physics.world.timeScale = 1;
+            }
+        });
+
+        let dodgeMsg = lang === 'ru' ? "ЧЁТКО!" : "GOOD!";
+        let dodgeCol = "#00ff88";
+        if (distX <= 22) { dodgeMsg = lang === 'ru' ? "ПУСТОТА!" : "VOID!"; dodgeCol = "#ff00ff"; safeHaptic('impact', 'heavy'); }
+        else if (distX <= 32) { dodgeMsg = lang === 'ru' ? "БЕЗУМНО!" : "SICK!"; dodgeCol = "#00ffff"; safeHaptic('impact', 'medium'); }
+        else { safeHaptic('impact', 'light'); }
+
+        let pop = scene.add.text(player.x, player.y + 30, dodgeMsg, { fontFamily: '"Orbitron", sans-serif', fontSize: '15px', fill: dodgeCol, fontWeight: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(150);
+        scene.tweens.add({ targets: pop, y: player.y + 60, alpha: 0, scale: 1.5, duration: 600, ease: 'Quad.easeOut', onComplete: () => pop.destroy() });
+        scene.cameras.main.flash(120, 255, 255, 255, 0.2);
+    }
+
     combo++;
     checkDailyQuest(scene, 'combo15');
     playSound(scene, 'sfx_combo', { volume: 0.3 });

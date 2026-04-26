@@ -239,7 +239,25 @@ function update(time, delta) {
         }
     });
     items.children.each(i => { if (i && i.active) { if (isMagnetActive && i.getData('type') === 'coin') { let angle = Phaser.Math.Angle.Between(i.x, i.y, player.x, player.y); i.body.setVelocity(Math.cos(angle) * 600, Math.sin(angle) * 600); } if (i.y > 750) i.destroy(); } });
-    obstacles.children.each(o => { if (o && o.active) { if (o.getData('isDrone')) { let speedX = (player.x - o.x) * 2.5; o.body.setVelocityX(speedX); o.setAlpha(0.7 + Math.sin(time * 0.01) * 0.3); } if (!o.getData('missed') && Math.abs(o.x - player.x) < 75 && Math.abs(o.y - player.y) < 30) { o.setData('missed', true); showComboEffect(this); } if (o.y > 750) o.destroy(); } }, this);
+    obstacles.children.each(o => { 
+        if (o && o.active) { 
+            if (o.getData('isDrone')) { 
+                let speedX = (player.x - o.x) * 2.5; o.body.setVelocityX(speedX); o.setAlpha(0.7 + Math.sin(time * 0.01) * 0.3); 
+            } 
+            
+            if (!o.getData('missed')) {
+                const distY = Math.abs(o.y - player.y);
+                const distX = Math.abs(o.x - player.x);
+                
+                // Normal dodge / combo point
+                if (distX < 75 && distY < 30) { 
+                    o.setData('missed', true); 
+                    showComboEffect(this, distX, distY); 
+                }
+            }
+            if (o.y > 750) o.destroy(); 
+        } 
+    }, this);
     minions.children.each(m => { if (m && m.active) { m.getData('state') === 'hunting' ? m.body.setVelocity((player.x - m.x) * 3, 100) : m.body.setVelocity(0, 50); if (m.y > 750) m.destroy(); } });
     minionBullets.children.each(b => { if (b && b.y > 750) b.destroy(); });
     if (!isBossFight) {
