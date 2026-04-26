@@ -159,6 +159,7 @@ function triggerDeath(scene) {
     if (typeof logMetric === 'function') logMetric('player_death', `bossFight:${isBossFight}`);
     lastRunState = { isDead: true, pendingDeath: true };
     if (scene.ovrText) { scene.ovrText.destroy(); scene.ovrText = null; }
+    if (scene.recordMarker) scene.recordMarker.setVisible(false);
     player.setVisible(false); player.setTint(0x333333); trailEmitter.stop();
     if (secondCore) { secondCore.destroy(); secondCore = null; } if (scene?.dualCoreShootTimer) { scene.dualCoreShootTimer.remove(); scene.dualCoreShootTimer = null; }
     saveProgress();

@@ -148,6 +148,7 @@ function showMenu(scene) {
     soundBtnBg.on('pointerdown', () => { 
         isSoundOn = !isSoundOn; 
         soundBtn.setText(isSoundOn ? '🔊' : '🔇'); 
+        scene.sound.mute = !isSoundOn;
         if (!isSoundOn) scene.sound.stopAll(); 
         else ensureBgm(scene);
         saveProgress(); 

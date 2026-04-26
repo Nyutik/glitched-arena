@@ -11,7 +11,6 @@
 let isPhase3 = false;
 let isSoundOn = true;
 let shouldAutoStart = false;
-let isGlitchMode = false;
 let isMagnetActive = false;
 let isDarkMode = true;
 

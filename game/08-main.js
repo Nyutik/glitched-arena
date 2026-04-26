@@ -39,9 +39,10 @@ function create() {
     }
     if (window.adController) adController = window.adController;
     currentStats = getShipStats();
+    this.sound.mute = !isSoundOn;
     isPhase3 = false; isVictory = false; isShopOpen = false; isDead = false; isBossFight = false; isStarted = false; isPaused = false; isPhase2 = false;
     const bootHealth = 100 + (upgradeLevels.meta_plating || 0) * 10 + (upgradeLevels.health || 0) * 25 + currentStats.hpBonus;
-    distance = 0; overdrive = 0; coinsThisRun = 0; playerHealth = bootHealth; maxPlayerHealth = bootHealth; isMagnetActive = false; isGlitchMode = false;
+    distance = 0; overdrive = 0; coinsThisRun = 0; playerHealth = bootHealth; maxPlayerHealth = bootHealth; isMagnetActive = false; 
     if (this.physics?.world) this.physics.world.timeScale = 1;
     
     this.cameras.main.setBackgroundColor('#000000');
@@ -357,22 +358,9 @@ function update(time, delta) {
         }
         distanceText.setText("");
     }
-    if (isGlitchMode) {
-        if (this.bgGrid) {
-            this.bgGrid.setAlpha(0.08 + Math.sin(time * 0.01) * 0.05);
-        }
-        if (Math.random() < 0.05) {
-            this.cameras.main.setScroll(Phaser.Math.Between(-2, 2), Phaser.Math.Between(-2, 2));
-        } else {
-            this.cameras.main.setScroll(0, 0);
-        }
-    } else {
-        if (this.bgGrid) {
-            this.bgGrid.setAlpha(0.03);
-        }
-        this.cameras.main.setScroll(0, 0);
-    }
     
+    if (this.bgGrid) { this.bgGrid.setAlpha(0.03); }
+    this.cameras.main.setScroll(0, 0);
     overdriveBar.clear().fillStyle(0x333333).fillRect(87, 645, 200, 8).fillStyle(0xffff00).fillRect(87, 645, (overdrive/100) * 200, 8);
     if (overdrive >= 100) { overdriveBar.setX(Math.sin(time * 0.1) * 3); if (!this.ovrText) { this.ovrText = this.add.text(player.x, player.y - 65, TRANSLATIONS[lang].tap_ultra, { fontFamily: fontUI, fontSize: '20px', fill: '#ffff00', fontWeight: 'bold', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setDepth(100); this.tweens.add({ targets: this.ovrText, alpha: 0.3, duration: 300, yoyo: true, repeat: -1 }); } this.ovrText.setPosition(player.x, player.y - 65); player.setTint(0xffff00); } else { if (this.ovrText) { this.ovrText.destroy(); this.ovrText = null; } player.clearTint(); }
     
@@ -412,7 +400,7 @@ function startRun(scene) {
     if (wallZoneGraphics) { wallZoneGraphics.destroy(); wallZoneGraphics = null; }
     if (secondCore) { secondCore.destroy(); secondCore = null; }
     if (stormZoneGraphics) { stormZoneGraphics.destroy(); stormZoneGraphics = null; }
-    if (this.stormZoneTimer) { this.stormZoneTimer.remove(); this.stormZoneTimer = null; } bossHealth = 400 * (1 + (level >= 30 ? (30 * 0.45 + (level - 30) * 0.22) : level * 0.45)); isMagnetActive = false; resetGlitchMode(scene); scene.isFirstMove = false; isSlowMoActive = false; slowMoCooldown = 0; lastEmpTime = 0;
+    if (this.stormZoneTimer) { this.stormZoneTimer.remove(); this.stormZoneTimer = null; } bossHealth = 400 * (1 + (level >= 30 ? (30 * 0.45 + (level - 30) * 0.22) : level * 0.45)); isMagnetActive = false;  scene.isFirstMove = false; isSlowMoActive = false; slowMoCooldown = 0; lastEmpTime = 0;
     if (scene.physics?.world) { scene.physics.resume(); scene.physics.world.timeScale = 1; }
     if (scene.time) { scene.time.paused = false; scene.time.timeScale = 1; }
     scene.obstacleTimer?.remove(); scene.shootEvent?.remove(); scene.itemTimer?.remove(); scene.bossShootEvent?.remove(); scene.turretShootEvent?.remove(); scene.minionTimer?.remove(); scene.phraseTimer?.remove(); scene.teleportEvent?.remove();

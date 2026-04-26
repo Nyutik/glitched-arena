@@ -1,7 +1,7 @@
 // ============================================
-// 05-EFFECTS.JS РІР‚вЂќ Р В­РЎвЂћРЎвЂћР ВµР С”РЎвЂљРЎвЂ№ Р С‘ Р Р†Р С‘Р В·РЎС“Р В°Р В»
+// 05-EFFECTS.JS — Эффекты и визуал
 // ============================================
-// Р вЂ”Р В° РЎвЂЎРЎвЂљР С• Р С•РЎвЂљР Р†Р ВµРЎвЂЎР В°Р ВµРЎвЂљ:
+// За что отвечает:
 // - showDamageText, showComboEffect
 // - triggerVictory, showRewardUI, showAdSafe
 // - applyGlitchEffect, startTitleGlitch
@@ -10,22 +10,6 @@
 function showDamageText(scene, x, y, damage, color = '#00ff00', size = '16px') {
     let txt = scene.add.text(x, y, `-${Math.floor(damage)}`, { fontFamily: '"Orbitron", sans-serif', fontSize: size, fill: color, fontWeight: 'bold', stroke: '#000', strokeThickness: 3, padding: 5 }).setDepth(100);
     scene.tweens.add({ targets: txt, y: y - 100, x: x + Phaser.Math.Between(-40, 40), alpha: 0, scale: size === '26px' ? 1.5 : 1.2, duration: 900, onComplete: () => txt.destroy() });
-}
-
-function resetGlitchMode(scene) {
-    if (!isGlitchMode) return;
-    isGlitchMode = false;
-    if (scene && scene.cameras && scene.cameras.main) {
-        scene.cameras.main.setBackgroundColor('#000000');
-    }
-    if (glitchText && glitchText.active && glitchText.text === TRANSLATIONS[lang].hyper_glitch) { 
-        glitchText.setText(''); 
-        glitchText.setBackgroundColor(null); 
-    }
-    if (trailEmitter) {
-        trailEmitter.lifespan = 600;
-        // removing setScale to prevent further errors, lifespan alone makes it longer
-    }
 }
 
 function showComboEffect(scene, distX = 100, distY = 100) {
@@ -56,23 +40,11 @@ function showComboEffect(scene, distX = 100, distY = 100) {
     combo++;
     checkDailyQuest(scene, 'combo15');
     playSound(scene, 'sfx_combo', { volume: 0.3 });
-    comboPopText.setPosition(player.x, player.y - 60).setText(`+${TRANSLATIONS[lang].combo_text} x${combo}`).setAlpha(1).setScale(1.2).setFill(combo >= 10 ? '#ff0000' : '#00ff00');
-    
-    if (combo >= 10 && !isGlitchMode) {
-        isGlitchMode = true; 
-        safeHaptic('impact', 'heavy');
-        scene.cameras.main.setBackgroundColor('#1a000a'); // Dark intense red/magenta instead of full white
-        scene.cameras.main.shake(400, 0.01);
-        glitchText.setText(TRANSLATIONS[lang].hyper_glitch).setFill('#ffffff').setBackgroundColor('#ff0055');
-        
-        if (trailEmitter) {
-            trailEmitter.lifespan = 1200;
-        }
-    }
+    comboPopText.setPosition(player.x, player.y - 60).setText(`+${TRANSLATIONS[lang].combo_text} x${combo}`).setAlpha(1).setScale(1.2).setFill('#00ff00');
     
     scene.tweens.killTweensOf(comboPopText);
-    scene.tweens.add({ targets: comboPopText, y: player.y - 120, alpha: 0, scale: combo >= 10 ? 2 : 1.6, duration: 600, ease: 'Quad.easeOut' });
-    if (combo % 5 === 0) { const reward = isGlitchMode ? 45 : 15; coinsThisRun += reward; updateHudTexts(); scene.cameras.main.flash(100, 255, 255, 255, 0.3); }
+    scene.tweens.add({ targets: comboPopText, y: player.y - 120, alpha: 0, scale: 1.6, duration: 600, ease: 'Quad.easeOut' });
+    if (combo % 5 === 0) { const reward = 15; coinsThisRun += reward; updateHudTexts(); scene.cameras.main.flash(100, 255, 255, 255, 0.3); }
 }
 
 async function triggerVictory(scene) {
@@ -169,24 +141,15 @@ function showRewardUI(scene, rewardInfo = null) {
     });
 
     async function finalizeCollection(finalSum) {
-        // Р РЋР Р…Р В°РЎвЂЎР В°Р В»Р В° РЎРѓР С•РЎвЂ¦РЎР‚Р В°Р Р…РЎРЏР ВµР С Р Р† Р В»Р С•Р С”Р В°Р В»РЎРЉР Р…РЎвЂ№Р Вµ Р СР С•Р Р…Р ВµРЎвЂљРЎвЂ№
         const oldCoins = coins;
         coins += finalSum;
-        
-        // Р С›Р В±Р Р…РЎС“Р В»РЎРЏР ВµР С "Р В·Р В°Р В±Р ВµР С–" РЎвЂљР С•Р В»РЎРЉР С”Р С• Р С—Р С•РЎРѓР В»Р Вµ РЎвЂљР С•Р С–Р С•, Р С”Р В°Р С” РЎС“РЎвЂЎР В»Р С‘ Р ВµР С–Р С• Р Р† Р С•Р В±РЎвЂ°Р ВµР С Р В±Р В°Р В»Р В°Р Р…РЎРѓР Вµ
         coinsThisRun = 0;
-        
         if (coins >= 5000 && !achievements.rich) achievements.rich = true;
         isVictory = true; isShopOpen = false; isDead = false; isBossFight = false; isPhase2 = false; isPhase3 = false; isStarted = false;
-        
         console.log(`[Reward] Finalizing: ${oldCoins} + ${finalSum} = ${coins}`);
-        
         clearBattleTexts(scene); cleanupScreenFx(scene);
         if (boss && boss.active) { safeKillTweens(scene, boss); boss.setVisible(false); boss.setActive(true); boss.setAlpha(1); boss.setPosition(187, -200); boss.setAngle(0); boss.clearTint(); }
-        
         saveProgress(); 
-        
-        // Р С›РЎвЂљР С—РЎР‚Р В°Р Р†Р В»РЎРЏР ВµР С Р Р…Р В° РЎРѓР ВµРЎР‚Р Р†Р ВµРЎР‚ Р С‘ Р В¶Р Т‘Р ВµР С Р С—Р С•Р Т‘РЎвЂљР Р†Р ВµРЎР‚Р В¶Р Т‘Р ВµР Р…Р С‘РЎРЏ
         if (hasTelegramUser()) {
             try {
                 await submitScore();
@@ -195,7 +158,6 @@ function showRewardUI(scene, rewardInfo = null) {
                 console.error('[Reward] Cloud sync failed', e);
             }
         }
-        
         container.destroy(); 
         showShop(scene, null, true);
     }
@@ -207,7 +169,7 @@ async function showAdSafe(onDone) {
         if (!window.Telegram?.WebApp || !tgUser?.id) { console.log('Adsgram unavailable outside Telegram, skip ad'); onDone?.(); return; }
         if (!window.adController || typeof window.adController.show !== 'function') { console.log('Adsgram controller missing, skip ad'); onDone?.(); return; }
         const result = await window.adController.show();
-        if (result?.done) onDone?.(); else alert(lang === 'ru' ? 'Р вЂќР С•РЎРѓР СР С•РЎвЂљРЎР‚Р С‘ РЎР‚Р ВµР С”Р В»Р В°Р СРЎС“ Р Т‘Р С• Р С”Р С•Р Р…РЎвЂ Р В°!' : 'Watch till the end!');
+        if (result?.done) onDone?.(); else alert(lang === 'ru' ? 'Досмотрите рекламу до конца!' : 'Watch till the end!');
     } catch (e) { console.log('Adsgram failure - silent bypass:', e); onDone?.(); }
 }
 

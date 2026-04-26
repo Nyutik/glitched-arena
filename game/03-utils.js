@@ -10,7 +10,7 @@
 // ============================================
 
 function playSound(scene, key, config = {}) {
-    if (!scene || !scene.sound || !scene.cache.audio.exists(key)) return false;
+    if (!isSoundOn || !scene || !scene.sound || !scene.cache.audio.exists(key)) return false;
     scene.sound.play(key, config);
     return true;
 }
